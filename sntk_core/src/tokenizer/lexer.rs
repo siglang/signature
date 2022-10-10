@@ -100,10 +100,10 @@ impl Lexer {
 
         macro_rules! next {
             ($n_token:expr => $t_token:expr; $e_token:expr) => {
-                inline_if! {
-                    (self.peek_char() == $n_token);
-                    (bind! { self.read_char() => $t_token });
-                    ($e_token)
+                if self.peek_char() == $n_token {
+                    bind! { self.read_char() => $t_token }
+                } else {
+                    $e_token
                 }
             };
         }
