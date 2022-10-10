@@ -15,8 +15,8 @@ macro_rules! inline_if {
 }
 
 #[macro_export]
-macro_rules! ret {
-    ($($f:expr),*; $r:expr) => {{
+macro_rules! bind {
+    ($($f:expr),* => $r:expr) => {{
         $( $f; )*
         $r
     }};
