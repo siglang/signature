@@ -3,21 +3,30 @@ use crate::*;
 
 #[derive(Debug)]
 pub struct Lexer {
-    input: String,
-    position: usize,
-    read_position: usize,
-    char: char,
-    current_position: (usize, usize),
+    pub input: String,
+    pub position: usize,
+    pub read_position: usize,
+    pub current_char: char,
+    pub current_position: (usize, usize),
+}
+
+impl Default for Lexer {
+    fn default() -> Self {
+        Self {
+            input: String::new(),
+            position: 0,
+            read_position: 0,
+            current_char: '\0',
+            current_position: (1, 0),
+        }
+    }
 }
 
 impl Lexer {
     pub fn new<T: Into<String>>(input: T) -> Self {
         let mut lexer = Lexer {
             input: input.into(),
-            position: 0,
-            read_position: 0,
-            char: '\0',
-            current_position: (1, 0),
+            ..Default::default()
         };
 
         lexer.read_char();
@@ -26,9 +35,9 @@ impl Lexer {
 
     pub fn read_char(&mut self) {
         if self.read_position >= self.input.len() {
-            self.char = '\0';
+            self.current_char = '\0';
         } else {
-            self.char = self.input.chars().nth(self.read_position).unwrap();
+            self.current_char = self.input.chars().nth(self.read_position).unwrap();
         }
 
         self.position = self.read_position;
@@ -46,8 +55,8 @@ impl Lexer {
     }
 
     pub fn skip_whitespace(&mut self) {
-        while self.char.is_whitespace() {
-            if self.char == '\n' {
+        while self.current_char.is_whitespace() {
+            if self.current_char == '\n' {
                 self.current_position.0 += 1;
                 self.current_position.1 = 0;
             }
@@ -58,7 +67,7 @@ impl Lexer {
 
     pub fn read_identifier(&mut self) -> String {
         let position = self.position;
-        while self.char.is_alphanumeric() || self.char == '_' {
+        while self.current_char.is_alphanumeric() || self.current_char == '_' {
             self.read_char();
         }
 
@@ -67,7 +76,7 @@ impl Lexer {
 
     pub fn read_number(&mut self) -> String {
         let position = self.position;
-        while self.char.is_numeric() {
+        while self.current_char.is_numeric() {
             self.read_char();
         }
 
@@ -76,7 +85,7 @@ impl Lexer {
 
     pub fn read_string(&mut self) -> String {
         let position = self.position + 1;
-        while self.char != '"' && self.char != '\0' {
+        while self.current_char != '"' && self.current_char != '\0' {
             self.read_char();
         }
 
@@ -91,7 +100,7 @@ impl Lexer {
 
         macro_rules! match_token {
             ($($token:expr => $token_type:expr),*) => {
-                match self.char {
+                match self.current_char {
                     $($token => Token::new($token_type, self.current_position),)*
                     _ => Token::new(Tokens::ILLEGAL, self.current_position),
                 }
@@ -130,7 +139,7 @@ impl Lexer {
             '\0' => EOF
         };
 
-        match self.char {
+        match self.current_char {
             c if c.is_alphabetic() => Token::new(Tokens::from(self.read_identifier()), self.current_position),
             c if c.is_numeric() => Token::new(Tokens::Number(self.read_number()), self.current_position),
             _ => bind! { self.read_char() => token },
@@ -169,9 +178,9 @@ let ten = 10;
             assert_eq!(token, test);
         }
 
-        let mut z = Lexer::new(r#"let x = y != 2;"#);
+        let mut z = Lexer::new(r#"let x_32z = y != 2;"#);
 
-        let mut x = Token::new(Tokens::Let, (1, 4));
+        let mut x = Token::default();
 
         while x.token_type != Tokens::EOF {
             x = z.next_token();
