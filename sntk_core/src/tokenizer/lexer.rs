@@ -121,7 +121,7 @@ impl Lexer {
             ($($token:expr => $token_type:expr),*) => {
                 match self.current_char {
                     $($token => Token::new($token_type, self.current_position),)*
-                    _ => Token::new(Tokens::ILLEGAL, self.current_position),
+                    token => Token::new(Tokens::ILLEGAL(token.to_string()), self.current_position)
                 }
             }
         }
@@ -202,7 +202,7 @@ let ten = 10;
     fn test_next_token2() {
         let mut z = Lexer::new(r#"let x_32z = y != "Hello, World\n";"#);
 
-        let mut x = Token::new(Tokens::ILLEGAL, (0, 0));
+        let mut x = Token::new(Tokens::ILLEGAL(String::new()), (0, 0));
 
         while x.token_type != Tokens::EOF {
             x = z.next_token();
