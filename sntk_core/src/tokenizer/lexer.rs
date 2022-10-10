@@ -71,26 +71,45 @@ impl Lexer {
             self.read_char();
         }
 
-        self.input[position..self.position].to_string()
+        let result = self.input[position..self.position].to_string();
+
+        replace_all! {
+            result,
+            "\\r" => "\r",
+            "\\t" => "\t",
+            "\\n" => "\n",
+            "\\\"" => "\"",
+            "\\\\" => "\\"
+        }
     }
 
-    pub fn read_number(&mut self) -> String {
+    pub fn read_number(&mut self) -> f64 {
         let position = self.position;
-        while self.current_char.is_numeric() {
+        let mut has_dot = false;
+
+        while self.current_char.is_numeric() || self.current_char == '.' {
+            if self.current_char == '.' {
+                if has_dot {
+                    break;
+                }
+
+                has_dot = true;
+            }
+
             self.read_char();
         }
 
-        self.input[position..self.position].to_string()
+        self.input[position..self.position].parse().unwrap_or(0.)
     }
 
     pub fn read_string(&mut self) -> String {
         let position = self.position + 1;
-        while self.current_char != '"' && self.current_char != '\0' {
+        while self.peek_char() != '"' && self.current_char != '\0' {
             self.read_char();
         }
 
         self.read_char();
-        self.input[position..self.position - 1].to_string()
+        self.input[position..self.position].to_string()
     }
 
     pub fn next_token(&mut self) -> Token {
@@ -161,12 +180,12 @@ let ten = 10;
             Token::new(Tokens::Let, (1, 4)),
             Token::new(Tokens::IDENT("five".to_string()), (1, 9)),
             Token::new(Tokens::Assign, (1, 10)),
-            Token::new(Tokens::Number("5".to_string()), (1, 13)),
+            Token::new(Tokens::Number(5.), (1, 13)),
             Token::new(Tokens::Semicolon, (1, 13)),
             Token::new(Tokens::Let, (2, 4)),
             Token::new(Tokens::IDENT("ten".to_string()), (2, 8)),
             Token::new(Tokens::Assign, (2, 9)),
-            Token::new(Tokens::Number("10".to_string()), (2, 13)),
+            Token::new(Tokens::Number(10.), (2, 13)),
             Token::new(Tokens::Semicolon, (2, 13)),
             Token::new(Tokens::EOF, (3, 1)),
         ];
@@ -177,10 +196,13 @@ let ten = 10;
             let token = lexer.next_token();
             assert_eq!(token, test);
         }
+    }
 
-        let mut z = Lexer::new(r#"let x_32z = y != 2;"#);
+    #[test]
+    fn test_next_token2() {
+        let mut z = Lexer::new(r#"let x_32z = y != "Hello, World\n";"#);
 
-        let mut x = Token::default();
+        let mut x = Token::new(Tokens::ILLEGAL, (0, 0));
 
         while x.token_type != Tokens::EOF {
             x = z.next_token();
