@@ -1,13 +1,11 @@
 #[derive(Debug, PartialEq)]
 #[rustfmt::skip]
 pub enum Tokens {
-    ILLEGAL, EOF, IDENT(String),
+    ILLEGAL(String), EOF, IDENT(String),
 
     Number(f64), String(String), Boolean(bool), Comment(String),
 
     Assign, Plus, Minus, Bang, Asterisk, Slash, Percent,
-
-    Quote, SingleQuote,
 
     Comma, Colon, Semicolon,
 
