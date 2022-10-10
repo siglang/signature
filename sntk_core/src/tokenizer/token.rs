@@ -10,6 +10,7 @@ pub enum Tokens {
     Quote, SingleQuote,
 
     Comma, Colon, Semicolon,
+
     LParen, RParen, LBrace, RBrace, LBracket, RBracket,
 
     LT, GT, LTE, GTE, EQ, NEQ,
