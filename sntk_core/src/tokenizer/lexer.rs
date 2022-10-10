@@ -102,7 +102,7 @@ impl Lexer {
             ($n_token:expr => $t_token:expr; $e_token:expr) => {
                 inline_if! {
                     (self.peek_char() == $n_token);
-                    (ret! { self.read_char(); $t_token });
+                    (bind! { self.read_char() => $t_token });
                     ($e_token)
                 }
             };
@@ -133,7 +133,7 @@ impl Lexer {
         match self.char {
             c if c.is_alphabetic() => Token::new(Tokens::from(self.read_identifier()), self.current_position),
             c if c.is_numeric() => Token::new(Tokens::Number(self.read_number()), self.current_position),
-            _ => ret! { self.read_char(); token },
+            _ => bind! { self.read_char() => token },
         }
     }
 }
