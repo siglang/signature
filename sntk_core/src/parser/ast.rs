@@ -61,15 +61,15 @@ pub struct Position {
 }
 
 macro_rules! make_struct {
-    ($name:ident => $($field:ident: $type:ty),*) => {
+    ($name:ident => $( $field:ident: $type:ty ),*) => {
         #[derive(Debug, PartialEq)]
         pub struct $name {
-            $(pub $field: $type,)*
+            $( pub $field: $type, )*
             position: Position
         }
 
         impl $name {
-            pub fn new($($field: $type,)*) -> Self {
+            pub fn new($( $field: $type, )*) -> Self {
                 $name { $($field,)* position: Position::default() }
             }
         }
