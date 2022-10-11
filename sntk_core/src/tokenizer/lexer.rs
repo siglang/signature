@@ -109,7 +109,7 @@ impl Lexer {
                 $( s = s.replace($t, $r); )*
                 s
             }};
-        }        
+        }
 
         replace_all! {
             result,
