@@ -1,3 +1,4 @@
+/// An enumeration of tokens, which are the basic units of that make up a language.
 #[derive(Debug, PartialEq)]
 #[rustfmt::skip]
 pub enum Tokens {
@@ -16,6 +17,7 @@ pub enum Tokens {
     Let, If, Else, Return, Function,
 }
 
+/// A `Token` structure containing `Tokens` and position (line, column) of the token.
 #[derive(Debug, PartialEq)]
 pub struct Token {
     pub token_type: Tokens,
@@ -45,12 +47,15 @@ impl<T: Into<String>> From<T> for Tokens {
             "else" => Tokens::Else,
             "return" => Tokens::Return,
             "fn" => Tokens::Function,
+            "true" => Tokens::Boolean(true),
+            "false" => Tokens::Boolean(false),
             s => Tokens::IDENT(s.to_string()),
         }
     }
 }
 
 impl Token {
+    /// Creates a new `Token` from a `Tokens` and a position.
     pub fn new(token_type: Tokens, position: (usize, usize)) -> Self {
         Token { token_type, position }
     }
