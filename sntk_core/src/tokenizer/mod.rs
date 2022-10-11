@@ -14,6 +14,6 @@
 /// ```
 pub mod lexer;
 /// An enumeration of tokens, which are the basic units of that make up a language.
-/// 
+///
 /// the `Token` structure containing `Tokens` and position (line, column) of the token.
 pub mod token;
