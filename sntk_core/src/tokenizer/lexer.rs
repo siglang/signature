@@ -1,6 +1,19 @@
 use super::token::*;
-use crate::*;
 
+/// **Lexer receives the source code in the from of a string and returns tokenized data.**
+///
+/// for example:
+/// ```rust
+/// use sntk_core::tokenizer::{token::*, lexer::*};
+///
+/// let mut lexer = Lexer::new(r#"let x_32z = y != "Hello, World\n";"#);
+/// let mut token = Token::new(Tokens::ILLEGAL(String::new()), (0, 0));
+///
+/// while token.token_type != Tokens::EOF {
+///     token = lexer.next_token();
+///     println!("{}", token);
+/// }
+/// ```
 #[derive(Debug)]
 pub struct Lexer {
     pub input: String,
@@ -23,6 +36,8 @@ impl Default for Lexer {
 }
 
 impl Lexer {
+    /// **Creates a new Lexer instance.**
+    /// it takes an argument of type `&str` or `String` (`Into<String>`).
     pub fn new<T: Into<String>>(input: T) -> Self {
         let mut lexer = Lexer {
             input: input.into(),
@@ -33,6 +48,8 @@ impl Lexer {
         lexer
     }
 
+    /// **Reads the next character from the input string.**
+    /// if `read_position` is greater than the length of the input string, it sets `current_char` to `'\0'` (EOF).
     pub fn read_char(&mut self) {
         if self.read_position >= self.input.len() {
             self.current_char = '\0';
@@ -46,6 +63,8 @@ impl Lexer {
         self.current_position.1 += 1;
     }
 
+    /// **Peeks the next character from the input string.**
+    /// if `read_position` is greater than the length of the input string, it returns `'\0'` (EOF).
     pub fn peek_char(&self) -> char {
         if self.read_position >= self.input.len() {
             '\0'
@@ -54,6 +73,10 @@ impl Lexer {
         }
     }
 
+    /// **Skips the whitespaces and newlines.**
+    ///
+    /// if `current_char` is a whitespace or newline, it calls `read_char()` until it finds a non-whitespace character.
+    /// also, if current_char is a newline, it increments the `current_position.0` (line number) by 1 and sets `current_position.1` (column number) to 0.
     pub fn skip_whitespace(&mut self) {
         while self.current_char.is_whitespace() {
             if self.current_char == '\n' {
@@ -65,6 +88,13 @@ impl Lexer {
         }
     }
 
+    /// **Read the identifier. it rules are:**
+    ///
+    /// - starts with a letter or an underscore.
+    /// - can contain letters, underscores, and numbers.
+    /// - can't be a keyword.
+    ///
+    /// this follows the `snake_case` naming convention.
     pub fn read_identifier(&mut self) -> String {
         let position = self.position;
         while self.current_char.is_alphanumeric() || self.current_char == '_' {
@@ -72,6 +102,14 @@ impl Lexer {
         }
 
         let result = self.input[position..self.position].to_string();
+
+        macro_rules! replace_all {
+            ($s:expr, $($t:expr => $r:expr),*) => {{
+                let mut s = String::from($s);
+                $( s = s.replace($t, $r); )*
+                s
+            }};
+        }        
 
         replace_all! {
             result,
@@ -83,6 +121,11 @@ impl Lexer {
         }
     }
 
+    /// **Read the number. it rules are:**
+    ///
+    /// - starts with a digit.
+    /// - can contain digits and a single dot.
+    ///     - can't contain more than one dot.
     pub fn read_number(&mut self) -> f64 {
         let position = self.position;
         let mut has_dot = false;
@@ -102,6 +145,12 @@ impl Lexer {
         self.input[position..self.position].parse().unwrap_or(0.)
     }
 
+    /// **Read the string. it rules are:**
+    ///
+    /// - starts with a double quote (`"`).
+    ///     - ends with a double quote (`"`).
+    /// - supports escape sequences.
+    /// - supports unicode characters.
     pub fn read_string(&mut self) -> String {
         let position = self.position + 1;
         while self.peek_char() != '"' && self.current_char != '\0' {
@@ -112,6 +161,12 @@ impl Lexer {
         self.input[position..self.position].to_string()
     }
 
+    /// **Read the next token.**
+    ///
+    /// it calls `skip_whitespace()` and then checks the `current_char` and returns the corresponding token.
+    ///
+    /// if `current_char` is not a valid character, it returns `Tokens::ILLEGAL(...)`.
+    /// if 'current_char` is `'\0'` (EOF), it returns `Tokens::EOF`.
     pub fn next_token(&mut self) -> Token {
         use super::token::Tokens::*;
 
@@ -120,7 +175,7 @@ impl Lexer {
         macro_rules! match_token {
             ($($token:expr => $token_type:expr),*) => {
                 match self.current_char {
-                    $($token => Token::new($token_type, self.current_position),)*
+                    $( $token => Token::new($token_type, self.current_position), )*
                     token => Token::new(Tokens::ILLEGAL(token.to_string()), self.current_position)
                 }
             }
@@ -129,7 +184,8 @@ impl Lexer {
         macro_rules! next {
             ($n_token:expr => $t_token:expr; $e_token:expr) => {
                 if self.peek_char() == $n_token {
-                    bind! { self.read_char() => $t_token }
+                    self.read_char();
+                    $t_token
                 } else {
                     $e_token
                 }
@@ -161,7 +217,10 @@ impl Lexer {
         match self.current_char {
             c if c.is_alphabetic() => Token::new(Tokens::from(self.read_identifier()), self.current_position),
             c if c.is_numeric() => Token::new(Tokens::Number(self.read_number()), self.current_position),
-            _ => bind! { self.read_char() => token },
+            _ => {
+                self.read_char();
+                token
+            }
         }
     }
 }
@@ -206,7 +265,7 @@ let ten = 10;
 
         while x.token_type != Tokens::EOF {
             x = z.next_token();
-            println!("{:?}", x);
+            println!("{}", x);
         }
     }
 }
