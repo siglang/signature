@@ -70,7 +70,7 @@ type T<U> = fn(U) -> U; // type alias
 let bar: T<number> = fn(x) => x * 2;
 let baz: T<string> = fn(x) => x.push<string>("!");
 
-let result: number[] = foo.map(bar -> to_s -> baz);
+let result: string[] = foo.map(bar -> to_s -> baz);
 
 println(result);
 ```
