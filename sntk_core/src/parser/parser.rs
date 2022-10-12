@@ -1,7 +1,15 @@
 use super::ast::*;
 use crate::tokenizer::{lexer::*, token::*};
 
-// TODO: Add documentation. (+n)
+/// **Parses the input string into an AST.**
+///
+/// for example:
+/// ```rust
+/// use sntk_core::parser::parser::*;
+///
+/// let parsed = Parser::from("let x = 10;").parse_program();
+/// println!("{parsed:#?}");
+/// ```
 #[derive(Debug)]
 pub struct Parser {
     pub lexer: Lexer,
@@ -20,8 +28,9 @@ where
     }
 }
 
-// TODO: Add documentation. (+n)
 impl Parser {
+    /// **Creates a new Parser instance.**
+    /// it takes an argument of type `Lexer`.
     pub fn new(lexer: Lexer) -> Self {
         let mut parser = Parser {
             lexer,
@@ -37,6 +46,7 @@ impl Parser {
         parser
     }
 
+    /// **Advances the current token and the peek token.**
     pub fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
         self.peek_token = self.lexer.next_token();
@@ -44,6 +54,7 @@ impl Parser {
         self.position = Position::new(self.current_token.position.0, self.current_token.position.1);
     }
 
+    /// **Parses the input string into an AST.**
     pub fn parse_program(&mut self) -> Program {
         let mut program = Program::default();
 
@@ -58,6 +69,7 @@ impl Parser {
         program
     }
 
+    /// **Parses a statement.**
     fn parse_statement(&mut self) -> Option<Statement> {
         println!("Parsing statement: {:?}", self.current_token);
 
