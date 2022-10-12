@@ -38,7 +38,10 @@ impl Default for Lexer {
 impl Lexer {
     /// **Creates a new Lexer instance.**
     /// it takes an argument of type `&str` or `String` (`Into<String>`).
-    pub fn new<T: Into<String>>(input: T) -> Self {
+    pub fn new<T>(input: T) -> Self
+    where
+        T: Into<String>,
+    {
         let mut lexer = Lexer {
             input: input.into(),
             ..Default::default()
@@ -221,51 +224,6 @@ impl Lexer {
                 self.read_char();
                 token
             }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_next_token() {
-        let input = r#"let five = 5;
-let ten = 10;
-"#;
-
-        let tests = vec![
-            Token::new(Tokens::Let, (1, 4)),
-            Token::new(Tokens::IDENT("five".to_string()), (1, 9)),
-            Token::new(Tokens::Assign, (1, 10)),
-            Token::new(Tokens::Number(5.), (1, 13)),
-            Token::new(Tokens::Semicolon, (1, 13)),
-            Token::new(Tokens::Let, (2, 4)),
-            Token::new(Tokens::IDENT("ten".to_string()), (2, 8)),
-            Token::new(Tokens::Assign, (2, 9)),
-            Token::new(Tokens::Number(10.), (2, 13)),
-            Token::new(Tokens::Semicolon, (2, 13)),
-            Token::new(Tokens::EOF, (3, 1)),
-        ];
-
-        let mut lexer = Lexer::new(input);
-
-        for test in tests {
-            let token = lexer.next_token();
-            assert_eq!(token, test);
-        }
-    }
-
-    #[test]
-    fn test_next_token2() {
-        let mut z = Lexer::new(r#"let x_32z = y != "Hello, World\n";"#);
-
-        let mut x = Token::new(Tokens::ILLEGAL(String::new()), (0, 0));
-
-        while x.token_type != Tokens::EOF {
-            x = z.next_token();
-            println!("{}", x);
         }
     }
 }
