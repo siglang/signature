@@ -52,7 +52,6 @@ graph LR
     C --> F[plugin]
     F --> G[Transcompile]
     G --> |sntkc javascript --target=ES6| H[JavaScript, etc..]
-
 ```
 
 ---
