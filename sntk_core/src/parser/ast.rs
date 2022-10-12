@@ -1,7 +1,7 @@
 /// `Program` is the structure where the AST is finally stored.
 ///
 /// and, this structure also stores errors that occurred during parsing.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Program {
     pub statements: Vec<Statement>,
     pub errors: Vec<String>,
@@ -71,9 +71,12 @@ pub enum DataType {
 /// The Position structure is to indicate the exact position of the error message.
 /// there is nothing else to do.
 #[derive(Debug, PartialEq, Default)]
-pub struct Position {
-    pub line: usize,
-    pub column: usize,
+pub struct Position(pub usize, pub usize);
+
+impl Position {
+    pub fn new(line: usize, column: usize) -> Self {
+        Position(line, column)
+    }
 }
 
 macro_rules! make_struct {
