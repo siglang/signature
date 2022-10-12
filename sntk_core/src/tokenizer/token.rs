@@ -1,5 +1,5 @@
 /// An enumeration of tokens, which are the basic units of that make up a language.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[rustfmt::skip]
 pub enum Tokens {
     ILLEGAL(String), EOF, IDENT(String),
@@ -15,10 +15,12 @@ pub enum Tokens {
     LT, GT, LTE, GTE, EQ, NEQ,
 
     Let, If, Else, Return, Function,
+
+    NumberType, StringType, BooleanType, /* ArrayType = type[] */ HashType, /* FnType = Function */
 }
 
 /// A `Token` structure containing `Tokens` and position (line, column) of the token.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     pub token_type: Tokens,
     pub position: (usize, usize),
@@ -26,10 +28,7 @@ pub struct Token {
 
 impl Default for Token {
     fn default() -> Self {
-        Token {
-            token_type: Tokens::EOF,
-            position: (0, 0),
-        }
+        Token::new(Tokens::ILLEGAL(String::from("")), (0, 0))
     }
 }
 
@@ -39,7 +38,10 @@ impl std::fmt::Display for Token {
     }
 }
 
-impl<T: Into<String>> From<T> for Tokens {
+impl<T> From<T> for Tokens
+where
+    T: Into<String>,
+{
     fn from(s: T) -> Self {
         match s.into().as_str() {
             "let" => Tokens::Let,
@@ -49,6 +51,10 @@ impl<T: Into<String>> From<T> for Tokens {
             "fn" => Tokens::Function,
             "true" => Tokens::Boolean(true),
             "false" => Tokens::Boolean(false),
+            "number" => Tokens::NumberType,
+            "string" => Tokens::StringType,
+            "boolean" => Tokens::BooleanType,
+            "hash" => Tokens::HashType,
             s => Tokens::IDENT(s.to_string()),
         }
     }
@@ -60,6 +66,7 @@ impl Token {
         Token { token_type, position }
     }
 
+    /// Stringify the token.
     pub fn stringify(&self) -> String {
         macro_rules! to_s {
             ($( $x:ident )*) => {
