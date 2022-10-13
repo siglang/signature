@@ -162,61 +162,70 @@ impl ParserTrait for Parser {
     ///
     /// `let ident: type = expr;`
     fn parse_let_statement(&mut self) -> ParseResult<Statement> {
-        if !self.expect_token(Tokens::IDENT(String::new())) {
-            return Err("expected next token to be an identifier".to_string());
-        }
+        let position = self.position.clone();
+        self.next_token();
 
         if let Tokens::IDENT(ident) = self.current_token.token_type.clone() {
+            let ident = Identifier::new(ident.clone(), self.position.clone());
+            self.next_token();
+
             if !self.expect_token(Tokens::Colon) {
                 return Err("expected next token to be a colon".to_string());
             }
 
-            if !self.expect_token(Tokens::IDENT(String::new())) {
-                return Err("expected next token to be a data type".to_string());
+            let data_type = self.parse_data_type()?;
+            self.next_token();
+
+            if !self.expect_token(Tokens::Assign) {
+                return Err("expected next token to be an equals sign".to_string());
             }
 
-            if let Tokens::IDENT(_) = &self.current_token.token_type {
-                let data_type = self.parse_data_type().unwrap(); // TODO: Handle error.
-
-                if !self.expect_token(Tokens::Assign) {
-                    return Err("expected next token to be an equals sign".to_string());
-                }
-
-                if let Ok(expression) = self.parse_expression(Priority::Lowest) {
-                    if self.expect_token(Tokens::Semicolon) {
-                        return Ok(Statement::LetStatement(LetStatement::new(
-                            data_type,
-                            Identifier::new(ident.clone()),
-                            expression,
-                        )));
-                    }
+            if let Ok(expression) = self.parse_expression(Priority::Lowest) {
+                self.next_token();
+                if self.expect_token(Tokens::Semicolon) {
+                    return Ok(Statement::LetStatement(LetStatement::new(data_type, ident, expression, position)));
                 }
             }
         }
 
-        Err("expected next token to be a semicolon".to_string())
+        Err(format!(
+            "expected next token to be an identifier, got {:?} instead",
+            self.current_token.token_type
+        ))
     }
 
     /// **Parses a return statement.**
     fn parse_return_statement(&mut self) -> ParseResult<Statement> {
-        Err("not implemented".to_string())
+        Err("not implemented".to_string()) // TODO: Implement.
     }
 
     /// **Parses an expression statement.**
     fn parse_expression_statement(&mut self) -> ParseResult<Statement> {
-        Err("not implemented".to_string())
+        let expression = self.parse_expression(Priority::Lowest)?;
+
+        if self.peek_token(Tokens::Semicolon) {
+            self.next_token();
+
+            Ok(Statement::ExpressionStatement(ExpressionStatement::new(
+                expression,
+                self.position.clone(),
+            )))
+        } else {
+            Err("expected next token to be a semicolon".to_string())
+        }
     }
 
     /// **Parses an expression.**
     fn parse_expression(&mut self, priority: Priority) -> ParseResult<Expression> {
         let mut left_expression = match self.current_token.token_type.clone() {
-            Tokens::IDENT(ident) => Ok(Expression::Identifier(Identifier::new(ident.clone()))),
-            Tokens::Number(number) => Ok(Expression::NumberLiteral(NumberLiteral::new(number))),
-            Tokens::String(string) => Ok(Expression::StringLiteral(StringLiteral::new(string))),
-            Tokens::Boolean(boolean) => Ok(Expression::BooleanLiteral(BooleanLiteral::new(boolean))),
+            Tokens::IDENT(ident) => Ok(Expression::Identifier(Identifier::new(ident.clone(), self.position.clone()))),
+            Tokens::Number(number) => Ok(Expression::NumberLiteral(NumberLiteral::new(number, self.position.clone()))),
+            Tokens::String(string) => Ok(Expression::StringLiteral(StringLiteral::new(string, self.position.clone()))),
+            Tokens::Boolean(boolean) => Ok(Expression::BooleanLiteral(BooleanLiteral::new(boolean, self.position.clone()))),
             Tokens::Bang | Tokens::Minus => Ok(Expression::PrefixExpression(PrefixExpression::new(
                 self.current_token.token_type.clone(),
-                Box::new(self.parse_expression(Priority::Prefix).unwrap()),
+                Box::new(self.parse_expression(Priority::Prefix)?),
+                self.position.clone(),
             ))),
             Tokens::LParen => {
                 self.next_token();
@@ -250,12 +259,13 @@ impl ParserTrait for Parser {
             left_expression = match self.current_token.token_type.clone() {
                 Tokens::Plus | Tokens::Minus | Tokens::Slash | Tokens::Asterisk | Tokens::EQ | Tokens::NEQ | Tokens::LT | Tokens::GT => {
                     Ok(Expression::InfixExpression(InfixExpression::new(
-                        Box::new(left_expression.unwrap()),
+                        Box::new(left_expression?),
                         self.current_token.token_type.clone(),
-                        Box::new(self.parse_expression(self.current_priority()).unwrap()),
+                        Box::new(self.parse_expression(self.current_priority())?),
+                        self.position.clone(),
                     )))
                 }
-                // Todo: LParen, LBracket ...
+                // TODO: LParen, LBracket ...
                 _ => Err(format!(
                     "expected next token to be an infix operator, got {:?} instead",
                     self.current_token.token_type
