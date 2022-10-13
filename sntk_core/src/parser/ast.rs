@@ -72,7 +72,7 @@ pub enum DataType {
 
 /// The Position structure is to indicate the exact position of the error message.
 /// there is nothing else to do.
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Position(pub usize, pub usize);
 
 impl Position {
@@ -90,8 +90,8 @@ macro_rules! make_struct {
         }
 
         impl $name {
-            pub fn new($( $field: $type, )*) -> Self {
-                $name { $($field,)* position: Position::default() }
+            pub fn new($( $field: $type, )* position: Position) -> Self {
+                $name { $($field,)* position }
             }
         }
     };
@@ -104,8 +104,8 @@ macro_rules! make_struct {
         }
 
         impl $name {
-            pub fn new(data_type: DataType, $( $field: $type, )*) -> Self {
-                $name { $($field,)* data_type, position: Position::default() }
+            pub fn new(data_type: DataType, $( $field: $type, )* position: Position) -> Self {
+                $name { $($field,)* data_type, position }
             }
         }
     }
