@@ -1,3 +1,5 @@
+use crate::tokenizer::token::*;
+
 /// `Program` is the structure where the AST is finally stored.
 ///
 /// and, this structure also stores errors that occurred during parsing.
@@ -45,7 +47,7 @@ pub enum Expression {
     /// `[1, 2, 3, 4]`: an array literal. it starts with `[` and ends with `]`.
     ArrayLiteral(ArrayLiteral),
     /// `true` or `false`: a boolean literal. it is a keyword.
-    Boolean(Boolean),
+    BooleanLiteral(BooleanLiteral),
     /// `array[index]`: an index expression. an array or hash can access it.
     IndexExpression(IndexExpression),
     /// `{ key: value, key: value }`: a hash literal. it starts with `{` and ends with `}`. a key and a value are separated by a colon (`:`).
@@ -55,7 +57,7 @@ pub enum Expression {
 /// * `Number`: a number literal. `data: number`
 /// * `String`: a string literal. `data: string`
 /// * `Boolean`: a boolean literal. `data: boolean`
-/// * `Array`: an array literal. `data: array[]`
+/// * `Array`: an array literal. `data: type[]`
 /// * `Hash`: a hash literal. `data: hash(key_type, value_type)`
 /// * `Fn`: a function literal. `data: fn((parameter_type)s) -> return_type`
 #[derive(Debug, PartialEq)]
@@ -84,7 +86,7 @@ macro_rules! make_struct {
         #[derive(Debug, PartialEq)]
         pub struct $name {
             $( pub $field: $type, )*
-            position: Position
+            pub position: Position
         }
 
         impl $name {
@@ -98,7 +100,7 @@ macro_rules! make_struct {
         pub struct $name {
             $( pub $field: $type, )*
             pub data_type: DataType,
-            position: Position
+            pub position: Position
         }
 
         impl $name {
@@ -114,10 +116,10 @@ make_struct! { @data_type ReturnStatement => return_value: Expression }
 make_struct! { ExpressionStatement => expression: Expression }
 make_struct! { BlockStatement => statements: Vec<Statement> }
 make_struct! { Identifier => value: String }
-make_struct! { NumberLiteral => value: i64 }
-make_struct! { PrefixExpression => operator: String, right: Box<Expression> }
-make_struct! { InfixExpression => left: Box<Expression>, operator: String, right: Box<Expression> }
-make_struct! { Boolean => value: bool }
+make_struct! { NumberLiteral => value: f64 }
+make_struct! { PrefixExpression => operator: Tokens, right: Box<Expression> }
+make_struct! { InfixExpression => left: Box<Expression>, operator: Tokens, right: Box<Expression> }
+make_struct! { BooleanLiteral => value: bool }
 make_struct! { IfExpression => condition: Box<Expression>, consequence: BlockStatement, alternative: Option<BlockStatement> }
 make_struct! { FunctionLiteral => parameters: Vec<Identifier>, body: BlockStatement }
 make_struct! { CallExpression => function: Box<Expression>, arguments: Vec<Expression> }
@@ -125,3 +127,17 @@ make_struct! { StringLiteral => value: String }
 make_struct! { ArrayLiteral => elements: Vec<Expression> }
 make_struct! { IndexExpression => left: Box<Expression>, index: Box<Expression> }
 make_struct! { HashLiteral => pairs: Vec<(Expression, Expression)> }
+
+/// Priority is used to determine the priority of the operator.
+/// The higher the priority, the higher the priority.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Priority {
+    Lowest,
+    Equals,
+    LessGreater,
+    Sum,
+    Product,
+    Prefix,
+    Call,
+    Index,
+}
