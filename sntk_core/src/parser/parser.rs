@@ -235,11 +235,13 @@ impl ParserTrait for Parser {
             }
 
             if let Ok(expression) = self.parse_expression(Priority::Lowest) {
-                if self.peek_token(Tokens::Semicolon) {
-                    return Ok(Statement::LetStatement(LetStatement::new(data_type, ident, expression, position)));
+                return if self.peek_token(Tokens::Semicolon) {
+                    self.next_token();
+
+                    Ok(Statement::LetStatement(LetStatement::new(data_type, ident, expression, position)))
                 } else {
-                    return Err("expected next token to be a semicolon".to_string());
-                }
+                    Err("expected next token to be a semicolon".to_string())
+                };
             }
         }
 
@@ -255,9 +257,11 @@ impl ParserTrait for Parser {
         self.next_token();
 
         if let Ok(expression) = self.parse_expression(Priority::Lowest) {
-            self.next_token();
-            if self.expect_token(Tokens::Semicolon) {
+            if self.peek_token(Tokens::Semicolon) {
+                self.next_token();
                 return Ok(Statement::ReturnStatement(ReturnStatement::new(expression, position)));
+            } else {
+                return Err("expected next token to be a semicolon".to_string());
             }
         }
 
