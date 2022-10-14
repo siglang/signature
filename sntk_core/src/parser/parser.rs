@@ -95,6 +95,15 @@ impl ParserTrait for Parser {
     }
 
     /// **Gets the priority from the `Tokens`.**
+    ///
+    /// * `Lowest`:       0 (`default`)
+    /// * `Equals`:       1 (`==`, ...)
+    /// * `LessGreater`:  2 (`<`, `>`, ...)
+    /// * `Sum`:          3 (`+`, `-`, ...)
+    /// * `Product`:      4 (`*`, `/`, ...)
+    /// * `Prefix`:       5 (`!expr`, `-expr`, ...)
+    /// * `Call`:         6 (`function(...)`)
+    /// * `Index`:        7 (`array[index]`)
     fn get_priority(&self, token_type: Tokens) -> Priority {
         match token_type {
             Tokens::Assign => Priority::Equals,
@@ -132,6 +141,11 @@ impl ParserTrait for Parser {
         }
 
         program.errors = self.errors.clone();
+
+        if self.errors.len() > 0 {
+            program.statements = vec![];
+        }
+
         program
     }
 
@@ -145,17 +159,57 @@ impl ParserTrait for Parser {
     }
 
     /// **Parses a data type.**
+    ///
+    /// * `x: number`:   `DataType::Number`
+    /// * `x: string`:   `DataType::String`
+    /// * `x: boolean`:  `DataType::Boolean`
+    /// * `x: T`:        `DataType::Identifier("T")`
+    /// * `x: T[]`:      `DataType::Array(Box<DataType::Identifier("T")>)`
+    /// * `x: T<U>`:     `DataType::Generic(Box<DataType::Identifier("T")>, Box<DataType::Identifier("U")>)`
+    ///
+    /// **TODO**: Add `hash`, `fn` types.
     fn parse_data_type(&mut self) -> ParseResult<DataType> {
-        // TODO: Add `array`, `hash`, `fn` types.
-        match self.current_token.token_type {
+        let mut data_type = match self.current_token.token_type {
             Tokens::NumberType => Ok(DataType::Number),
             Tokens::StringType => Ok(DataType::String),
             Tokens::BooleanType => Ok(DataType::Boolean),
+            Tokens::IDENT(ref ident) => Ok(DataType::Identifier(ident.clone())),
             _ => Err(format!(
                 "expected next token to be a data type, got {:?} instead",
                 self.current_token.token_type
             )),
+        };
+
+        if self.peek_token(Tokens::LT) {
+            self.next_token();
+            self.next_token();
+
+            let arr_data_type = self.parse_data_type()?; // refactoring here
+
+            self.next_token();
+
+            return if self.current_token.token_type == Tokens::GT {
+                Ok(DataType::Generic(Box::new(data_type?), Box::new(arr_data_type)))
+            } else {
+                Err(format!(
+                    "expected next token to be a data type, got {:?} instead",
+                    self.current_token.token_type
+                ))
+            };
         }
+
+        while self.peek_token(Tokens::LBracket) {
+            self.next_token();
+            self.next_token();
+
+            if self.current_token.token_type != Tokens::RBracket {
+                return Err(format!("expected next token to be ], got {:?} instead", self.current_token.token_type));
+            }
+
+            data_type = data_type.map(|t| DataType::Array(Box::new(t)));
+        }
+
+        data_type
     }
 
     /// **Parses a let statement.**
@@ -181,9 +235,10 @@ impl ParserTrait for Parser {
             }
 
             if let Ok(expression) = self.parse_expression(Priority::Lowest) {
-                self.next_token();
-                if self.expect_token(Tokens::Semicolon) {
+                if self.peek_token(Tokens::Semicolon) {
                     return Ok(Statement::LetStatement(LetStatement::new(data_type, ident, expression, position)));
+                } else {
+                    return Err("expected next token to be a semicolon".to_string());
                 }
             }
         }
@@ -196,7 +251,17 @@ impl ParserTrait for Parser {
 
     /// **Parses a return statement.**
     fn parse_return_statement(&mut self) -> ParseResult<Statement> {
-        Err("not implemented".to_string()) // TODO: Implement.
+        let position = self.position.clone();
+        self.next_token();
+
+        if let Ok(expression) = self.parse_expression(Priority::Lowest) {
+            self.next_token();
+            if self.expect_token(Tokens::Semicolon) {
+                return Ok(Statement::ReturnStatement(ReturnStatement::new(expression, position)));
+            }
+        }
+
+        Err("expected next token to be an expression".to_string())
     }
 
     /// **Parses an expression statement.**
