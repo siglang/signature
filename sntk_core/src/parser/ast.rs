@@ -60,7 +60,7 @@ pub enum Expression {
 /// * `Array`: an array literal. `data: type[]`
 /// * `Hash`: a hash literal. `data: hash(key_type, value_type)`
 /// * `Fn`: a function literal. `data: fn((parameter_type)s) -> return_type`
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum DataType {
     Number,
     String,
@@ -68,6 +68,8 @@ pub enum DataType {
     Array(Box<DataType>),
     Hash(Box<DataType>, Box<DataType>),
     Fn(Vec<DataType>, Box<DataType>),
+    Generic(Box<DataType>, Box<DataType>),
+    Identifier(String),
 }
 
 /// The Position structure is to indicate the exact position of the error message.
@@ -112,7 +114,7 @@ macro_rules! make_struct {
 }
 
 make_struct! { @data_type LetStatement => name: Identifier, value: Expression }
-make_struct! { @data_type ReturnStatement => return_value: Expression }
+make_struct! { ReturnStatement => return_value: Expression }
 make_struct! { ExpressionStatement => expression: Expression }
 make_struct! { BlockStatement => statements: Vec<Statement> }
 make_struct! { Identifier => value: String }
