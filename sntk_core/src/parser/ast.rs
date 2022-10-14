@@ -1,3 +1,4 @@
+use super::error::*;
 use crate::tokenizer::token::*;
 
 /// `Program` is the structure where the AST is finally stored.
@@ -6,7 +7,7 @@ use crate::tokenizer::token::*;
 #[derive(Debug, Default)]
 pub struct Program {
     pub statements: Vec<Statement>,
-    pub errors: Vec<String>,
+    pub errors: Vec<ParsingError>,
 }
 
 /// In the Sanetaka language, statements contain the following data:
@@ -19,6 +20,7 @@ pub struct Program {
 pub enum Statement {
     LetStatement(LetStatement),
     ReturnStatement(ReturnStatement),
+    TypeStatement(TypeStatement),
     BlockStatement(BlockStatement),
     ExpressionStatement(ExpressionStatement),
 }
@@ -69,7 +71,7 @@ pub enum DataType {
     Hash(Box<DataType>, Box<DataType>),
     Fn(Vec<DataType>, Box<DataType>),
     Generic(Box<DataType>, Box<DataType>),
-    Identifier(String),
+    Custom(String),
 }
 
 /// The Position structure is to indicate the exact position of the error message.
@@ -114,6 +116,7 @@ macro_rules! make_struct {
 }
 
 make_struct! { @data_type LetStatement => name: Identifier, value: Expression }
+make_struct! { @data_type TypeStatement => name: Identifier, generics: Vec<Identifier> }
 make_struct! { ReturnStatement => return_value: Expression }
 make_struct! { ExpressionStatement => expression: Expression }
 make_struct! { BlockStatement => statements: Vec<Statement> }
