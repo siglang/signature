@@ -14,9 +14,25 @@ pub enum Tokens {
 
     LT, GT, LTE, GTE, EQ, NEQ,
 
-    Let, If, Else, Return, Function,
+    Let, If, Else, Return, Function, Type,
 
     NumberType, StringType, BooleanType, /* ArrayType = type[] */ HashType, /* FnType = Function */
+}
+
+impl Tokens {
+    /// Stringify the token.
+    pub fn stringify(&self) -> String {
+        macro_rules! to_s {
+                ($( $x:ident )*) => {
+                    match &self {
+                        $( Tokens::$x(x) => x.to_string(), )*
+                        _ => format!("{:?}", self)
+                    }
+                }
+            }
+
+        to_s! { IDENT String Number Boolean Comment }
+    }
 }
 
 /// A `Token` structure containing `Tokens` and position (line, column) of the token.
@@ -55,6 +71,7 @@ where
             "string" => Tokens::StringType,
             "boolean" => Tokens::BooleanType,
             "hash" => Tokens::HashType,
+            "type" => Tokens::Type,
             s => Tokens::IDENT(s.to_string()),
         }
     }
@@ -64,19 +81,5 @@ impl Token {
     /// Creates a new `Token` from a `Tokens` and a position.
     pub fn new(token_type: Tokens, position: (usize, usize)) -> Self {
         Token { token_type, position }
-    }
-
-    /// Stringify the token.
-    pub fn stringify(&self) -> String {
-        macro_rules! to_s {
-            ($( $x:ident )*) => {
-                match &self.token_type {
-                    $( Tokens::$x(x) => x.to_string(), )*
-                    _ => format!("{:?}", self.token_type)
-                }
-            }
-        }
-
-        to_s! { IDENT String Number Boolean Comment }
     }
 }
