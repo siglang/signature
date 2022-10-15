@@ -69,7 +69,7 @@ pub enum DataType {
     Boolean,
     Array(Box<DataType>),
     Hash(Box<DataType>, Box<DataType>),
-    Fn(Vec<DataType>, Box<DataType>),
+    Fn(FunctionType),
     Generic(Generic),
     Custom(String),
 }
@@ -80,6 +80,15 @@ pub struct Generic(Box<DataType>, Vec<DataType>);
 impl Generic {
     pub fn new(data_type: DataType, generic_types: Vec<DataType>) -> Self {
         Generic(Box::new(data_type), generic_types)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct FunctionType(Vec<DataType>, Box<DataType>);
+
+impl FunctionType {
+    pub fn new(parameters: Vec<DataType>, return_type: DataType) -> Self {
+        FunctionType(parameters, Box::new(return_type))
     }
 }
 
