@@ -481,10 +481,13 @@ impl ParserTrait for Parser {
                 | Tokens::Minus
                 | Tokens::Slash
                 | Tokens::Asterisk
+                | Tokens::Percent
                 | Tokens::EQ
                 | Tokens::NEQ
                 | Tokens::LT
-                | Tokens::GT => Ok(Expr::InfixExpression(InfixExpression::new(
+                | Tokens::GT
+                | Tokens::LTE
+                | Tokens::GTE => Ok(Expr::InfixExpression(InfixExpression::new(
                     Box::new(left_expression?),
                     self.current_token.token_type.clone(),
                     {
