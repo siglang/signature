@@ -20,6 +20,8 @@ pub trait ParserTrait: ParserBase {
     fn parse_program(&mut self) -> Program;
     fn parse_statement(&mut self) -> ParseResult<Statement>;
     fn parse_data_type(&mut self) -> ParseResult<DataType>;
+    fn parse_generic(&mut self) -> ParseResult<Generic>;
+    fn parse_generic_identifier(&mut self) -> ParseResult<Vec<Identifier>>;
     fn parse_let_statement(&mut self) -> ParseResult<Statement>;
     fn parse_return_statement(&mut self) -> ParseResult<Statement>;
     fn parse_type_statement(&mut self) -> ParseResult<Statement>;
@@ -177,12 +179,12 @@ impl ParserTrait for Parser {
 
     /// **Parses a data type.**
     ///
-    /// * `x: number`:   `DataType::Number`
-    /// * `x: string`:   `DataType::String`
-    /// * `x: boolean`:  `DataType::Boolean`
-    /// * `x: T`:        `DataType::Identifier("T")`
-    /// * `x: T[]`:      `DataType::Array(Box<DataType::Identifier("T")>)`
-    /// * `x: T<U>`:     `DataType::Generic(Box<DataType::Identifier("T")>, Box<DataType::Identifier("U")>)`
+    /// * `x: number`:   `Number`
+    /// * `x: string`:   `String`
+    /// * `x: boolean`:  `Boolean`
+    /// * `x: T`:        `Identifier("T")`
+    /// * `x: T[]`:      `Array(Identifier("T"))`
+    /// * `x: T<U, V>`:  `Generic(Identifier("T"), [Identifier("U"), Identifier("V")])`
     fn parse_data_type(&mut self) -> ParseResult<DataType> {
         let mut data_type = match self.current_token.token_type {
             Tokens::NumberType => Ok(DataType::Number),
@@ -191,29 +193,16 @@ impl ParserTrait for Parser {
             Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
             Tokens::HashType | Tokens::Function => unimplemented!(),
             _ => Err(ParsingError::new(
-                EXPECTED_DATA_TYPE,
+                UNEXPECTED_TOKEN,
                 vec![&self.current_token.token_type.stringify()],
                 self.position.clone(),
             )),
         };
 
         if self.peek_token(Tokens::LT) {
-            self.next_token();
-            self.next_token();
+            let generics = self.parse_generic()?;
 
-            let arr_data_type = self.parse_data_type()?;
-
-            self.next_token();
-
-            return if self.current_token.token_type == Tokens::GT {
-                Ok(DataType::Generic(Box::new(data_type?), Box::new(arr_data_type)))
-            } else {
-                Err(ParsingError::new(
-                    EXPECTED_DATA_TYPE,
-                    vec![&self.current_token.token_type.stringify()],
-                    self.position.clone(),
-                ))
-            };
+            data_type = Ok(DataType::Generic(generics));
         }
 
         while self.peek_token(Tokens::LBracket) {
@@ -232,6 +221,73 @@ impl ParserTrait for Parser {
         }
 
         data_type
+    }
+
+    /// **Parses a generic type.**
+    ///
+    /// `T<U[], V>`: `Generic(Identifier("T"), [Array(Identifier("U")), Identifier("V")])`
+    fn parse_generic(&mut self) -> ParseResult<Generic> {
+        let ident = match self.current_token.token_type {
+            Tokens::IDENT(ref ident) => ident.clone(),
+            _ => {
+                return Err(ParsingError::new(
+                    EXPECTED_NEXT_TOKEN,
+                    vec![&Tokens::IDENT("".to_string()).stringify(), &self.current_token.token_type.stringify()],
+                    self.position.clone(),
+                ))
+            }
+        };
+
+        self.next_token();
+
+        let mut generics = Vec::new();
+
+        self.expect_token(Tokens::LT);
+
+        while self.current_token.token_type != Tokens::GT {
+            let data_type = self.parse_data_type()?;
+            self.next_token();
+
+            generics.push(data_type);
+
+            if self.current_token.token_type == Tokens::Comma {
+                self.next_token();
+            }
+        }
+
+        Ok(Generic::new(DataType::Custom(ident), generics))
+    }
+
+    /// **Parses a generic type.**
+    ///
+    /// `T<U, V>`: `Generic(Identifier("T"), [Identifier("U"), Identifier("V")])`
+    fn parse_generic_identifier(&mut self) -> ParseResult<Vec<Identifier>> {
+        let mut generics = Vec::new();
+
+        self.expect_token(Tokens::LT);
+
+        while self.current_token.token_type != Tokens::GT {
+            let ident = match self.current_token.token_type {
+                Tokens::IDENT(ref ident) => ident.clone(),
+                _ => {
+                    return Err(ParsingError::new(
+                        EXPECTED_NEXT_TOKEN,
+                        vec![&Tokens::IDENT("".to_string()).stringify(), &self.current_token.token_type.stringify()],
+                        self.position.clone(),
+                    ))
+                }
+            };
+
+            self.next_token();
+
+            generics.push(Identifier::new(ident, self.position.clone()));
+
+            if self.current_token.token_type == Tokens::Comma {
+                self.next_token();
+            }
+        }
+
+        Ok(generics)
     }
 
     /// **Parses a let statement.**
@@ -256,13 +312,7 @@ impl ParserTrait for Parser {
             let data_type = self.parse_data_type()?;
             self.next_token();
 
-            if !self.expect_token(Tokens::Assign) {
-                return Err(ParsingError::new(
-                    EXPECTED_NEXT_TOKEN,
-                    vec![&Tokens::Assign.stringify(), &self.current_token.token_type.stringify()],
-                    self.position.clone(),
-                ));
-            }
+            self.expect_token(Tokens::Assign);
 
             if let Ok(expression) = self.parse_expression(Priority::Lowest) {
                 return if self.peek_token(Tokens::Semicolon) {
@@ -320,7 +370,48 @@ impl ParserTrait for Parser {
     ///
     /// `type <ident><generics?> = <type>;`
     fn parse_type_statement(&mut self) -> ParseResult<Statement> {
-        unimplemented!()
+        let position = self.position.clone();
+        self.next_token();
+
+        if let Tokens::IDENT(ident) = self.current_token.token_type.clone() {
+            self.next_token();
+
+            let generics = if self.current_token.token_type == Tokens::LT {
+                self.parse_generic_identifier()?
+            } else {
+                Vec::new()
+            };
+            self.next_token();
+
+            self.expect_token(Tokens::Assign);
+
+            let data_type = self.parse_data_type()?;
+
+            return if self.peek_token(Tokens::Semicolon) {
+                self.next_token();
+                Ok(Stmt::TypeStatement(TypeStatement::new(
+                    data_type,
+                    Identifier::new(ident, position.clone()),
+                    generics,
+                    position,
+                )))
+            } else {
+                Err(ParsingError::new(
+                    EXPECTED_NEXT_TOKEN,
+                    vec![&Tokens::Semicolon.stringify(), &self.current_token.token_type.stringify()],
+                    self.position.clone(),
+                ))
+            };
+        }
+
+        Err(ParsingError::new(
+            EXPECTED_NEXT_TOKEN,
+            vec![
+                &Tokens::IDENT("identifier".to_string()).stringify(),
+                &self.current_token.token_type.stringify(),
+            ],
+            self.position.clone(),
+        ))
     }
 
     /// **Parses an expression statement.**
