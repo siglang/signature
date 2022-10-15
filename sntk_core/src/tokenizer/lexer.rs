@@ -231,8 +231,12 @@ impl LexerTrait for Lexer {
         };
 
         match self.current_char {
-            c if c.is_alphabetic() => Token::new(Tokens::from(self.read_identifier()), self.current_position),
-            c if c.is_numeric() => Token::new(Tokens::Number(self.read_number()), self.current_position),
+            c if c.is_alphabetic() => {
+                Token::new(Tokens::from(self.read_identifier()), self.current_position)
+            }
+            c if c.is_numeric() => {
+                Token::new(Tokens::Number(self.read_number()), self.current_position)
+            }
             _ => {
                 self.read_char();
                 token
