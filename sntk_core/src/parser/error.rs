@@ -7,7 +7,7 @@ pub struct ParsingError {
 }
 
 impl ParsingError {
-    pub fn new(message: &str, args: Vec<&str>, position: Position) -> Self {
+    pub fn new(message: &str, args: Vec<String>, position: Position) -> Self {
         let mut message = message.to_string();
 
         args.iter().enumerate().for_each(|(i, arg)| {
