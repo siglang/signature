@@ -7,6 +7,6 @@ fn main() {
     );
     println!(
         "{:#?}",
-        Parser::from(r#"type x<T, U> = T<U[]>x"#).parse_program()
+        Parser::from(r#"type x<T, U> = T<U[]>;"#).parse_program()
     );
 }
