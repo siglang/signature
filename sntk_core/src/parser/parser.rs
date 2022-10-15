@@ -12,7 +12,7 @@ pub type ParseResult<T> = Result<T, ParsingError>;
 pub trait ParserBase {
     fn new(lexer: Lexer) -> Self;
     fn next_token(&mut self);
-    fn expect_token(&mut self, token_type: Tokens) -> bool;
+    fn expect_token(&mut self, token_type: Tokens) -> ParseResult<()>;
     fn peek_token(&self, token_type: Tokens) -> bool;
     fn get_priority(&self, token_type: Tokens) -> Priority;
     fn peek_priority(&mut self) -> Priority;
@@ -23,6 +23,8 @@ pub trait ParserTrait: ParserBase {
     fn parse_program(&mut self) -> Program;
     fn parse_statement(&mut self) -> ParseResult<Statement>;
     fn parse_data_type(&mut self) -> ParseResult<DataType>;
+    fn parse_data_type_without_next(&mut self) -> ParseResult<DataType>;
+    fn parse_function_type(&mut self) -> ParseResult<FunctionType>;
     fn parse_generic(&mut self) -> ParseResult<Generic>;
     fn parse_generic_identifier(&mut self) -> ParseResult<Vec<Identifier>>;
     fn parse_let_statement(&mut self) -> ParseResult<Statement>;
@@ -95,15 +97,15 @@ impl ParserBase for Parser {
     }
 
     /// **Checks if the current token is of the expected type.**
-    fn expect_token(&mut self, token_type: Tokens) -> bool {
+    fn expect_token(&mut self, token_type: Tokens) -> ParseResult<()> {
         if self.current_token.token_type == token_type {
             self.next_token();
 
-            true
+            Ok(())
         } else {
-            self.errors.push(parsing_error! { self; EXPECTED_NEXT_TOKEN; token_type, self.current_token.token_type });
-
-            false
+            Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; token_type, self.current_token.token_type },
+            )
         }
     }
 
@@ -187,13 +189,24 @@ impl ParserTrait for Parser {
     /// * `x: T`:        `Identifier("T")`
     /// * `x: T[]`:      `Array(Identifier("T"))`
     /// * `x: T<U, V>`:  `Generic(Identifier("T"), [Identifier("U"), Identifier("V")])`
+    /// * `x: fn(number, string) -> boolean`: `Function([Number, String], Boolean)`
     fn parse_data_type(&mut self) -> ParseResult<DataType> {
+        let result = self.parse_data_type_without_next();
+        self.next_token();
+        result
+    }
+
+    /// **Parses a data type.**
+    ///
+    /// extends `parse_data_type` by not advancing the current token.
+    fn parse_data_type_without_next(&mut self) -> ParseResult<DataType> {
         let mut data_type = match self.current_token.token_type {
             Tokens::NumberType => Ok(DataType::Number),
             Tokens::StringType => Ok(DataType::String),
             Tokens::BooleanType => Ok(DataType::Boolean),
             Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
-            Tokens::HashType | Tokens::Function => unimplemented!(),
+            Tokens::Function => Ok(DataType::Fn(self.parse_function_type()?)),
+            Tokens::HashType => unimplemented!(),
             _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
         };
 
@@ -219,27 +232,54 @@ impl ParserTrait for Parser {
         data_type
     }
 
+    /// **Parses a function type.**
+    ///
+    /// * `fn(number, string) -> boolean`: `Function([Number, String], Boolean)`
+    fn parse_function_type(&mut self) -> ParseResult<FunctionType> {
+        let mut parameters = Vec::new();
+        self.next_token();
+
+        self.expect_token(Tokens::LParen)?;
+
+        while self.current_token.token_type != Tokens::RParen {
+            parameters.push(self.parse_data_type()?);
+
+            if self.current_token.token_type == Tokens::RParen {
+                break;
+            }
+
+            self.expect_token(Tokens::Comma)?;
+        }
+
+        self.expect_token(Tokens::RParen)?;
+        self.expect_token(Tokens::Arrow)?;
+
+        let return_type = self.parse_data_type_without_next()?;
+
+        Ok(FunctionType::new(parameters, return_type))
+    }
+
     /// **Parses a generic type.**
     ///
     /// `T<U[], V>`: `Generic(Identifier("T"), [Array(Identifier("U")), Identifier("V")])`
     fn parse_generic(&mut self) -> ParseResult<Generic> {
         let ident = ident! { self };
-
         self.next_token();
 
         let mut generics = Vec::new();
 
-        self.expect_token(Tokens::LT);
+        self.expect_token(Tokens::LT)?;
 
         while self.current_token.token_type != Tokens::GT {
             let data_type = self.parse_data_type()?;
-            self.next_token();
 
             generics.push(data_type);
 
-            if self.current_token.token_type == Tokens::Comma {
-                self.next_token();
+            if self.current_token.token_type == Tokens::GT {
+                break;
             }
+
+            self.expect_token(Tokens::Comma)?;
         }
 
         Ok(Generic::new(DataType::Custom(ident), generics))
@@ -251,18 +291,19 @@ impl ParserTrait for Parser {
     fn parse_generic_identifier(&mut self) -> ParseResult<Vec<Identifier>> {
         let mut generics = Vec::new();
 
-        self.expect_token(Tokens::LT);
+        self.expect_token(Tokens::LT)?;
 
         while self.current_token.token_type != Tokens::GT {
             let ident = ident! { self };
-
             self.next_token();
 
             generics.push(Identifier::new(ident, position! { self }));
 
-            if self.current_token.token_type == Tokens::Comma {
-                self.next_token();
+            if self.current_token.token_type == Tokens::GT {
+                break;
             }
+
+            self.expect_token(Tokens::Comma)?;
         }
 
         Ok(generics)
@@ -278,12 +319,11 @@ impl ParserTrait for Parser {
         let ident = Identifier::new(ident! { self }.clone(), position! { self });
         self.next_token();
 
-        self.expect_token(Tokens::Colon);
+        self.expect_token(Tokens::Colon)?;
 
         let data_type = self.parse_data_type()?;
-        self.next_token();
 
-        self.expect_token(Tokens::Assign);
+        self.expect_token(Tokens::Assign)?;
 
         if let Ok(expression) = self.parse_expression(Priority::Lowest) {
             return if self.peek_token(Tokens::Semicolon) {
@@ -343,22 +383,20 @@ impl ParserTrait for Parser {
         };
         self.next_token();
 
-        self.expect_token(Tokens::Assign);
+        self.expect_token(Tokens::Assign)?;
 
         let data_type = self.parse_data_type()?;
 
-        if self.peek_token(Tokens::Semicolon) {
-            self.next_token();
-            return Ok(Stmt::TypeStatement(TypeStatement::new(
+        return if let Err(e) = self.expect_token(Tokens::Semicolon) {
+            Err(e)
+        } else {
+            Ok(Stmt::TypeStatement(TypeStatement::new(
                 data_type,
                 Identifier::new(ident, position.clone()),
                 generics,
                 position,
-            )));
-        }
-        Err(
-            parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
-        )
+            )))
+        };
     }
 
     /// **Parses an expression statement.**
@@ -381,28 +419,30 @@ impl ParserTrait for Parser {
 
     /// **Parses an expression.**
     fn parse_expression(&mut self, priority: Priority) -> ParseResult<Expression> {
-        let mut left_expression = match self.current_token.token_type.clone() {
-            Tokens::IDENT(ident) => Ok(Expr::Identifier(Identifier::new(
+        let left_expression = match self.current_token.token_type.clone() {
+            Tokens::IDENT(ident) => Some(Ok(Expr::Identifier(Identifier::new(
                 ident.clone(),
                 position! { self },
-            ))),
-            Tokens::Number(number) => Ok(Expr::NumberLiteral(NumberLiteral::new(
+            )))),
+            Tokens::Number(number) => Some(Ok(Expr::NumberLiteral(NumberLiteral::new(
                 number,
                 position! { self },
-            ))),
-            Tokens::String(string) => Ok(Expr::StringLiteral(StringLiteral::new(
+            )))),
+            Tokens::String(string) => Some(Ok(Expr::StringLiteral(StringLiteral::new(
                 string,
                 position! { self },
-            ))),
-            Tokens::Boolean(boolean) => Ok(Expr::BooleanLiteral(BooleanLiteral::new(
+            )))),
+            Tokens::Boolean(boolean) => Some(Ok(Expr::BooleanLiteral(BooleanLiteral::new(
                 boolean,
                 position! { self },
-            ))),
-            Tokens::Bang | Tokens::Minus => Ok(Expr::PrefixExpression(PrefixExpression::new(
-                self.current_token.token_type.clone(),
-                Box::new(self.parse_expression(Priority::Prefix)?),
-                position! { self },
-            ))),
+            )))),
+            Tokens::Bang | Tokens::Minus => {
+                Some(Ok(Expr::PrefixExpression(PrefixExpression::new(
+                    self.current_token.token_type.clone(),
+                    Box::new(self.parse_expression(Priority::Prefix)?),
+                    position! { self },
+                ))))
+            }
             Tokens::LParen => {
                 self.next_token();
 
@@ -415,26 +455,28 @@ impl ParserTrait for Parser {
                     );
                 }
 
-                expression
+                Some(expression)
             }
             Tokens::If | Tokens::Function | Tokens::LBracket | Tokens::LBrace => unimplemented!(),
-            _ => Err(parsing_error! { self; EXPECTED_EXPRESSION; self.current_token.token_type }),
+            _ => None,
         };
 
-        if let Err(e) = left_expression {
+        if let None = left_expression {
             if self.current_token.token_type != Tokens::Semicolon {
                 return Err(
                     parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type },
                 );
             }
-
-            return Err(e);
         }
+
+        let mut left_expression = left_expression.ok_or_else(
+            || parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type },
+        )?;
 
         while !self.peek_token(Tokens::Semicolon) && priority < self.peek_priority() {
             self.next_token();
 
-            left_expression = match self.current_token.token_type.clone() {
+            left_expression = match self.current_token.token_type {
                 Tokens::Plus
                 | Tokens::Minus
                 | Tokens::Slash
@@ -445,7 +487,10 @@ impl ParserTrait for Parser {
                 | Tokens::GT => Ok(Expr::InfixExpression(InfixExpression::new(
                     Box::new(left_expression?),
                     self.current_token.token_type.clone(),
-                    Box::new(self.parse_expression(self.current_priority())?),
+                    {
+                        self.next_token();
+                        Box::new(self.parse_expression(self.current_priority())?)
+                    },
                     position! { self },
                 ))),
                 Tokens::LParen | Tokens::LBracket => unimplemented!(),
