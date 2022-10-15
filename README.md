@@ -23,7 +23,7 @@ this may not be observed. (No, most likely. D:) however, we strive to provide be
 # Progress
 
 -   [x] Tokenizer (Tokens + Lexer)
--   [ ] Parser (AST)
+-   [ ] Parser (AST) **(in progress)**
 -   [ ] Compiler (Bytecode)
 -   [ ] Interpreter (VM)
 -   [ ] Plugin (Transcompiler)
