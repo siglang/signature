@@ -210,9 +210,9 @@ impl LexerTrait for Lexer {
 
         let token = match_token! {
             '+' => Plus,
-            '-' => Minus,
             '*' => Asterisk,
             '/' => Slash,
+            '%' => Percent,
             '<' => LT,
             '>' => GT,
             ',' => Comma,
@@ -225,6 +225,7 @@ impl LexerTrait for Lexer {
             '[' => LBracket,
             ']' => RBracket,
             '"' => String(self.read_string()),
+            '-' => next!('>' => Arrow; Minus),
             '=' => next!('=' => EQ; Assign),
             '!' => next!('=' => NEQ; Bang),
             '\0' => EOF
