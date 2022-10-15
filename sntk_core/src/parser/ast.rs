@@ -16,7 +16,7 @@ pub struct Program {
 /// * `return` statement (`return value;`)
 /// * `block` statement (`{ statements }`)
 /// * `expression` statement (`value;`)
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Statement {
     LetStatement(LetStatement),
     ReturnStatement(ReturnStatement),
@@ -28,7 +28,7 @@ pub enum Statement {
 /// `value` in Statement corresponds to Expression.
 ///
 /// when expression ends, a semicolon (`;`) is required.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
     /// `ident`: it is an identifier, not a keyword, such as a variable name.
     Identifier(Identifier),
@@ -70,8 +70,17 @@ pub enum DataType {
     Array(Box<DataType>),
     Hash(Box<DataType>, Box<DataType>),
     Fn(Vec<DataType>, Box<DataType>),
-    Generic(Box<DataType>, Box<DataType>),
+    Generic(Generic),
     Custom(String),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Generic(Box<DataType>, Vec<DataType>);
+
+impl Generic {
+    pub fn new(data_type: DataType, generic_types: Vec<DataType>) -> Self {
+        Generic(Box::new(data_type), generic_types)
+    }
 }
 
 /// The Position structure is to indicate the exact position of the error message.
@@ -87,7 +96,7 @@ impl Position {
 
 macro_rules! make_struct {
     ($name:ident => $( $field:ident: $type:ty ),*) => {
-        #[derive(Debug, PartialEq)]
+        #[derive(Debug, PartialEq, Clone)]
         pub struct $name {
             $( pub $field: $type, )*
             pub position: Position
@@ -100,7 +109,7 @@ macro_rules! make_struct {
         }
     };
     (@data_type $name:ident => $( $field:ident: $type:ty ),*) => {
-        #[derive(Debug, PartialEq)]
+        #[derive(Debug, PartialEq, Clone)]
         pub struct $name {
             $( pub $field: $type, )*
             pub data_type: DataType,
