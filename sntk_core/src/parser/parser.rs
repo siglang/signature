@@ -101,14 +101,7 @@ impl ParserBase for Parser {
 
             true
         } else {
-            self.errors.push(ParsingError::new(
-                EXPECTED_NEXT_TOKEN,
-                vec![
-                    &token_type.stringify(),
-                    &self.current_token.token_type.stringify(),
-                ],
-                position! { self },
-            ));
+            self.errors.push(parsing_error! { self; EXPECTED_NEXT_TOKEN; token_type, self.current_token.token_type });
 
             false
         }
@@ -201,11 +194,7 @@ impl ParserTrait for Parser {
             Tokens::BooleanType => Ok(DataType::Boolean),
             Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
             Tokens::HashType | Tokens::Function => unimplemented!(),
-            _ => Err(ParsingError::new(
-                UNEXPECTED_TOKEN,
-                vec![&self.current_token.token_type.stringify()],
-                position! { self },
-            )),
+            _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
         };
 
         if self.peek_token(Tokens::LT) {
@@ -219,14 +208,9 @@ impl ParserTrait for Parser {
             self.next_token();
 
             if self.current_token.token_type != Tokens::RBracket {
-                return Err(ParsingError::new(
-                    EXPECTED_NEXT_TOKEN,
-                    vec![
-                        &Tokens::RBracket.stringify(),
-                        &self.current_token.token_type.stringify(),
-                    ],
-                    position! { self },
-                ));
+                return Err(
+                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBracket, self.current_token.token_type },
+                );
             }
 
             data_type = data_type.map(|t| DataType::Array(Box::new(t)));
@@ -294,16 +278,7 @@ impl ParserTrait for Parser {
         let ident = Identifier::new(ident! { self }.clone(), position! { self });
         self.next_token();
 
-        if !self.expect_token(Tokens::Colon) {
-            return Err(ParsingError::new(
-                EXPECTED_NEXT_TOKEN,
-                vec![
-                    &Tokens::Colon.stringify(),
-                    &self.current_token.token_type.stringify(),
-                ],
-                position! { self },
-            ));
-        }
+        self.expect_token(Tokens::Colon);
 
         let data_type = self.parse_data_type()?;
         self.next_token();
@@ -318,22 +293,13 @@ impl ParserTrait for Parser {
                     data_type, ident, expression, position,
                 )))
             } else {
-                Err(ParsingError::new(
-                    EXPECTED_NEXT_TOKEN,
-                    vec![
-                        &Tokens::Semicolon.stringify(),
-                        &self.current_token.token_type.stringify(),
-                    ],
-                    position! { self },
-                ))
+                Err(
+                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+                )
             };
         }
 
-        Err(ParsingError::new(
-            UNEXPECTED_TOKEN,
-            vec![&self.current_token.token_type.stringify()],
-            position! { self },
-        ))
+        Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type })
     }
 
     /// **Parses a return statement.**
@@ -344,28 +310,20 @@ impl ParserTrait for Parser {
         self.next_token();
 
         if let Ok(expression) = self.parse_expression(Priority::Lowest) {
-            if self.peek_token(Tokens::Semicolon) {
+            return if self.peek_token(Tokens::Semicolon) {
                 self.next_token();
-                return Ok(Stmt::ReturnStatement(ReturnStatement::new(
+
+                Ok(Stmt::ReturnStatement(ReturnStatement::new(
                     expression, position,
-                )));
+                )))
             } else {
-                return Err(ParsingError::new(
-                    EXPECTED_NEXT_TOKEN,
-                    vec![
-                        &Tokens::Semicolon.stringify(),
-                        &self.current_token.token_type.stringify(),
-                    ],
-                    position! { self },
-                ));
-            }
+                Err(
+                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+                )
+            };
         }
 
-        Err(ParsingError::new(
-            EXPECTED_EXPRESSION,
-            vec![&self.current_token.token_type.stringify()],
-            position! { self },
-        ))
+        Err(parsing_error! { self; EXPECTED_EXPRESSION; self.current_token.token_type })
     }
 
     /// **Parses a type statement.**
@@ -398,14 +356,9 @@ impl ParserTrait for Parser {
                 position,
             )));
         }
-        Err(ParsingError::new(
-            EXPECTED_NEXT_TOKEN,
-            vec![
-                &Tokens::Semicolon.stringify(),
-                &self.current_token.token_type.stringify(),
-            ],
-            position! { self },
-        ))
+        Err(
+            parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+        )
     }
 
     /// **Parses an expression statement.**
@@ -420,14 +373,9 @@ impl ParserTrait for Parser {
                 position! { self },
             )))
         } else {
-            Err(ParsingError::new(
-                EXPECTED_NEXT_TOKEN,
-                vec![
-                    &Tokens::Semicolon.stringify(),
-                    &self.current_token.token_type.stringify(),
-                ],
-                position! { self },
-            ))
+            Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+            )
         }
     }
 
@@ -462,34 +410,22 @@ impl ParserTrait for Parser {
                 self.next_token();
 
                 if self.current_token.token_type != Tokens::RParen {
-                    return Err(ParsingError::new(
-                        EXPECTED_NEXT_TOKEN,
-                        vec![
-                            &Tokens::RParen.stringify(),
-                            &self.current_token.token_type.stringify(),
-                        ],
-                        position! { self },
-                    ));
+                    return Err(
+                        parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RParen, self.current_token.token_type },
+                    );
                 }
 
                 expression
             }
             Tokens::If | Tokens::Function | Tokens::LBracket | Tokens::LBrace => unimplemented!(),
-            _ => Err(ParsingError::new(
-                EXPECTED_EXPRESSION,
-                vec![&self.current_token.token_type.stringify()],
-                position! { self },
-            )),
+            _ => Err(parsing_error! { self; EXPECTED_EXPRESSION; self.current_token.token_type }),
         };
 
         if let Err(e) = left_expression {
             if self.current_token.token_type != Tokens::Semicolon {
-                // self.errors.push(format!("unexpected token: {:?}", self.current_token.token_type));
-                self.errors.push(ParsingError::new(
-                    UNEXPECTED_TOKEN,
-                    vec![&self.current_token.token_type.stringify()],
-                    position! { self },
-                ));
+                return Err(
+                    parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type },
+                );
             }
 
             return Err(e);
@@ -513,11 +449,7 @@ impl ParserTrait for Parser {
                     position! { self },
                 ))),
                 Tokens::LParen | Tokens::LBracket => unimplemented!(),
-                _ => Err(ParsingError::new(
-                    UNEXPECTED_TOKEN,
-                    vec![&self.current_token.token_type.stringify()],
-                    position! { self },
-                )),
+                _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
             };
         }
 
