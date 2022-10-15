@@ -1,3 +1,5 @@
+use std::fmt::*;
+
 /// An enumeration of tokens, which are the basic units of that make up a language.
 #[derive(Debug, PartialEq, Clone)]
 #[rustfmt::skip]
@@ -17,6 +19,35 @@ pub enum Tokens {
     Let, If, Else, Return, Function, Type,
 
     NumberType, StringType, BooleanType, /* ArrayType = type[] */ HashType, /* FnType = Function */
+}
+
+impl<T> From<T> for Tokens
+where
+    T: Into<String>,
+{
+    fn from(s: T) -> Self {
+        match s.into().as_str() {
+            "let" => Tokens::Let,
+            "if" => Tokens::If,
+            "else" => Tokens::Else,
+            "return" => Tokens::Return,
+            "fn" => Tokens::Function,
+            "true" => Tokens::Boolean(true),
+            "false" => Tokens::Boolean(false),
+            "number" => Tokens::NumberType,
+            "string" => Tokens::StringType,
+            "boolean" => Tokens::BooleanType,
+            "hash" => Tokens::HashType,
+            "type" => Tokens::Type,
+            s => Tokens::IDENT(s.to_string()),
+        }
+    }
+}
+
+impl Display for Tokens {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "{}", self.stringify())
+    }
 }
 
 impl Tokens {
@@ -48,32 +79,9 @@ impl Default for Token {
     }
 }
 
-impl std::fmt::Display for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "Token {:?} at {:?}", self.token_type, self.position)
-    }
-}
-
-impl<T> From<T> for Tokens
-where
-    T: Into<String>,
-{
-    fn from(s: T) -> Self {
-        match s.into().as_str() {
-            "let" => Tokens::Let,
-            "if" => Tokens::If,
-            "else" => Tokens::Else,
-            "return" => Tokens::Return,
-            "fn" => Tokens::Function,
-            "true" => Tokens::Boolean(true),
-            "false" => Tokens::Boolean(false),
-            "number" => Tokens::NumberType,
-            "string" => Tokens::StringType,
-            "boolean" => Tokens::BooleanType,
-            "hash" => Tokens::HashType,
-            "type" => Tokens::Type,
-            s => Tokens::IDENT(s.to_string()),
-        }
     }
 }
 
