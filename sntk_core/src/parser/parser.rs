@@ -44,7 +44,7 @@ pub trait TypeParser {
 /// ```rust
 /// use sntk_core::parser::parser::*;
 ///
-/// let parsed = Parser::from("let x = 10;").parse_program();
+/// let parsed = Parser::from(r#"type X<T, U> = fn(T, U[]) -> object T: U;"#).parse_program();
 /// println!("{parsed:#?}");
 /// ```
 #[derive(Debug)]
