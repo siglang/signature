@@ -32,13 +32,13 @@ where
             "else" => Tokens::Else,
             "return" => Tokens::Return,
             "fn" => Tokens::Function,
+            "type" => Tokens::Type,
             "true" => Tokens::Boolean(true),
             "false" => Tokens::Boolean(false),
             "number" => Tokens::NumberType,
             "string" => Tokens::StringType,
             "boolean" => Tokens::BooleanType,
             "object" => Tokens::ObjectType,
-            "type" => Tokens::Type,
             s => Tokens::IDENT(s.to_string()),
         }
     }
