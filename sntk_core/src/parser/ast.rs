@@ -74,6 +74,9 @@ pub enum DataType {
     Custom(String),
 }
 
+/// `<T, U, V>`: a generic type. `T`, `U` and `V` are identifiers.
+pub type IdentifierGeneric = Vec<Identifier>;
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectType(Box<DataType>, Box<DataType>);
 
@@ -84,11 +87,15 @@ impl ObjectType {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct FunctionType(Vec<DataType>, Box<DataType>);
+pub struct FunctionType(Option<IdentifierGeneric>, Vec<DataType>, Box<DataType>);
 
 impl FunctionType {
-    pub fn new(parameters: Vec<DataType>, return_type: DataType) -> Self {
-        FunctionType(parameters, Box::new(return_type))
+    pub fn new(
+        generics: Option<IdentifierGeneric>,
+        parameters: Vec<DataType>,
+        return_type: DataType,
+    ) -> Self {
+        FunctionType(generics, parameters, Box::new(return_type))
     }
 }
 
@@ -143,7 +150,7 @@ macro_rules! make_struct {
 }
 
 make_struct! { @data_type LetStatement => name: Identifier, value: Expression }
-make_struct! { @data_type TypeStatement => name: Identifier, generics: Vec<Identifier> }
+make_struct! { @data_type TypeStatement => name: Identifier, generics: IdentifierGeneric }
 make_struct! { ReturnStatement => return_value: Expression }
 make_struct! { ExpressionStatement => expression: Expression }
 make_struct! { BlockExpression => statements: Vec<Statement> }
@@ -153,7 +160,7 @@ make_struct! { PrefixExpression => operator: Tokens, right: Box<Expression> }
 make_struct! { InfixExpression => left: Box<Expression>, operator: Tokens, right: Box<Expression> }
 make_struct! { BooleanLiteral => value: bool }
 make_struct! { IfExpression => condition: Box<Expression>, consequence: BlockExpression, alternative: Option<BlockExpression> }
-make_struct! { FunctionLiteral => parameters: Vec<Identifier>, body: BlockExpression }
+make_struct! { FunctionLiteral => generics: Option<IdentifierGeneric>, parameters: Vec<(Identifier, DataType)>, return_type: DataType, body: BlockExpression }
 make_struct! { CallExpression => function: Box<Expression>, arguments: Vec<Expression> }
 make_struct! { StringLiteral => value: String }
 make_struct! { ArrayLiteral => elements: Vec<Expression> }
