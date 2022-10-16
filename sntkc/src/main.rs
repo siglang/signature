@@ -16,8 +16,5 @@ fn main() {
         Parser::from(r#"type X<T, U> = fn(T, U[]) -> string;"#).parse_program()
     );
 
-    println!(
-        "{:#?}",
-        Parser::from(r#"type MyHash<T, U> = hash T: U;"#).parse_program()
-    );
+    println!("{:#?}", Parser::from(r#"[1, 2, 3];"#).parse_program());
 }
