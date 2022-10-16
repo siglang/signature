@@ -1,7 +1,4 @@
-use super::{
-    ast::{Expression as Expr, Statement as Stmt, *},
-    error::*,
-};
+use super::{ast::*, error::*};
 use crate::{
     tokenizer::{lexer::*, token::*},
     *,
@@ -19,19 +16,22 @@ pub trait ParserBase {
     fn current_priority(&self) -> Priority;
 }
 
-pub trait ParserTrait: ParserBase {
+pub trait ParserTrait {
     fn parse_program(&mut self) -> Program;
     fn parse_statement(&mut self) -> ParseResult<Statement>;
-    fn parse_data_type(&mut self) -> ParseResult<DataType>;
-    fn parse_data_type_without_next(&mut self) -> ParseResult<DataType>;
-    fn parse_function_type(&mut self) -> ParseResult<FunctionType>;
-    fn parse_generic(&mut self) -> ParseResult<Generic>;
-    fn parse_generic_identifier(&mut self) -> ParseResult<Vec<Identifier>>;
     fn parse_let_statement(&mut self) -> ParseResult<Statement>;
     fn parse_return_statement(&mut self) -> ParseResult<Statement>;
     fn parse_type_statement(&mut self) -> ParseResult<Statement>;
     fn parse_expression_statement(&mut self) -> ParseResult<Statement>;
     fn parse_expression(&mut self, precedence: Priority) -> ParseResult<Expression>;
+}
+
+pub trait TypeParser {
+    fn parse_data_type(&mut self) -> ParseResult<DataType>;
+    fn parse_data_type_without_next(&mut self) -> ParseResult<DataType>;
+    fn parse_function_type(&mut self) -> ParseResult<FunctionType>;
+    fn parse_generic(&mut self) -> ParseResult<Generic>;
+    fn parse_generic_identifier(&mut self) -> ParseResult<Vec<Identifier>>;
 }
 
 /// **Parses the input string into an AST.**
@@ -181,6 +181,203 @@ impl ParserTrait for Parser {
         }
     }
 
+    /// **Parses a let statement.**
+    ///
+    /// `let ident: type = expr;`
+    fn parse_let_statement(&mut self) -> ParseResult<Statement> {
+        let position = position! { self };
+        self.next_token();
+
+        let ident = Identifier::new(ident! { self }.clone(), position! { self });
+        self.next_token();
+
+        self.expect_token(Tokens::Colon)?;
+
+        let data_type = self.parse_data_type()?;
+
+        self.expect_token(Tokens::Assign)?;
+
+        if let Ok(expression) = self.parse_expression(Priority::Lowest) {
+            return if self.peek_token(Tokens::Semicolon) {
+                self.next_token();
+
+                Ok(Statement::LetStatement(LetStatement::new(
+                    data_type, ident, expression, position,
+                )))
+            } else {
+                Err(
+                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+                )
+            };
+        }
+
+        Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type })
+    }
+
+    /// **Parses a return statement.**
+    ///
+    /// `return expr;`
+    fn parse_return_statement(&mut self) -> ParseResult<Statement> {
+        let position = position! { self };
+        self.next_token();
+
+        if let Ok(expression) = self.parse_expression(Priority::Lowest) {
+            return if self.peek_token(Tokens::Semicolon) {
+                self.next_token();
+
+                Ok(Statement::ReturnStatement(ReturnStatement::new(
+                    expression, position,
+                )))
+            } else {
+                Err(
+                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+                )
+            };
+        }
+
+        Err(parsing_error! { self; EXPECTED_EXPRESSION; self.current_token.token_type })
+    }
+
+    /// **Parses a type statement.**
+    ///
+    /// `type <ident><generics?> = <type>;`
+    fn parse_type_statement(&mut self) -> ParseResult<Statement> {
+        let position = position! { self };
+        self.next_token();
+
+        let ident = ident! { self };
+        self.next_token();
+
+        let generics = if self.current_token.token_type == Tokens::LT {
+            self.parse_generic_identifier()?
+        } else {
+            Vec::new()
+        };
+        self.next_token();
+
+        self.expect_token(Tokens::Assign)?;
+
+        let data_type = self.parse_data_type()?;
+
+        return if let Err(e) = self.expect_token(Tokens::Semicolon) {
+            Err(e)
+        } else {
+            Ok(Statement::TypeStatement(TypeStatement::new(
+                data_type,
+                Identifier::new(ident, position.clone()),
+                generics,
+                position,
+            )))
+        };
+    }
+
+    /// **Parses an expression statement.**
+    fn parse_expression_statement(&mut self) -> ParseResult<Statement> {
+        let expression = self.parse_expression(Priority::Lowest)?;
+
+        if self.peek_token(Tokens::Semicolon) {
+            self.next_token();
+
+            Ok(Statement::ExpressionStatement(ExpressionStatement::new(
+                expression,
+                position! { self },
+            )))
+        } else {
+            Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+            )
+        }
+    }
+
+    /// **Parses an expression.**
+    fn parse_expression(&mut self, priority: Priority) -> ParseResult<Expression> {
+        let left_expression = match self.current_token.token_type.clone() {
+            Tokens::IDENT(ident) => Some(Ok(Expression::Identifier(Identifier::new(
+                ident.clone(),
+                position! { self },
+            )))),
+            Tokens::Number(number) => Some(Ok(Expression::NumberLiteral(NumberLiteral::new(
+                number,
+                position! { self },
+            )))),
+            Tokens::String(string) => Some(Ok(Expression::StringLiteral(StringLiteral::new(
+                string,
+                position! { self },
+            )))),
+            Tokens::Boolean(boolean) => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(
+                boolean,
+                position! { self },
+            )))),
+            Tokens::Bang | Tokens::Minus => {
+                Some(Ok(Expression::PrefixExpression(PrefixExpression::new(
+                    self.current_token.token_type.clone(),
+                    Box::new(self.parse_expression(Priority::Prefix)?),
+                    position! { self },
+                ))))
+            }
+            Tokens::LParen => {
+                self.next_token();
+
+                let expression = self.parse_expression(Priority::Lowest);
+                self.next_token();
+
+                if self.current_token.token_type != Tokens::RParen {
+                    return Err(
+                        parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RParen, self.current_token.token_type },
+                    );
+                }
+
+                Some(expression)
+            }
+            Tokens::If | Tokens::Function | Tokens::LBracket | Tokens::LBrace => unimplemented!(),
+            _ => None,
+        };
+
+        if let None = left_expression {
+            if self.current_token.token_type != Tokens::Semicolon {
+                return Err(
+                    parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type },
+                );
+            }
+        }
+
+        let mut left_expression = left_expression.ok_or_else(
+            || parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type },
+        )?;
+
+        while !self.peek_token(Tokens::Semicolon) && priority < self.peek_priority() {
+            self.next_token();
+
+            left_expression = match self.current_token.token_type {
+                Tokens::Plus
+                | Tokens::Minus
+                | Tokens::Slash
+                | Tokens::Asterisk
+                | Tokens::Percent
+                | Tokens::EQ
+                | Tokens::NEQ
+                | Tokens::LT
+                | Tokens::GT
+                | Tokens::LTE
+                | Tokens::GTE => Ok(Expression::InfixExpression(InfixExpression::new(
+                    Box::new(left_expression?),
+                    self.current_token.token_type.clone(),
+                    {
+                        self.next_token();
+                        Box::new(self.parse_expression(self.current_priority())?)
+                    },
+                    position! { self },
+                ))),
+                Tokens::LParen | Tokens::LBracket => unimplemented!(),
+                _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
+            };
+        }
+
+        left_expression
+    }
+}
+
+impl TypeParser for Parser {
     /// **Parses a data type.**
     ///
     /// * `x: number`:   `Number`
@@ -307,200 +504,5 @@ impl ParserTrait for Parser {
         }
 
         Ok(generics)
-    }
-
-    /// **Parses a let statement.**
-    ///
-    /// `let ident: type = expr;`
-    fn parse_let_statement(&mut self) -> ParseResult<Statement> {
-        let position = position! { self };
-        self.next_token();
-
-        let ident = Identifier::new(ident! { self }.clone(), position! { self });
-        self.next_token();
-
-        self.expect_token(Tokens::Colon)?;
-
-        let data_type = self.parse_data_type()?;
-
-        self.expect_token(Tokens::Assign)?;
-
-        if let Ok(expression) = self.parse_expression(Priority::Lowest) {
-            return if self.peek_token(Tokens::Semicolon) {
-                self.next_token();
-
-                Ok(Stmt::LetStatement(LetStatement::new(
-                    data_type, ident, expression, position,
-                )))
-            } else {
-                Err(
-                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
-                )
-            };
-        }
-
-        Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type })
-    }
-
-    /// **Parses a return statement.**
-    ///
-    /// `return expr;`
-    fn parse_return_statement(&mut self) -> ParseResult<Statement> {
-        let position = position! { self };
-        self.next_token();
-
-        if let Ok(expression) = self.parse_expression(Priority::Lowest) {
-            return if self.peek_token(Tokens::Semicolon) {
-                self.next_token();
-
-                Ok(Stmt::ReturnStatement(ReturnStatement::new(
-                    expression, position,
-                )))
-            } else {
-                Err(
-                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
-                )
-            };
-        }
-
-        Err(parsing_error! { self; EXPECTED_EXPRESSION; self.current_token.token_type })
-    }
-
-    /// **Parses a type statement.**
-    ///
-    /// `type <ident><generics?> = <type>;`
-    fn parse_type_statement(&mut self) -> ParseResult<Statement> {
-        let position = position! { self };
-        self.next_token();
-
-        let ident = ident! { self };
-        self.next_token();
-
-        let generics = if self.current_token.token_type == Tokens::LT {
-            self.parse_generic_identifier()?
-        } else {
-            Vec::new()
-        };
-        self.next_token();
-
-        self.expect_token(Tokens::Assign)?;
-
-        let data_type = self.parse_data_type()?;
-
-        return if let Err(e) = self.expect_token(Tokens::Semicolon) {
-            Err(e)
-        } else {
-            Ok(Stmt::TypeStatement(TypeStatement::new(
-                data_type,
-                Identifier::new(ident, position.clone()),
-                generics,
-                position,
-            )))
-        };
-    }
-
-    /// **Parses an expression statement.**
-    fn parse_expression_statement(&mut self) -> ParseResult<Statement> {
-        let expression = self.parse_expression(Priority::Lowest)?;
-
-        if self.peek_token(Tokens::Semicolon) {
-            self.next_token();
-
-            Ok(Stmt::ExpressionStatement(ExpressionStatement::new(
-                expression,
-                position! { self },
-            )))
-        } else {
-            Err(
-                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
-            )
-        }
-    }
-
-    /// **Parses an expression.**
-    fn parse_expression(&mut self, priority: Priority) -> ParseResult<Expression> {
-        let left_expression = match self.current_token.token_type.clone() {
-            Tokens::IDENT(ident) => Some(Ok(Expr::Identifier(Identifier::new(
-                ident.clone(),
-                position! { self },
-            )))),
-            Tokens::Number(number) => Some(Ok(Expr::NumberLiteral(NumberLiteral::new(
-                number,
-                position! { self },
-            )))),
-            Tokens::String(string) => Some(Ok(Expr::StringLiteral(StringLiteral::new(
-                string,
-                position! { self },
-            )))),
-            Tokens::Boolean(boolean) => Some(Ok(Expr::BooleanLiteral(BooleanLiteral::new(
-                boolean,
-                position! { self },
-            )))),
-            Tokens::Bang | Tokens::Minus => {
-                Some(Ok(Expr::PrefixExpression(PrefixExpression::new(
-                    self.current_token.token_type.clone(),
-                    Box::new(self.parse_expression(Priority::Prefix)?),
-                    position! { self },
-                ))))
-            }
-            Tokens::LParen => {
-                self.next_token();
-
-                let expression = self.parse_expression(Priority::Lowest);
-                self.next_token();
-
-                if self.current_token.token_type != Tokens::RParen {
-                    return Err(
-                        parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RParen, self.current_token.token_type },
-                    );
-                }
-
-                Some(expression)
-            }
-            Tokens::If | Tokens::Function | Tokens::LBracket | Tokens::LBrace => unimplemented!(),
-            _ => None,
-        };
-
-        if let None = left_expression {
-            if self.current_token.token_type != Tokens::Semicolon {
-                return Err(
-                    parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type },
-                );
-            }
-        }
-
-        let mut left_expression = left_expression.ok_or_else(
-            || parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type },
-        )?;
-
-        while !self.peek_token(Tokens::Semicolon) && priority < self.peek_priority() {
-            self.next_token();
-
-            left_expression = match self.current_token.token_type {
-                Tokens::Plus
-                | Tokens::Minus
-                | Tokens::Slash
-                | Tokens::Asterisk
-                | Tokens::Percent
-                | Tokens::EQ
-                | Tokens::NEQ
-                | Tokens::LT
-                | Tokens::GT
-                | Tokens::LTE
-                | Tokens::GTE => Ok(Expr::InfixExpression(InfixExpression::new(
-                    Box::new(left_expression?),
-                    self.current_token.token_type.clone(),
-                    {
-                        self.next_token();
-                        Box::new(self.parse_expression(self.current_priority())?)
-                    },
-                    position! { self },
-                ))),
-                Tokens::LParen | Tokens::LBracket => unimplemented!(),
-                _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
-            };
-        }
-
-        left_expression
     }
 }
