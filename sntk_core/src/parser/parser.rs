@@ -24,14 +24,16 @@ pub trait ParserTrait {
     fn parse_type_statement(&mut self) -> ParseResult<Statement>;
     fn parse_expression_statement(&mut self) -> ParseResult<Statement>;
     fn parse_expression(&mut self, precedence: Priority) -> ParseResult<Expression>;
+    fn parse_block_expression(&mut self) -> ParseResult<BlockExpression>;
     fn parse_array_literal(&mut self) -> ParseResult<ArrayLiteral>;
+    fn parse_object_literal(&mut self) -> ParseResult<ObjectLiteral>;
 }
 
 pub trait TypeParser {
     fn parse_data_type(&mut self) -> ParseResult<DataType>;
     fn parse_data_type_without_next(&mut self) -> ParseResult<DataType>;
     fn parse_function_type(&mut self) -> ParseResult<FunctionType>;
-    fn parse_hash_type(&mut self) -> ParseResult<HashType>;
+    fn parse_object_type(&mut self) -> ParseResult<ObjectType>;
     fn parse_generic(&mut self) -> ParseResult<Generic>;
     fn parse_generic_identifier(&mut self) -> ParseResult<Vec<Identifier>>;
 }
@@ -187,7 +189,6 @@ impl ParserTrait for Parser {
     ///
     /// `let ident: type = expr;`
     fn parse_let_statement(&mut self) -> ParseResult<Statement> {
-        let position = position! { self };
         self.next_token();
 
         let ident = Identifier::new(ident! { self }.clone(), position! { self });
@@ -204,7 +205,10 @@ impl ParserTrait for Parser {
                 self.next_token();
 
                 Ok(Statement::LetStatement(LetStatement::new(
-                    data_type, ident, expression, position,
+                    data_type,
+                    ident,
+                    expression,
+                    position! { self },
                 )))
             } else {
                 Err(
@@ -220,7 +224,6 @@ impl ParserTrait for Parser {
     ///
     /// `return expr;`
     fn parse_return_statement(&mut self) -> ParseResult<Statement> {
-        let position = position! { self };
         self.next_token();
 
         if let Ok(expression) = self.parse_expression(Priority::Lowest) {
@@ -228,7 +231,8 @@ impl ParserTrait for Parser {
                 self.next_token();
 
                 Ok(Statement::ReturnStatement(ReturnStatement::new(
-                    expression, position,
+                    expression,
+                    position! { self },
                 )))
             } else {
                 Err(
@@ -244,7 +248,6 @@ impl ParserTrait for Parser {
     ///
     /// `type <ident><generics?> = <type>;`
     fn parse_type_statement(&mut self) -> ParseResult<Statement> {
-        let position = position! { self };
         self.next_token();
 
         let ident = ident! { self };
@@ -266,9 +269,9 @@ impl ParserTrait for Parser {
         } else {
             Ok(Statement::TypeStatement(TypeStatement::new(
                 data_type,
-                Identifier::new(ident, position.clone()),
+                Identifier::new(ident, position! { self }),
                 generics,
-                position,
+                position! { self },
             )))
         };
     }
@@ -331,8 +334,12 @@ impl ParserTrait for Parser {
 
                 Some(expression)
             }
+            Tokens::LBrace => Some(Ok(Expression::BlockExpression(
+                self.parse_block_expression()?,
+            ))),
             Tokens::LBracket => Some(Ok(Expression::ArrayLiteral(self.parse_array_literal()?))),
-            Tokens::If | Tokens::Function | Tokens::LBrace => unimplemented!(),
+            Tokens::ObjectType => Some(Ok(Expression::ObjectLiteral(self.parse_object_literal()?))),
+            Tokens::If | Tokens::Function => unimplemented!(),
             _ => None,
         };
 
@@ -378,9 +385,22 @@ impl ParserTrait for Parser {
         left_expression
     }
 
+    /// **Parses a block expression.**
+    fn parse_block_expression(&mut self) -> ParseResult<BlockExpression> {
+        self.next_token();
+
+        let mut statements = Vec::new();
+
+        while self.current_token.token_type != Tokens::RBrace {
+            statements.push(self.parse_statement()?);
+            self.next_token();
+        }
+
+        Ok(BlockExpression::new(statements, position! { self }))
+    }
+
     /// **Parses an array literal.**
     fn parse_array_literal(&mut self) -> ParseResult<ArrayLiteral> {
-        let position = position! { self };
         self.next_token();
 
         let mut elements = Vec::new();
@@ -402,7 +422,41 @@ impl ParserTrait for Parser {
             );
         }
 
-        Ok(ArrayLiteral::new(elements, position))
+        Ok(ArrayLiteral::new(elements, position! { self }))
+    }
+
+    /// **Parses a object type.**
+    fn parse_object_literal(&mut self) -> ParseResult<ObjectLiteral> {
+        self.next_token();
+        self.next_token();
+
+        let mut elements = Vec::new();
+
+        while self.current_token.token_type != Tokens::RBrace {
+            let key = self.parse_expression(Priority::Lowest)?;
+            self.next_token();
+
+            self.expect_token(Tokens::Colon)?;
+
+            let value = self.parse_expression(Priority::Lowest)?;
+            self.next_token();
+
+            elements.push((key, value));
+
+            if self.current_token.token_type == Tokens::RBrace {
+                break;
+            }
+
+            self.expect_token(Tokens::Comma)?;
+        }
+
+        if self.current_token.token_type != Tokens::RBrace {
+            return Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBrace, self.current_token.token_type },
+            );
+        }
+
+        Ok(ObjectLiteral::new(elements, position! { self }))
     }
 }
 
@@ -432,7 +486,7 @@ impl TypeParser for Parser {
             Tokens::BooleanType => Ok(DataType::Boolean),
             Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
             Tokens::Function => Ok(DataType::Fn(self.parse_function_type()?)),
-            Tokens::HashType => Ok(DataType::Hash(self.parse_hash_type()?)),
+            Tokens::ObjectType => Ok(DataType::Object(self.parse_object_type()?)),
             _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
         };
 
@@ -485,17 +539,17 @@ impl TypeParser for Parser {
         Ok(FunctionType::new(parameters, return_type))
     }
 
-    /// **Parses a hash type.**
+    /// **Parses a object type.**
     ///
-    /// `hash string: number` -> `Hash(String, Number)`
-    fn parse_hash_type(&mut self) -> ParseResult<HashType> {
+    /// `object string: number` -> `Object(String, Number)`
+    fn parse_object_type(&mut self) -> ParseResult<ObjectType> {
         self.next_token();
 
         let key_type = self.parse_data_type()?;
         self.expect_token(Tokens::Colon)?;
         let value_type = self.parse_data_type_without_next()?;
 
-        Ok(HashType::new(key_type, value_type))
+        Ok(ObjectType::new(key_type, value_type))
     }
 
     /// **Parses a generic type.**
