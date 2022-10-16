@@ -30,6 +30,7 @@ pub trait TypeParser {
     fn parse_data_type(&mut self) -> ParseResult<DataType>;
     fn parse_data_type_without_next(&mut self) -> ParseResult<DataType>;
     fn parse_function_type(&mut self) -> ParseResult<FunctionType>;
+    fn parse_hash_type(&mut self) -> ParseResult<HashType>;
     fn parse_generic(&mut self) -> ParseResult<Generic>;
     fn parse_generic_identifier(&mut self) -> ParseResult<Vec<Identifier>>;
 }
@@ -403,7 +404,7 @@ impl TypeParser for Parser {
             Tokens::BooleanType => Ok(DataType::Boolean),
             Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
             Tokens::Function => Ok(DataType::Fn(self.parse_function_type()?)),
-            Tokens::HashType => unimplemented!(),
+            Tokens::HashType => Ok(DataType::Hash(self.parse_hash_type()?)),
             _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
         };
 
@@ -454,6 +455,19 @@ impl TypeParser for Parser {
         let return_type = self.parse_data_type_without_next()?;
 
         Ok(FunctionType::new(parameters, return_type))
+    }
+
+    /// **Parses a hash type.**
+    ///
+    /// `hash string: number` -> `Hash(String, Number)`
+    fn parse_hash_type(&mut self) -> ParseResult<HashType> {
+        self.next_token();
+
+        let key_type = self.parse_data_type()?;
+        self.expect_token(Tokens::Colon)?;
+        let value_type = self.parse_data_type_without_next()?;
+
+        Ok(HashType::new(key_type, value_type))
     }
 
     /// **Parses a generic type.**
