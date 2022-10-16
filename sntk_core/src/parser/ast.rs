@@ -21,7 +21,6 @@ pub enum Statement {
     LetStatement(LetStatement),
     ReturnStatement(ReturnStatement),
     TypeStatement(TypeStatement),
-    BlockStatement(BlockStatement),
     ExpressionStatement(ExpressionStatement),
 }
 
@@ -30,6 +29,7 @@ pub enum Statement {
 /// when expression ends, a semicolon (`;`) is required.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
+    BlockExpression(BlockExpression),
     /// `ident`: it is an identifier, not a keyword, such as a variable name.
     Identifier(Identifier),
     /// `!value`: a prefix before an expression. this includes `!`, `-` and etc.
@@ -53,7 +53,7 @@ pub enum Expression {
     /// `array[index]`: an index expression. an array or hash can access it.
     IndexExpression(IndexExpression),
     /// `{ key: value, key: value }`: a hash literal. it starts with `{` and ends with `}`. a key and a value are separated by a colon (`:`).
-    HashLiteral(HashLiteral),
+    ObjectLiteral(ObjectLiteral),
 }
 
 /// * `Number`: a number literal. `data: number`
@@ -68,18 +68,18 @@ pub enum DataType {
     String,
     Boolean,
     Array(Box<DataType>),
-    Hash(HashType),
+    Object(ObjectType),
     Fn(FunctionType),
     Generic(Generic),
     Custom(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct HashType(Box<DataType>, Box<DataType>);
+pub struct ObjectType(Box<DataType>, Box<DataType>);
 
-impl HashType {
+impl ObjectType {
     pub fn new(key_type: DataType, value_type: DataType) -> Self {
-        HashType(Box::new(key_type), Box::new(value_type))
+        ObjectType(Box::new(key_type), Box::new(value_type))
     }
 }
 
@@ -146,19 +146,19 @@ make_struct! { @data_type LetStatement => name: Identifier, value: Expression }
 make_struct! { @data_type TypeStatement => name: Identifier, generics: Vec<Identifier> }
 make_struct! { ReturnStatement => return_value: Expression }
 make_struct! { ExpressionStatement => expression: Expression }
-make_struct! { BlockStatement => statements: Vec<Statement> }
+make_struct! { BlockExpression => statements: Vec<Statement> }
 make_struct! { Identifier => value: String }
 make_struct! { NumberLiteral => value: f64 }
 make_struct! { PrefixExpression => operator: Tokens, right: Box<Expression> }
 make_struct! { InfixExpression => left: Box<Expression>, operator: Tokens, right: Box<Expression> }
 make_struct! { BooleanLiteral => value: bool }
-make_struct! { IfExpression => condition: Box<Expression>, consequence: BlockStatement, alternative: Option<BlockStatement> }
-make_struct! { FunctionLiteral => parameters: Vec<Identifier>, body: BlockStatement }
+make_struct! { IfExpression => condition: Box<Expression>, consequence: BlockExpression, alternative: Option<BlockExpression> }
+make_struct! { FunctionLiteral => parameters: Vec<Identifier>, body: BlockExpression }
 make_struct! { CallExpression => function: Box<Expression>, arguments: Vec<Expression> }
 make_struct! { StringLiteral => value: String }
 make_struct! { ArrayLiteral => elements: Vec<Expression> }
 make_struct! { IndexExpression => left: Box<Expression>, index: Box<Expression> }
-make_struct! { HashLiteral => pairs: Vec<(Expression, Expression)> }
+make_struct! { ObjectLiteral => pairs: Vec<(Expression, Expression)> }
 
 /// Priority is used to determine the priority of the operator.
 /// The higher the priority, the higher the priority.
