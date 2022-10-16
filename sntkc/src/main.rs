@@ -8,13 +8,16 @@ fn main() {
 
     println!(
         "{:#?}",
-        Parser::from(r#"type x<T, U> = T<>;"#).parse_program()
+        Parser::from(r#"type X<T, U> = T<>;"#).parse_program()
     );
 
     println!(
         "{:#?}",
-        Parser::from(r#"type func<T, U> = fn(T, U[]) -> string;"#).parse_program()
+        Parser::from(r#"type X<T, U> = fn(T, U[]) -> string;"#).parse_program()
     );
 
-    println!("{:#?}", Parser::from(r#"1 * 2;"#).parse_program());
+    println!(
+        "{:#?}",
+        Parser::from(r#"type MyHash<T, U> = hash T: U;"#).parse_program()
+    );
 }
