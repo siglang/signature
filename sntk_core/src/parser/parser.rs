@@ -74,7 +74,7 @@ impl Default for Parser {
 }
 
 impl ParserBase for Parser {
-    /// **Creates a new Lexer instance.**
+    /// **Creates a new Parser instance.**
     /// it takes an argument of type `Lexer`.
     fn new(lexer: Lexer) -> Self {
         let mut parser = Parser {
