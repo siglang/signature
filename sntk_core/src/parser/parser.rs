@@ -24,6 +24,7 @@ pub trait ParserTrait {
     fn parse_type_statement(&mut self) -> ParseResult<Statement>;
     fn parse_expression_statement(&mut self) -> ParseResult<Statement>;
     fn parse_expression(&mut self, precedence: Priority) -> ParseResult<Expression>;
+    fn parse_array_literal(&mut self) -> ParseResult<ArrayLiteral>;
 }
 
 pub trait TypeParser {
@@ -330,7 +331,8 @@ impl ParserTrait for Parser {
 
                 Some(expression)
             }
-            Tokens::If | Tokens::Function | Tokens::LBracket | Tokens::LBrace => unimplemented!(),
+            Tokens::LBracket => Some(Ok(Expression::ArrayLiteral(self.parse_array_literal()?))),
+            Tokens::If | Tokens::Function | Tokens::LBrace => unimplemented!(),
             _ => None,
         };
 
@@ -369,12 +371,38 @@ impl ParserTrait for Parser {
                     },
                     position! { self },
                 ))),
-                Tokens::LParen | Tokens::LBracket => unimplemented!(),
                 _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
             };
         }
 
         left_expression
+    }
+
+    /// **Parses an array literal.**
+    fn parse_array_literal(&mut self) -> ParseResult<ArrayLiteral> {
+        let position = position! { self };
+        self.next_token();
+
+        let mut elements = Vec::new();
+
+        while self.current_token.token_type != Tokens::RBrace {
+            elements.push(self.parse_expression(Priority::Lowest)?);
+            self.next_token();
+
+            if self.current_token.token_type == Tokens::RBracket {
+                break;
+            }
+
+            self.expect_token(Tokens::Comma)?;
+        }
+
+        if self.current_token.token_type != Tokens::RBracket {
+            return Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBracket, self.current_token.token_type },
+            );
+        }
+
+        Ok(ArrayLiteral::new(elements, position))
     }
 }
 
