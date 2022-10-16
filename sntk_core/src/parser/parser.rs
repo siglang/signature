@@ -27,6 +27,7 @@ pub trait ParserTrait {
     fn parse_block_expression(&mut self) -> ParseResult<BlockExpression>;
     fn parse_array_literal(&mut self) -> ParseResult<ArrayLiteral>;
     fn parse_object_literal(&mut self) -> ParseResult<ObjectLiteral>;
+    fn parse_function_literal(&mut self) -> ParseResult<FunctionLiteral>;
 }
 
 pub trait TypeParser {
@@ -35,7 +36,7 @@ pub trait TypeParser {
     fn parse_function_type(&mut self) -> ParseResult<FunctionType>;
     fn parse_object_type(&mut self) -> ParseResult<ObjectType>;
     fn parse_generic(&mut self) -> ParseResult<Generic>;
-    fn parse_generic_identifier(&mut self) -> ParseResult<Vec<Identifier>>;
+    fn parse_generic_identifier(&mut self) -> ParseResult<IdentifierGeneric>;
 }
 
 /// **Parses the input string into an AST.**
@@ -264,15 +265,17 @@ impl ParserTrait for Parser {
 
         let data_type = self.parse_data_type()?;
 
-        return if let Err(e) = self.expect_token(Tokens::Semicolon) {
-            Err(e)
-        } else {
+        return if self.current_token.token_type == Tokens::Semicolon {
             Ok(Statement::TypeStatement(TypeStatement::new(
                 data_type,
                 Identifier::new(ident, position! { self }),
                 generics,
                 position! { self },
             )))
+        } else {
+            Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+            )
         };
     }
 
@@ -339,7 +342,10 @@ impl ParserTrait for Parser {
             ))),
             Tokens::LBracket => Some(Ok(Expression::ArrayLiteral(self.parse_array_literal()?))),
             Tokens::ObjectType => Some(Ok(Expression::ObjectLiteral(self.parse_object_literal()?))),
-            Tokens::If | Tokens::Function => unimplemented!(),
+            Tokens::Function => Some(Ok(Expression::FunctionLiteral(
+                self.parse_function_literal()?,
+            ))),
+            Tokens::If => unimplemented!(),
             _ => None,
         };
 
@@ -378,6 +384,38 @@ impl ParserTrait for Parser {
                     },
                     position! { self },
                 ))),
+                Tokens::LParen => {
+                    self.next_token();
+
+                    let mut arguments = Vec::new();
+
+                    if self.current_token.token_type != Tokens::RParen {
+                        arguments.push(self.parse_expression(Priority::Lowest)?);
+
+                        while self.current_token.token_type != Tokens::RParen {
+                            arguments.push(self.parse_expression(Priority::Lowest)?);
+                            self.next_token();
+
+                            if self.current_token.token_type == Tokens::RParen {
+                                break;
+                            }
+
+                            self.expect_token(Tokens::Comma)?;
+                        }
+
+                        if self.current_token.token_type != Tokens::RParen {
+                            return Err(
+                                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RParen, self.current_token.token_type },
+                            );
+                        }
+                    }
+
+                    Ok(Expression::CallExpression(CallExpression::new(
+                        Box::new(left_expression?),
+                        arguments,
+                        position! { self },
+                    )))
+                }
                 _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
             };
         }
@@ -458,6 +496,70 @@ impl ParserTrait for Parser {
 
         Ok(ObjectLiteral::new(elements, position! { self }))
     }
+
+    /// **Parses a function literal.**
+    ///
+    /// `fn<Generic>(arg1: Type, arg2: Type) -> Type { ... }`
+    fn parse_function_literal(&mut self) -> ParseResult<FunctionLiteral> {
+        self.next_token();
+
+        let generics = if self.current_token.token_type == Tokens::LT {
+            let result = Some(self.parse_generic_identifier()?);
+            self.next_token();
+
+            result
+        } else {
+            None
+        };
+
+        self.expect_token(Tokens::LParen)?;
+
+        let mut parameters = Vec::new();
+
+        while self.current_token.token_type != Tokens::RParen {
+            if let Tokens::IDENT(identifier) = self.current_token.token_type.clone() {
+                self.next_token();
+                self.expect_token(Tokens::Colon)?;
+
+                let data_type = self.parse_data_type()?;
+
+                parameters.push((
+                    Identifier::new(identifier.clone(), position! { self }),
+                    data_type,
+                ));
+            } else {
+                return Err(
+                    parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type },
+                );
+            }
+
+            if self.current_token.token_type == Tokens::RParen {
+                break;
+            }
+
+            self.expect_token(Tokens::Comma)?;
+        }
+
+        self.expect_token(Tokens::RParen)?;
+        self.expect_token(Tokens::Arrow)?;
+
+        let return_type = self.parse_data_type()?;
+        if self.current_token.token_type != Tokens::LBrace {
+            return Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::LBrace, self.current_token.token_type },
+            );
+        }
+
+        let body = self.parse_block_expression()?;
+
+        Ok(FunctionLiteral::new(
+            generics,
+            parameters,
+            return_type,
+            body,
+            position! { self },
+        ))
+    }
 }
 
 impl TypeParser for Parser {
@@ -484,9 +586,9 @@ impl TypeParser for Parser {
             Tokens::NumberType => Ok(DataType::Number),
             Tokens::StringType => Ok(DataType::String),
             Tokens::BooleanType => Ok(DataType::Boolean),
-            Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
             Tokens::Function => Ok(DataType::Fn(self.parse_function_type()?)),
             Tokens::ObjectType => Ok(DataType::Object(self.parse_object_type()?)),
+            Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
             _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
         };
 
@@ -516,10 +618,20 @@ impl TypeParser for Parser {
     ///
     /// * `fn(number, string) -> boolean`: `Function([Number, String], Boolean)`
     fn parse_function_type(&mut self) -> ParseResult<FunctionType> {
-        let mut parameters = Vec::new();
         self.next_token();
 
+        let generics = if self.current_token.token_type == Tokens::LT {
+            let result = Some(self.parse_generic_identifier()?);
+            self.next_token();
+
+            result
+        } else {
+            None
+        };
+
         self.expect_token(Tokens::LParen)?;
+
+        let mut parameters = Vec::new();
 
         while self.current_token.token_type != Tokens::RParen {
             parameters.push(self.parse_data_type()?);
@@ -536,7 +648,7 @@ impl TypeParser for Parser {
 
         let return_type = self.parse_data_type_without_next()?;
 
-        Ok(FunctionType::new(parameters, return_type))
+        Ok(FunctionType::new(generics, parameters, return_type))
     }
 
     /// **Parses a object type.**
@@ -581,7 +693,7 @@ impl TypeParser for Parser {
     /// **Parses a generic type.**
     ///
     /// `T<U, V>`: `Generic(Identifier("T"), [Identifier("U"), Identifier("V")])`
-    fn parse_generic_identifier(&mut self) -> ParseResult<Vec<Identifier>> {
+    fn parse_generic_identifier(&mut self) -> ParseResult<IdentifierGeneric> {
         let mut generics = Vec::new();
 
         self.expect_token(Tokens::LT)?;
