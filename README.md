@@ -59,17 +59,17 @@ graph LR
 Here's what we think of language design:
 
 ```rs
-use std::convert::to_s;
-use std::io::println;
+use std::convert::to_s; /* not working yet. */
+use std::io::println; /* not working yet. */
 
 let foo: number[] = [1, 2, 3, 4, 5];
 
-type T<U> = fn(U) -> U; // type alias
+type T<U> = fn(U) -> U; /* type alias */
 
-let bar: T<number> = fn(x) => x * 2;
-let baz: T<string> = fn(x) => x.push<string>("!");
+let bar: T<number> = fn(x: number) -> number -> x * 2;
+let baz: T<string> = fn(x: strnig) -> string -> x.push("!");
 
-let result: string[] = foo.map(bar -> to_s -> baz);
+let result: string[] = foo.map(bar -> to_s -> baz); /* not working yet. */
 
 println(result);
 ```
@@ -77,11 +77,10 @@ println(result);
 ---
 
 ```rs
-type Ret<T, U> = fn(T, U) -> object T: U;
+type Ret<T, U> = fn(T, U) -> object T: U; /* type alias */
 let x: fn<T, U>(T, U) -> Ret<T, U> = fn<T, U>(x: T, y: U) -> fn() -> object T: U[] {
-    return fn() -> object T: U[] {
-        return object { "foo": x * y };
-    };
+    println("Hello, World!");
+    return fn() -> object T: U[] -> object { "foo": x * y }; /* inline function */
 };
 let y: object number: number[] = x(10, 20)();
 ```
