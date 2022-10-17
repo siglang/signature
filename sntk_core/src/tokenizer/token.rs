@@ -18,7 +18,7 @@ pub enum Tokens {
 
     Let, If, Else, Return, Function, Type,
 
-    NumberType, StringType, BooleanType, /* ArrayType = type[] */ ObjectType, /* FnType = Function */
+    NumberType, StringType, BooleanType, /* ArrayType = type[] */ ObjectType, /* FnType = Function */ VoidType,
 }
 
 impl<T> From<T> for Tokens
@@ -39,6 +39,7 @@ where
             "string" => Tokens::StringType,
             "boolean" => Tokens::BooleanType,
             "object" => Tokens::ObjectType,
+            "void" => Tokens::VoidType,
             s => Tokens::IDENT(s.to_string()),
         }
     }
