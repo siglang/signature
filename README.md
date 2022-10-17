@@ -68,9 +68,9 @@ let foo: number[] = [1, 2, 3, 4, 5];
 type T<U> = fn(U) -> U; /* type alias */
 
 let bar: T<number> = fn(x: number) -> number -> x * 2;
-let baz: T<string> = fn(x: strnig) -> string -> x.push("!");
+let baz: T<string> = fn(x: string) -> string -> x.push("!");
 
-let result: string[] = foo.map(bar -> to_s -> baz); /* not working yet. */
+let result: string[] = foo.map(bar -> to_s -> baz);
 
 println(result);
 ```
