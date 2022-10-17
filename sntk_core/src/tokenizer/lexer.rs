@@ -10,6 +10,7 @@ pub trait LexerTrait {
     fn read_identifier(&mut self) -> String;
     fn read_number(&mut self) -> f64;
     fn read_string(&mut self) -> String;
+    fn read_comment(&mut self);
     fn next_token(&mut self) -> Token;
 }
 
@@ -177,6 +178,27 @@ impl LexerTrait for Lexer {
         self.input[position..self.position].to_string()
     }
 
+    /// **Read the comment. it rules are:**
+    ///
+    /// - starts with a slash and an asterisk (`/*`).
+    ///    - ends with an asterisk and a slash (`*/`).
+    /// - ~~starts with a double slash (`//`).~~ Not supported yet. regarding the `//` comment, there is a problem with `skip_whitespace`.
+    ///
+    /// TODO: support `//` comment.
+    fn read_comment(&mut self) {
+        if self.current_char == '/' && self.peek_char() == '*' {
+            self.read_char();
+            self.read_char();
+
+            while self.current_char != '\0' && (self.current_char != '*' || self.peek_char() != '/')
+            {
+                self.read_char();
+            }
+
+            self.read_char();
+        }
+    }
+
     /// **Read the next token.**
     ///
     /// it calls `skip_whitespace()` and then checks the `current_char` and returns the corresponding token.
@@ -198,20 +220,27 @@ impl LexerTrait for Lexer {
         }
 
         macro_rules! next {
-            ($n_token:expr => $t_token:expr; $e_token:expr) => {
+            (@macro_read $n_token:expr => $t_token:expr; $e_token:expr; $next:expr) => {
                 if self.peek_char() == $n_token {
-                    self.read_char();
+                    if $next {
+                        self.read_char();
+                    }
                     $t_token
                 } else {
                     $e_token
                 }
+            };
+            (@no_read $n_token:expr => $t_token:expr; $e_token:expr) => {
+                next!(@macro_read $n_token => $t_token; $e_token; false)
+            };
+            ($n_token:expr => $t_token:expr; $e_token:expr) => {
+                next!(@macro_read $n_token => $t_token; $e_token; true)
             };
         }
 
         let token = match_token! {
             '+' => Plus,
             '*' => Asterisk,
-            '/' => Slash,
             '%' => Percent,
             '<' => LT,
             '>' => GT,
@@ -228,6 +257,11 @@ impl LexerTrait for Lexer {
             '-' => next!('>' => Arrow; Minus),
             '=' => next!('=' => EQ; Assign),
             '!' => next!('=' => NEQ; Bang),
+            '/' => next!(@no_read '*' => {
+                self.read_comment();
+                self.next_token();
+                return self.next_token();
+            }; Slash),
             '\0' => EOF
         };
 
