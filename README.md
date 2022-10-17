@@ -10,11 +10,12 @@ We will provide the following features:
 
 -   **Easy and simple, and even beginners can learn it quickly and easily.**
     -   it also has a C-like syntax, which makes it easy for other programmers to use the C-like syntax to learn.
--   **Using bytecode, it provides a fast interpreter.**
+-   **Using bytecode**, it provides a fast interpreter.
 -   **Supports functional programming.**
--   **Supports macro. it is similar to Rust's Macros, and will provide a powerful macro system.**
+-   **Supports macro**. it is similar to Rust's Macros, and will provide a powerful macro system.
 -   **Supports type system.**
--   **By providing an interpreter plugin, it can transcompile to other languages. (e.g. JavaScript)**
+-   **By providing an interpreter plugin**, it can transcompile to other languages. (e.g. JavaScript)
+-   **`null` does not exist.** it is in the form of Rust's `Option<T>`, a monadic type will be decalred in the standard library.
 
 ... and more.
 
@@ -72,6 +73,18 @@ let baz: T<string> = fn(x: strnig) -> string -> x.push("!");
 let result: string[] = foo.map(bar -> to_s -> baz); /* not working yet. */
 
 println(result);
+```
+
+---
+
+**macro:** (not working yet.)
+
+```rs
+@macro foo($name:ident $args:@repeat($arg:ident, $data_type:type); $ret_type:type; $body:expr) {
+    fn $name($args { $arg: $data_type }) -> $ret_type -> $body;
+}
+
+@foo(bar a: number, b: number; number; a + b);
 ```
 
 ---
