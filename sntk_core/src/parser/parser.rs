@@ -131,6 +131,7 @@ impl ParserBase for Parser {
     /// * `Index`:        7 (`array[index]`)
     fn get_priority(&self, token_type: Tokens) -> Priority {
         match token_type {
+            Tokens::Dot | Tokens::Arrow => Priority::Dot,
             Tokens::Assign => Priority::Equals,
             Tokens::Plus | Tokens::Minus => Priority::Sum,
             Tokens::Slash | Tokens::Asterisk => Priority::Product,
@@ -367,9 +368,11 @@ impl ParserTrait for Parser {
             left_expression = match self.current_token.token_type {
                 Tokens::Plus
                 | Tokens::Minus
+                | Tokens::Dot
                 | Tokens::Slash
                 | Tokens::Asterisk
                 | Tokens::Percent
+                | Tokens::Arrow // bind: `foo -> bar` = `foo.bind(bar)`
                 | Tokens::EQ
                 | Tokens::NEQ
                 | Tokens::LT
