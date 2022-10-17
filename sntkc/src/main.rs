@@ -28,12 +28,11 @@ fn main() {
             r#"
 type Ret<T, U> = fn(T, U) -> object T: U;
 let x: fn<T, U>(T, U) -> Ret<T, U> = fn<T, U>(x: T, y: U) -> fn() -> object T: U[] {
-    return fn() -> object T: U[] {
-        return object { "foo": x * y };
-    };
+    println("Hello, World!");
+    return fn() -> object T: U[] -> object { "foo": x * y };
 };
 let y: object number: number[] = x(10, 20)();
-        "#
+            "#
         )
         .parse_program()
     );
