@@ -173,6 +173,7 @@ make_struct! { ObjectLiteral => pairs: Vec<(Expression, Expression)> }
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Priority {
     Lowest,
+    Dot,
     Equals,
     LessGreater,
     Sum,
