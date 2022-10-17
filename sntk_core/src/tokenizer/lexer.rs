@@ -244,6 +244,7 @@ impl LexerTrait for Lexer {
             '%' => Percent,
             '<' => LT,
             '>' => GT,
+            '.' => Dot,
             ',' => Comma,
             ';' => Semicolon,
             ':' => Colon,
