@@ -67,6 +67,7 @@ pub enum DataType {
     Number,
     String,
     Boolean,
+    Void,
     Array(Box<DataType>),
     Object(ObjectType),
     Fn(FunctionType),
