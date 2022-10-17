@@ -8,9 +8,9 @@ pub enum Tokens {
 
     Number(f64), String(String), Boolean(bool), Comment,
 
-    Assign, Plus, Minus, Bang, Asterisk, Slash, Percent, Arrow,
+    Assign, Plus, Minus, Bang, Asterisk, Slash, Percent, Arrow /* -> */,
 
-    Comma, Colon, Semicolon,
+    Dot, Comma, Colon, Semicolon,
 
     LParen, RParen, LBrace, RBrace, LBracket, RBracket,
 
