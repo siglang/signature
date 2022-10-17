@@ -6,7 +6,7 @@ use std::fmt::*;
 pub enum Tokens {
     ILLEGAL(String), EOF, IDENT(String),
 
-    Number(f64), String(String), Boolean(bool), Comment(String),
+    Number(f64), String(String), Boolean(bool), Comment,
 
     Assign, Plus, Minus, Bang, Asterisk, Slash, Percent, Arrow,
 
@@ -62,7 +62,7 @@ impl Tokens {
                 }
             }
 
-        to_s! { IDENT String Number Boolean Comment }
+        to_s! { IDENT String Number Boolean }
     }
 }
 
