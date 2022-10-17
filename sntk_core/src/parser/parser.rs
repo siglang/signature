@@ -544,13 +544,26 @@ impl ParserTrait for Parser {
         self.expect_token(Tokens::Arrow)?;
 
         let return_type = self.parse_data_type()?;
-        if self.current_token.token_type != Tokens::LBrace {
-            return Err(
-                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::LBrace, self.current_token.token_type },
-            );
-        }
 
-        let body = self.parse_block_expression()?;
+        let body = match self.current_token.token_type {
+            Tokens::LBrace => self.parse_block_expression()?,
+            Tokens::Arrow => {
+                self.next_token();
+
+                BlockExpression::new(
+                    vec![Statement::ReturnStatement(ReturnStatement::new(
+                        self.parse_expression(Priority::Lowest)?,
+                        position! { self },
+                    ))],
+                    position! { self },
+                )
+            }
+            _ => {
+                return Err(
+                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::LBrace, self.current_token.token_type },
+                )
+            }
+        };
 
         Ok(FunctionLiteral::new(
             generics,
