@@ -30,7 +30,7 @@ this may not be observed. (No, most likely. D:) however, we strive to provide be
 
 -   [ ] Macro
 -   [ ] Functional Programming
--   [ ] Type System
+-   [ ] Type System **(in progress)**
 
 -   [ ] Standard Library
 -   [ ] Package Manager
