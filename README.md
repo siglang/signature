@@ -16,18 +16,22 @@ We will provide the following features:
 -   **Supports type system.**
 -   **By providing an interpreter plugin**, it can transcompile to other languages. (e.g. JavaScript)
 -   **`null` does not exist.** it is in the form of Rust's `Option<T>`, a monadic type will be decalred in the standard library.
+-   **In the parsing phase, evaluable expressions are pre-evaluated.** it is providing a fast runtime.
 
 ... and more.
 
-this may not be observed. (No, most likely. D:) however, we strive to provide better features. :D
+this may not be observed. (No, most likely.) however, we strive to provide better features.
 
 # Progress
 
 -   [x] Tokenizer (Tokens + Lexer)
 -   [ ] Parser (AST) **(in progress)**
+    -   [ ] EEE (Evaluating an Evaluable Expression)
 -   [ ] Compiler (Bytecode)
+    -   [ ] Type Checker
 -   [ ] Interpreter (VM)
--   [ ] Plugin (Transcompiler)
+-   [ ] Plugin (e.g. Transcompiler)
+    -   [ ] Plugin API
 
 -   [ ] Macro
 -   [ ] Functional Programming
@@ -45,14 +49,14 @@ this may not be observed. (No, most likely. D:) however, we strive to provide be
 
 ```mermaid
 graph LR
-    _[Source Code] --> |sntkc| A
-    A[Tokenizer / Lexer] --> B[Parser / AST]
-    B --> C[ByteCode / Compiler]
-    C --> D[sntk run]
-    D --> |Run| E[Virtual Machine / Interpreter]
-    C --> F[plugin]
-    F --> G[Transcompile]
-    G --> |sntkc javascript --target=ES6| H[JavaScript, etc..]
+    _[Source Code] --> |sntkc| Lexer
+    Lexer[Tokenizer / Lexer] --> Parser[Parser / AST]
+    Parser --> Compiler[ByteCode / Compiler]
+    Compiler --> Run[sntk run]
+    Run --> |Run| VM[Virtual Machine / Interpreter]
+    Compiler --> Plugin[plugin]
+    Plugin --> Transcompile[Transcompile]
+    Transcompile --> TResult[JavaScript, etc..]
 ```
 
 ---
