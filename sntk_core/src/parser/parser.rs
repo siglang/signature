@@ -6,6 +6,7 @@ use crate::{
 
 pub type ParseResult<T> = Result<T, ParsingError>;
 
+/// Provides the basic methods of the parser.
 pub trait ParserBase {
     fn new(lexer: Lexer) -> Self;
     fn next_token(&mut self);
@@ -16,6 +17,7 @@ pub trait ParserBase {
     fn current_priority(&self) -> Priority;
 }
 
+/// Parses statements, expressions, etc.
 pub trait ParserTrait {
     fn parse_program(&mut self) -> Program;
     fn parse_statement(&mut self) -> ParseResult<Statement>;
@@ -30,6 +32,7 @@ pub trait ParserTrait {
     fn parse_function_literal(&mut self) -> ParseResult<FunctionLiteral>;
 }
 
+/// Parses type annotations, generics, etc.
 pub trait TypeParser {
     fn parse_data_type(&mut self) -> ParseResult<DataType>;
     fn parse_data_type_without_next(&mut self) -> ParseResult<DataType>;
@@ -37,6 +40,18 @@ pub trait TypeParser {
     fn parse_object_type(&mut self) -> ParseResult<ObjectType>;
     fn parse_generic(&mut self) -> ParseResult<Generic>;
     fn parse_generic_identifier(&mut self) -> ParseResult<IdentifierGeneric>;
+}
+
+/// **Evaluating an Evaluable Expression**
+///
+/// In the parsing phase, evaluable expressions are pre-evaluated. it is providing a fast runtime.
+pub trait EEE {
+    fn eval_expression(&mut self, expression: Expression) -> Option<ParseResult<Expression>>;
+    fn eval_infix_expression(&mut self, infix: InfixExpression) -> Option<ParseResult<Expression>>;
+    fn eval_prefix_expression(
+        &mut self,
+        prefix: PrefixExpression,
+    ) -> Option<ParseResult<Expression>>;
 }
 
 /// **Parses the input string into an AST.**
@@ -318,8 +333,12 @@ impl ParserTrait for Parser {
                 position! { self },
             )))),
             Tokens::Bang | Tokens::Minus => {
+                let operator = self.current_token.token_type.clone();
+
+                self.next_token();
+
                 Some(Ok(Expression::PrefixExpression(PrefixExpression::new(
-                    self.current_token.token_type.clone(),
+                    operator,
                     Box::new(self.parse_expression(Priority::Prefix)?),
                     position! { self },
                 ))))
@@ -422,6 +441,20 @@ impl ParserTrait for Parser {
                 _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
             };
         }
+
+        match left_expression.clone()? {
+            Expression::InfixExpression(infix) => {
+                if let Some(e) = self.eval_infix_expression(infix) {
+                    return Ok(e?);
+                };
+            }
+            Expression::PrefixExpression(prefix) => {
+                if let Some(e) = self.eval_prefix_expression(prefix) {
+                    return Ok(e?);
+                };
+            }
+            _ => {}
+        };
 
         left_expression
     }
@@ -729,5 +762,113 @@ impl TypeParser for Parser {
         }
 
         Ok(generics)
+    }
+}
+
+impl EEE for Parser {
+    /// **Evaluates expressions.**
+    fn eval_expression(&mut self, expression: Expression) -> Option<ParseResult<Expression>> {
+        match expression {
+            Expression::InfixExpression(infix) => self.eval_infix_expression(infix),
+            Expression::PrefixExpression(prefix) => self.eval_prefix_expression(prefix),
+            e => Some(Ok(e)),
+        }
+    }
+
+    /// **Evaluates operators.**
+    ///
+    /// * `10 + 20`: InfixExpression(10, Plus, 20)
+    /// * `10 - 20`: InfixExpression(10, Minus, 20)
+    /// * `10 * 20`: InfixExpression(10, Asterisk, 20)
+    /// * `10 / 20`: InfixExpression(10, Slash, 20)
+    /// * `10 % 20`: InfixExpression(10, Percent, 20)
+    ///
+    /// # TODO (Not implemented yet)
+    ///
+    /// * `expr == expr`: InfixExpression(expr, Equal, expr) -> BooleanLiteral(...)
+    /// * `10 != 20`: InfixExpression(10, NotEqual, 20) -> BooleanLiteral(true)
+    /// * `10 > 20`: InfixExpression(10, Greater, 20) -> BooleanLiteral(false)
+    /// * `10 < 20`: InfixExpression(10, Less, 20) -> BooleanLiteral(true)
+    /// * `10 >= 20`: InfixExpression(10, GreaterEqual, 20) -> BooleanLiteral(false)
+    /// * `10 <= 20`: InfixExpression(10, LessEqual, 20) -> BooleanLiteral(true)
+    ///
+    /// * `"Foo" + "Bar"`: InfixExpression(StringLiteral("Foo"), Add, StringLiteral("Bar")) -> StringLiteral("FooBar")
+    fn eval_infix_expression(&mut self, infix: InfixExpression) -> Option<ParseResult<Expression>> {
+        let InfixExpression {
+            left,
+            operator,
+            right,
+            ..
+        } = infix;
+
+        macro_rules! f64_ops {
+            ($op:tt) => {{
+                println!("{:?}", self.eval_expression(*right.clone()));
+                if let (Some(Ok(left)), Some(Ok(right))) = (self.eval_expression(*left.clone()), self.eval_expression(*right.clone())) {
+                    if let (Expression::NumberLiteral(left), Expression::NumberLiteral(right)) = (left, right) {
+                        let result = left.value $op right.value;
+
+                        return Some(Ok(Expression::NumberLiteral(NumberLiteral::new(
+                            result,
+                            position! { self },
+                        ))));
+                    }
+
+                    return None;
+                }
+
+                return None;
+            }}
+        }
+
+        match operator {
+            Tokens::Plus => f64_ops! { + },
+            Tokens::Minus => f64_ops! { - },
+            Tokens::Asterisk => f64_ops! { * },
+            Tokens::Slash => f64_ops! { / },
+            Tokens::Percent => f64_ops! { % },
+            _ => None,
+        }
+    }
+
+    /// **Evaluates prefix operators.**
+    ///
+    /// * `-10`: PrefixExpression(Minus, 10) -> NumberLiteral(-10)
+    /// * `!true`: PrefixExpression(Not, true) -> BooleanLiteral(false)
+    fn eval_prefix_expression(
+        &mut self,
+        prefix: PrefixExpression,
+    ) -> Option<ParseResult<Expression>> {
+        let PrefixExpression {
+            operator,
+            right,
+            position,
+        } = prefix;
+
+        match operator {
+            Tokens::Minus => {
+                if let Expression::NumberLiteral(right) = *right.clone() {
+                    let result = -right.value;
+
+                    return Some(Ok(Expression::NumberLiteral(NumberLiteral::new(
+                        result, position,
+                    ))));
+                }
+
+                return None;
+            }
+            Tokens::Bang => {
+                if let Expression::BooleanLiteral(right) = *right.clone() {
+                    let result = !right.value;
+
+                    return Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(
+                        result, position,
+                    ))));
+                }
+
+                return None;
+            }
+            _ => None,
+        }
     }
 }
