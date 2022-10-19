@@ -26,7 +26,7 @@ this may not be observed. (No, most likely.) however, we strive to provide bette
 
 -   [x] Tokenizer (Tokens + Lexer)
 -   [ ] Parser (AST) **(in progress)**
-    -   [ ] EEE (Evaluating an Evaluable Expression)
+    -   [ ] EEE (Evaluating an Evaluable Expression) **(in progress)**
 -   [ ] Compiler (Bytecode)
     -   [ ] Type Checker
 -   [ ] Interpreter (VM)
