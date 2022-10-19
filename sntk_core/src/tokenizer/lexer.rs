@@ -190,8 +190,7 @@ impl LexerTrait for Lexer {
             self.read_char();
             self.read_char();
 
-            while self.current_char != '\0' && (self.current_char != '*' || self.peek_char() != '/')
-            {
+            while self.current_char != '\0' && (self.current_char != '*' || self.peek_char() != '/') {
                 self.read_char();
             }
 
@@ -267,12 +266,8 @@ impl LexerTrait for Lexer {
         };
 
         match self.current_char {
-            c if c.is_alphabetic() => {
-                Token::new(Tokens::from(self.read_identifier()), self.current_position)
-            }
-            c if c.is_numeric() => {
-                Token::new(Tokens::Number(self.read_number()), self.current_position)
-            }
+            c if c.is_alphabetic() => Token::new(Tokens::from(self.read_identifier()), self.current_position),
+            c if c.is_numeric() => Token::new(Tokens::Number(self.read_number()), self.current_position),
             _ => {
                 self.read_char();
                 token
