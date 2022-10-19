@@ -89,9 +89,6 @@ impl Display for Token {
 impl Token {
     /// Creates a new `Token` from a `Tokens` and a position.
     pub fn new(token_type: Tokens, position: (usize, usize)) -> Self {
-        Token {
-            token_type,
-            position,
-        }
+        Token { token_type, position }
     }
 }
