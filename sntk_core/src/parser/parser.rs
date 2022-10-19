@@ -777,7 +777,6 @@ impl EEE for Parser {
     /// **Evaluates operators.**
     ///
     /// extends `eval_infix_expression` with `eee_opt_level`: `2`
-    #[allow(unused_variables)]
     fn eval_infix_expression_opt_2(&mut self, infix: InfixExpression) -> Option<ParseResult<Expression>> {
         let InfixExpression { left, operator, right, .. } = infix.clone();
 
@@ -812,7 +811,7 @@ impl EEE for Parser {
     /// **Evaluates prefix operators.**
     ///
     /// * `-10`: PrefixExpression(Minus, 10) -> NumberLiteral(-10)
-    /// * `!true`: PrefixExpression(Not, true) -> BooleanLiteral(false)
+    /// * `!true`: PrefixExpression(Bang, true) -> BooleanLiteral(false)
     fn eval_prefix_expression(&mut self, prefix: PrefixExpression) -> Option<ParseResult<Expression>> {
         let PrefixExpression { operator, right, position } = prefix;
 
