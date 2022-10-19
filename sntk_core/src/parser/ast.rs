@@ -91,11 +91,7 @@ impl ObjectType {
 pub struct FunctionType(Option<IdentifierGeneric>, Vec<DataType>, Box<DataType>);
 
 impl FunctionType {
-    pub fn new(
-        generics: Option<IdentifierGeneric>,
-        parameters: Vec<DataType>,
-        return_type: DataType,
-    ) -> Self {
+    pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<DataType>, return_type: DataType) -> Self {
         FunctionType(generics, parameters, Box::new(return_type))
     }
 }
@@ -111,12 +107,18 @@ impl Generic {
 
 /// The Position structure is to indicate the exact position of the error message.
 /// there is nothing else to do.
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Position(pub usize, pub usize);
 
 impl Position {
     pub fn new(line: usize, column: usize) -> Self {
         Position(line, column)
+    }
+}
+
+impl PartialEq for Position {
+    fn eq(&self, _: &Self) -> bool {
+        true
     }
 }
 
