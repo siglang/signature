@@ -43,7 +43,7 @@ fn main() {
         Parser {
             lexer: Lexer::new(r#"3 == (-1 + 4);"#),
             options: CompilerOptions {
-                eee_opt_level: Rc::new(RefCell::new(2)),
+                eee_opt_level: 2.into(),
                 ..Default::default()
             },
             ..Default::default()
