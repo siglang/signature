@@ -4,11 +4,6 @@ macro_rules! ident {
         match $self.current_token.token_type {
             Tokens::IDENT(ref ident) => ident.clone(),
             _ => {
-                // return Err(ParsingError::new(
-                //     UNEXPECTED_TOKEN,
-                //     vec![&$self.current_token.token_type.stringify()],
-                //     position! { $self },
-                // ))
                 return Err(parsing_error! {
                     $self;
                     UNEXPECTED_TOKEN;
