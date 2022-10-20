@@ -10,6 +10,7 @@ pub type ParseResult<T> = Result<T, ParsingError>;
 /// Provides the basic methods of the parser.
 pub trait ParserBase {
     fn new(lexer: Lexer) -> Self;
+    fn new_with_options(lexer: Lexer, options: CompilerOptions) -> Self;
     fn next_token(&mut self);
     fn expect_token(&mut self, token_type: Tokens) -> ParseResult<()>;
     fn peek_token(&self, token_type: Tokens) -> bool;
@@ -100,6 +101,11 @@ impl ParserBase for Parser {
     /// it takes an argument of type `Lexer`.
     fn new(lexer: Lexer) -> Self {
         Parser { lexer, ..Default::default() }
+    }
+
+    /// **creates a new Parser instance with custom options.**
+    fn new_with_options(lexer: Lexer, options: CompilerOptions) -> Self {
+        Parser { lexer, options, ..Default::default() }
     }
 
     /// **Advances the current token and the peek token.**
