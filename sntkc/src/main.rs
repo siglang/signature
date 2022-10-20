@@ -1,5 +1,4 @@
 use sntk_core::{options::*, parser::parser::*, tokenizer::lexer::*};
-use std::{cell::*, rc::*};
 
 fn main() {
     // println!(
