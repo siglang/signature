@@ -1,20 +1,18 @@
-use std::{cell::*, rc::*};
+use std::cell::*;
 
 /// Depending on this options, the behavior of the compiler is different.
 ///
 /// the following describes the possible options and default values for compiler options:
 ///
-/// * `eee_opt_level` = `0`, `1` or `2`, default `1`
+/// * `eee_opt_level` = `0`, `1` or `2`, default `2`
 #[derive(Debug, Clone)]
 pub struct CompilerOptions {
-    pub eee_opt_level: Rc<RefCell<u8>>,
+    pub eee_opt_level: Cell<u8>,
 }
 
 impl Default for CompilerOptions {
     fn default() -> Self {
-        Self {
-            eee_opt_level: Rc::new(RefCell::new(1)),
-        }
+        Self { eee_opt_level: 2.into() }
     }
 }
 
@@ -23,11 +21,11 @@ macro_rules! impl_compiler_options {
         impl CompilerOptions {
             $(
                 pub fn $name(&self) -> $t {
-                    *self.$name.borrow()
+                    self.$name.get()
                 }
 
                 pub fn $set(&self, value: $t) {
-                    *self.$name.borrow_mut() = value;
+                    self.$name.set(value)
                 }
             )*
         }
