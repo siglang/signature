@@ -1,4 +1,4 @@
-use sntk_core::{options::*, parser::parser::*, tokenizer::lexer::*};
+use sntk_core::{parser::parser::*, tokenizer::lexer::*, options::*};
 
 fn main() {
     // println!(
