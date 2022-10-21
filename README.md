@@ -10,7 +10,6 @@ We will provide the following features:
 
 -   **Easy and simple, and even beginners can learn it quickly and easily.**
     -   it also has a C-like syntax, which makes it easy for other programmers to use the C-like syntax to learn.
--   **Using bytecode**, it provides a fast interpreter.
 -   **Supports functional programming.**
 -   **Supports macro**. it is similar to Rust's Macros, and will provide a powerful macro system.
 -   **Supports type system.**
@@ -25,12 +24,10 @@ this may not be observed. (No, most likely.) however, we strive to provide bette
 # Progress
 
 -   [x] Tokenizer (Tokens + Lexer)
--   [ ] Parser (AST) **(in progress)**
+-   [x] Parser (AST) **(in progress)**
     -   [ ] EEE (Evaluating an Evaluable Expression) **(in progress)**
--   [ ] Compiler (Bytecode)
-    -   [ ] Type Checker
--   [ ] Interpreter (VM)
 -   [ ] Plugin (e.g. Transcompiler)
+
     -   [ ] Plugin API
 
 -   [ ] Macro
@@ -51,10 +48,8 @@ this may not be observed. (No, most likely.) however, we strive to provide bette
 graph LR
     _[Source Code] --> |sntkc| Lexer
     Lexer[Tokenizer / Lexer] --> Parser[Parser / AST]
-    Parser --> Compiler[ByteCode / Compiler]
-    Compiler --> Run[sntk run]
-    Run --> |Run| VM[Virtual Machine / Interpreter]
-    Compiler --> Plugin[plugin]
+    Parser --> Evaluator[Type Checker + Evaluator]
+    Parser --> Plugin[Plugin]
     Plugin --> Transcompile[Transcompile]
     Transcompile --> TResult[JavaScript, etc..]
 ```
