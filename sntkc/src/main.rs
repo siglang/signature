@@ -1,8 +1,4 @@
-use sntk_bytecode::{
-    code::{BinaryOp, Instruction},
-    interpreter::Interpreter,
-    stack::Value,
-};
+use sntk_bytecode::{code::*, interpreter::*, stack::*};
 // use sntk_core::{options::*, parser::parser::*, tokenizer::lexer::*};
 
 fn main() {
@@ -78,7 +74,11 @@ fn main() {
             /* Line 4 */ Instruction::LoadGlobal(0), // print
             /* Line 4 */ Instruction::CallFunction(1), // print(77)
         ],
-        vec![Value::Number(5.), Value::Number(2.), Value::Number(10.)],
+        vec![
+            Value::LiteralValue(LiteralValue::Number(5.0)),
+            Value::LiteralValue(LiteralValue::Number(2.0)),
+            Value::LiteralValue(LiteralValue::Number(10.0)),
+        ],
         vec!["print".to_string(), "a".to_string(), "b".to_string()],
     )
     .run();
