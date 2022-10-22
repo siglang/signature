@@ -1,38 +1,72 @@
+use std::*;
+
+/// **The stack on which the interpreter is based.**
 #[derive(Debug, PartialEq, Clone)]
 pub struct Stack(Vec<Value>);
 
+/// **The value of a stack.**
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
-    Number(f64),
-    Bool(bool),
-    Str(String),
+    LiteralValue(LiteralValue),
     Identifier(String),
     None,
-    // ...
 }
 
-impl Stack {
-    pub fn new() -> Self {
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Value::LiteralValue(literal_value) => write!(f, "{}", literal_value),
+            Value::Identifier(name) => write!(f, "{}", name),
+            Value::None => write!(f, "None"),
+        }
+    }
+}
+
+/// **The literal value of a stack.**
+#[derive(Debug, PartialEq, Clone)]
+pub enum LiteralValue {
+    Number(f64),
+    Boolean(bool),
+    String(String),
+}
+
+impl fmt::Display for LiteralValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            LiteralValue::Number(number) => write!(f, "{}", number),
+            LiteralValue::Boolean(boolean) => write!(f, "{}", boolean),
+            LiteralValue::String(string) => write!(f, "\"{}\"", string),
+        }
+    }
+}
+
+/// **The trait for the stack implementation.**
+pub trait StackTrait {
+    fn new() -> Self;
+    fn push(&mut self, value: Value);
+    fn pop(&mut self) -> Option<Value>;
+    fn is_empty(&self) -> bool;
+    fn len(&self) -> usize;
+}
+
+impl StackTrait for Stack {
+    fn new() -> Self {
         Stack(Vec::new())
     }
 
-    pub fn push(&mut self, value: Value) {
+    fn push(&mut self, value: Value) {
         self.0.push(value);
     }
 
-    pub fn pop(&mut self) -> Option<Value> {
+    fn pop(&mut self) -> Option<Value> {
         self.0.pop()
     }
 
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
-    pub fn peek(&self) -> Option<&Value> {
-        self.0.last()
-    }
-
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.0.len()
     }
 }
