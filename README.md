@@ -10,9 +10,10 @@ We will provide the following features:
 
 -   **Easy and simple, and even beginners can learn it quickly and easily.**
     -   it also has a C-like syntax, which makes it easy for other programmers to use the C-like syntax to learn.
+-   **Using bytecode**, it provides a fast interpreter.
 -   **Supports functional programming.**
 -   **Supports macro**. it is similar to Rust's Macros, and will provide a powerful macro system.
--   **Supports type system.**
+-   **Supports type system.** (static type system)
 -   **By providing an interpreter plugin**, it can transcompile to other languages. (e.g. JavaScript)
 -   **`null` does not exist.** it is in the form of Rust's `Option<T>`, a monadic type will be decalred in the standard library.
 -   **In the parsing phase, evaluable expressions are pre-evaluated.** it is providing a fast runtime.
@@ -26,8 +27,10 @@ this may not be observed. (No, most likely.) however, we strive to provide bette
 -   [x] Tokenizer (Tokens + Lexer)
 -   [x] Parser (AST) **(in progress)**
     -   [ ] EEE (Evaluating an Evaluable Expression) **(in progress)**
+-   [ ] Compiler (Bytecode)
+    -   [ ] Type Checker
+-   [ ] Interpreter (VM, Stack Machine)
 -   [ ] Plugin (e.g. Transcompiler)
-
     -   [ ] Plugin API
 
 -   [ ] Macro
@@ -48,8 +51,10 @@ this may not be observed. (No, most likely.) however, we strive to provide bette
 graph LR
     _[Source Code] --> |sntkc| Lexer
     Lexer[Tokenizer / Lexer] --> Parser[Parser / AST]
-    Parser --> Evaluator[Type Checker + Evaluator]
-    Parser --> Plugin[Plugin]
+    Parser --> Compiler[ByteCode / Compiler]
+    Compiler --> Run[sntk run]
+    Run --> |Run| VM[Virtual Machine / Interpreter]
+    Compiler --> Plugin[plugin]
     Plugin --> Transcompile[Transcompile]
     Transcompile --> TResult[JavaScript, etc..]
 ```
