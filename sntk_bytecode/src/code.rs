@@ -1,5 +1,6 @@
 macro_rules! instruction {
     ($( $op:ident )*) => {
+        /// **Instruction commands**
         #[derive(Debug, PartialEq, Clone)]
         pub enum Instruction {
             $( $op(usize) ),*,
@@ -10,6 +11,7 @@ macro_rules! instruction {
 
 macro_rules! binary_op {
     ($( $op:ident )*) => {
+        /// **Binary operations**
         #[derive(Debug, PartialEq, Clone)]
         pub enum BinaryOp {
             $( $op ),*
