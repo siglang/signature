@@ -1,4 +1,9 @@
-use sntk_core::{parser::parser::*, tokenizer::lexer::*, options::*};
+use sntk_bytecode::{
+    code::{BinaryOp, Instruction},
+    interpreter::Interpreter,
+    stack::Value,
+};
+// use sntk_core::{options::*, parser::parser::*, tokenizer::lexer::*};
 
 fn main() {
     // println!(
@@ -37,16 +42,44 @@ fn main() {
     //         .parse_program()
     //     );
 
-    println!(
-        "{:#?}",
-        Parser {
-            lexer: Lexer::new(r#"3 == (-1 + 4);"#),
-            options: CompilerOptions {
-                eee_opt_level: 2.into(),
-                ..Default::default()
-            },
-            ..Default::default()
-        }
-        .parse_program()
-    );
+    // println!(
+    //     "{:#?}",
+    //     Parser {
+    //         lexer: Lexer::new(r#"3 == (-1 + 4);"#),
+    //         options: CompilerOptions {
+    //             eee_opt_level: 2.into(),
+    //             ..Default::default()
+    //         },
+    //         ..Default::default()
+    //     }
+    //     .parse_program()
+    // );
+
+    // a = 5 + 2; // a = 7
+    // print(a); // prints 7
+    // b = a * 10; // b = 70
+    // print(b + a); // prints 77
+    Interpreter::new(
+        vec![
+            /* Line 1 */ Instruction::LoadConst(0), // 5
+            /* Line 1 */ Instruction::LoadConst(1), // 2
+            /* Line 1 */ Instruction::BinaryOp(BinaryOp::Add), // 5 + 2
+            /* Line 1 */ Instruction::StoreName(0), // a = 7
+            /* Line 2 */ Instruction::LoadName(0), // a, 7
+            /* Line 2 */ Instruction::LoadGlobal(0), // print
+            /* Line 2 */ Instruction::CallFunction(1), // print(7)
+            /* Line 3 */ Instruction::LoadName(0), // a, 7
+            /* Line 3 */ Instruction::LoadConst(2), // 10
+            /* Line 3 */ Instruction::BinaryOp(BinaryOp::Mul), // 7 * 10
+            /* Line 3 */ Instruction::StoreName(1), // b = 70
+            /* Line 4 */ Instruction::LoadName(1), // b, 70
+            /* Line 4 */ Instruction::LoadName(0), // a, 7
+            /* Line 4 */ Instruction::BinaryOp(BinaryOp::Add), // 70 + 7
+            /* Line 4 */ Instruction::LoadGlobal(0), // print
+            /* Line 4 */ Instruction::CallFunction(1), // print(77)
+        ],
+        vec![Value::Number(5.), Value::Number(2.), Value::Number(10.)],
+        vec!["print".to_string(), "a".to_string(), "b".to_string()],
+    )
+    .run();
 }
