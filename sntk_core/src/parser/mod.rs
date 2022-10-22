@@ -1,6 +1,6 @@
 /// AST Node structures and enumerations such as expression, statements, etc are implemented in this module.
 pub mod ast;
-/// The error module contains the error handling for the language.
+/// The error module contains the error handling for the parser.
 pub mod error;
 /// **Parses the input string into an AST.**
 ///
