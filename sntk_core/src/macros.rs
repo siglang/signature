@@ -24,10 +24,6 @@ macro_rules! position {
 #[macro_export]
 macro_rules! parsing_error {
     ($self:ident; $msg:ident; $( $r:expr ),*) => {
-        ParsingError::new(
-            $msg,
-            vec![$( format!("{}", $r) ),*],
-            position! { $self },
-        )
+        ParsingError::new($msg, vec![$( format!("{}", $r) ),*], position! { $self })
     };
 }
