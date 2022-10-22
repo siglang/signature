@@ -105,7 +105,11 @@ impl ParserBase for Parser {
 
     /// **creates a new Parser instance with custom options.**
     fn new_with_options(lexer: Lexer, options: CompilerOptions) -> Self {
-        Parser { lexer, options, ..Default::default() }
+        Parser {
+            lexer,
+            options,
+            ..Default::default()
+        }
     }
 
     /// **Advances the current token and the peek token.**
