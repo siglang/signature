@@ -27,9 +27,9 @@ this may not be observed. (No, most likely.) however, we strive to provide bette
 -   [x] Tokenizer (Tokens + Lexer)
 -   [x] Parser (AST) **(in progress)**
     -   [ ] EEE (Evaluating an Evaluable Expression) **(in progress)**
--   [ ] Compiler (Bytecode)
+-   [ ] Compiler (Bytecode) **(in progress)**
     -   [ ] Type Checker
--   [ ] Interpreter (VM, Stack Machine)
+-   [ ] Interpreter (VM, Stack Machine) **(in progress)**
 -   [ ] Plugin (e.g. Transcompiler)
     -   [ ] Plugin API
 
