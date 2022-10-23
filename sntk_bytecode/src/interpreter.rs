@@ -29,6 +29,22 @@ trait BinaryOpTrait {
     fn binary_op_mod(&mut self);
 }
 
+/// Binary operator equal instructions implementation trait.
+trait BinaryOpEqTrait {
+    fn binary_op_eq(&mut self);
+    fn binary_op_neq(&mut self);
+    fn binary_op_lt(&mut self);
+    fn binary_op_gt(&mut self);
+    fn binary_op_lt_eq(&mut self);
+    fn binary_op_gt_eq(&mut self);
+}
+
+/// Unary operator instructions implementation trait.
+trait UnaryOpTrait {
+    fn unary_op_not(&mut self);
+    fn unary_op_minus(&mut self);
+}
+
 /// **Virtual machine interpreter.** it works on a stack basis.
 ///
 /// for example:
@@ -49,7 +65,7 @@ trait BinaryOpTrait {
 ///         /* Line 3 */ Instruction::LoadConst(3), // 20
 ///         /* Line 3 */ Instruction::LoadConst(4), // "hello"
 ///         /* Line 3 */ Instruction::LoadConst(5), // "world"
-//         /* Line 3 */ Instruction::BinaryOp(BinaryOp::Add), // "hello" + "world"
+///         /* Line 3 */ Instruction::BinaryOp(BinaryOp::Add), // "hello" + "world"
 ///         /* Line 3 */ Instruction::LoadGlobal(2), // foo
 ///         /* Line 3 */ Instruction::CallFunction(4), // foo(7, 10, 20, "helloworld")
 ///         /* Line 4 */ Instruction::LoadName(0), // a, 7
@@ -228,6 +244,90 @@ impl BinaryOpTrait for Interpreter {
     }
 }
 
+impl BinaryOpEqTrait for Interpreter {
+    fn binary_op_eq(&mut self) {
+        let right = self.stack.pop().unwrap();
+        let left = self.stack.pop().unwrap();
+
+        self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left == right)));
+    }
+
+    fn binary_op_neq(&mut self) {
+        let right = self.stack.pop().unwrap();
+        let left = self.stack.pop().unwrap();
+
+        self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left != right)));
+    }
+
+    fn binary_op_gt(&mut self) {
+        let right = self.stack.pop().unwrap();
+        let left = self.stack.pop().unwrap();
+
+        match (left, right) {
+            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
+                self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left > right)))
+            }
+            _ => runtime_error!(self; INVALID_OPERAND; ">"),
+        }
+    }
+
+    fn binary_op_lt(&mut self) {
+        let right = self.stack.pop().unwrap();
+        let left = self.stack.pop().unwrap();
+
+        match (left, right) {
+            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
+                self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left < right)))
+            }
+            _ => runtime_error!(self; INVALID_OPERAND; "<"),
+        }
+    }
+
+    fn binary_op_lt_eq(&mut self) {
+        let right = self.stack.pop().unwrap();
+        let left = self.stack.pop().unwrap();
+
+        match (left, right) {
+            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
+                self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left <= right)))
+            }
+            _ => runtime_error!(self; INVALID_OPERAND; "<="),
+        }
+    }
+
+    fn binary_op_gt_eq(&mut self) {
+        let right = self.stack.pop().unwrap();
+        let left = self.stack.pop().unwrap();
+
+        match (left, right) {
+            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
+                self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left >= right)))
+            }
+            _ => runtime_error!(self; INVALID_OPERAND; ">="),
+        }
+    }
+}
+
+impl UnaryOpTrait for Interpreter {
+    fn unary_op_not(&mut self) {
+        let value = self.stack.pop().unwrap();
+
+        match value {
+            Value::LiteralValue(LiteralValue::Boolean(value)) => self.stack.push(Value::LiteralValue(LiteralValue::Boolean(!value))),
+            _ => runtime_error!(self; INVALID_OPERAND; "!"),
+        }
+    }
+
+    fn unary_op_minus(&mut self) {
+        let value = self.stack.pop().unwrap();
+
+        match value {
+            Value::LiteralValue(LiteralValue::Number(value)) => self.stack.push(Value::LiteralValue(LiteralValue::Number(-value))),
+            _ => runtime_error!(self; INVALID_OPERAND; "-"),
+        }
+    }
+}
+
 impl InterpreterBase for Interpreter {
     fn new(instructions: Vec<Instruction>, constants: Vec<Value>, names: Vec<String>) -> Self {
         Interpreter {
@@ -258,6 +358,18 @@ impl InterpreterBase for Interpreter {
                     BinaryOp::Mul => self.binary_op_mul(),
                     BinaryOp::Div => self.binary_op_div(),
                     BinaryOp::Mod => self.binary_op_mod(),
+                },
+                Instruction::BinaryOpEq(op) => match op {
+                    BinaryOpEq::Eq => self.binary_op_eq(),
+                    BinaryOpEq::Neq => self.binary_op_neq(),
+                    BinaryOpEq::Lt => self.binary_op_lt(),
+                    BinaryOpEq::Gt => self.binary_op_gt(),
+                    BinaryOpEq::Lte => self.binary_op_lt_eq(),
+                    BinaryOpEq::Gte => self.binary_op_gt_eq(),
+                },
+                Instruction::UnaryOp(op) => match op {
+                    UnaryOp::Not => self.unary_op_not(),
+                    UnaryOp::Minus => self.unary_op_minus(),
                 },
             }
 
