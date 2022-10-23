@@ -94,7 +94,7 @@ trait UnaryOpTrait {
 ///     ],
 /// ).run()
 /// ```
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct Interpreter {
     stack: Stack,
     instructions: Vec<Instruction>,
