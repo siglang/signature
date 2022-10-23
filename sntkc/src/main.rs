@@ -129,4 +129,24 @@ fn main() {
         vec!["print".to_string()],
     )
     .run();
+
+    // let a = -1;
+    // print(a > 2);
+    Interpreter::new(
+        vec![
+            /* 0 */ /* Line 1 */ Instruction::LoadConst(0), // -1
+            /* 1 */ /* Line 1 */ Instruction::StoreName(0), // a = -1
+            /* 2 */ /* Line 2 */ Instruction::LoadName(0), // a, -1
+            /* 3 */ /* Line 2 */ Instruction::LoadConst(1), // 2
+            /* 4 */ /* Line 2 */ Instruction::BinaryOpEq(BinaryOpEq::Gt), // -1 > 2
+            /* 5 */ /* Line 2 */ Instruction::LoadGlobal(0), // print
+            /* 6 */ /* Line 2 */ Instruction::CallFunction(1), // print(-1 > 2)
+        ],
+        vec![
+            Value::LiteralValue(LiteralValue::Number(-1.0)),
+            Value::LiteralValue(LiteralValue::Number(2.0)),
+        ],
+        vec!["print".to_string()],
+    )
+    .run();
 }
