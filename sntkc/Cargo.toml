@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 sntk_core = { path = "../sntk_core" }
 sntk_bytecode = { path = "../sntk_bytecode" }
+sntk_compiler = { path = "../sntk_compiler" }
