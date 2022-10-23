@@ -22,7 +22,7 @@ pub mod error;
 ///         /* Line 3 */ Instruction::LoadConst(3), // 20
 ///         /* Line 3 */ Instruction::LoadConst(4), // "hello"
 ///         /* Line 3 */ Instruction::LoadConst(5), // "world"
-//         /* Line 3 */ Instruction::BinaryOp(BinaryOp::Add), // "hello" + "world"
+///         /* Line 3 */ Instruction::BinaryOp(BinaryOp::Add), // "hello" + "world"
 ///         /* Line 3 */ Instruction::LoadGlobal(2), // foo
 ///         /* Line 3 */ Instruction::CallFunction(4), // foo(7, 10, 20, "helloworld")
 ///         /* Line 4 */ Instruction::LoadName(0), // a, 7
