@@ -1,5 +1,9 @@
+#![allow(unused_imports)]
+
 use sntk_bytecode::{code::*, interpreter::*, stack::*};
-// use sntk_core::{options::*, parser::parser::*, tokenizer::lexer::*};
+use sntk_core::{options::*, parser::parser::*, tokenizer::lexer::*};
+use sntk_compiler::compiler::*;
+use sntk_core::parser::parser::*;
 
 fn main() {
     // println!(
@@ -105,48 +109,82 @@ fn main() {
     //   print("Goodbye, World!");
     // }
     // print("Foo");
-    Interpreter::new(
-        vec![
-            /* 0  */ /* Line 1 */ Instruction::LoadConst(0), // true
-            /* 1  */ /* Line 1 */ Instruction::JumpIfFalse(5), // if (true) {
-            /* 2  */ /* Line 2 */ Instruction::LoadConst(1), // "Hello, World!"
-            /* 3  */ /* Line 2 */ Instruction::LoadGlobal(0), // print
-            /* 4  */ /* Line 2 */ Instruction::CallFunction(1), // print("Hello, World!")
-            /* 5  */ /* Line 3 */ Instruction::Jump(8), // } else {
-            /* 6  */ /* Line 4 */ Instruction::LoadConst(2), // "Goodbye, World!"
-            /* 7  */ /* Line 4 */ Instruction::LoadGlobal(0), // print
-            /* 8  */ /* Line 4 */ Instruction::CallFunction(1), // print("Goodbye, World!")
-            /* 9  */ /* Line 6 */ Instruction::LoadConst(3), // "Foo"
-            /* 10 */ /* Line 6 */ Instruction::LoadGlobal(0), // print
-            /* 11 */ /* Line 6 */ Instruction::CallFunction(1), // print("Foo")
-        ],
-        vec![
-            Value::LiteralValue(LiteralValue::Boolean(true)),
-            Value::LiteralValue(LiteralValue::String("Hello, World!".to_string())),
-            Value::LiteralValue(LiteralValue::String("Goodbye, World!".to_string())),
-            Value::LiteralValue(LiteralValue::String("Foo".to_string())),
-        ],
-        vec!["print".to_string()],
-    )
-    .run();
+    // Interpreter::new(
+    //     vec![
+    //         /* 0  */ /* Line 1 */ Instruction::LoadConst(0), // true
+    //         /* 1  */ /* Line 1 */ Instruction::JumpIfFalse(5), // if (true) {
+    //         /* 2  */ /* Line 2 */ Instruction::LoadConst(1), // "Hello, World!"
+    //         /* 3  */ /* Line 2 */ Instruction::LoadGlobal(0), // print
+    //         /* 4  */ /* Line 2 */ Instruction::CallFunction(1), // print("Hello, World!")
+    //         /* 5  */ /* Line 3 */ Instruction::Jump(8), // } else {
+    //         /* 6  */ /* Line 4 */ Instruction::LoadConst(2), // "Goodbye, World!"
+    //         /* 7  */ /* Line 4 */ Instruction::LoadGlobal(0), // print
+    //         /* 8  */ /* Line 4 */ Instruction::CallFunction(1), // print("Goodbye, World!")
+    //         /* 9  */ /* Line 6 */ Instruction::LoadConst(3), // "Foo"
+    //         /* 10 */ /* Line 6 */ Instruction::LoadGlobal(0), // print
+    //         /* 11 */ /* Line 6 */ Instruction::CallFunction(1), // print("Foo")
+    //     ],
+    //     vec![
+    //         Value::LiteralValue(LiteralValue::Boolean(true)),
+    //         Value::LiteralValue(LiteralValue::String("Hello, World!".to_string())),
+    //         Value::LiteralValue(LiteralValue::String("Goodbye, World!".to_string())),
+    //         Value::LiteralValue(LiteralValue::String("Foo".to_string())),
+    //     ],
+    //     vec!["print".to_string()],
+    // )
+    // .run();
 
-    // let a = -1;
-    // print(a > 2);
+    // // let a = -1;
+    // // print(a > 2);
+    // Interpreter::new(
+    //     vec![
+    //         /* 0 */ /* Line 1 */ Instruction::LoadConst(0), // -1
+    //         /* 1 */ /* Line 1 */ Instruction::StoreName(0), // a = -1
+    //         /* 2 */ /* Line 2 */ Instruction::LoadName(0), // a, -1
+    //         /* 3 */ /* Line 2 */ Instruction::LoadConst(1), // 2
+    //         /* 4 */ /* Line 2 */ Instruction::BinaryOpEq(BinaryOpEq::Gt), // -1 > 2
+    //         /* 5 */ /* Line 2 */ Instruction::LoadGlobal(0), // print
+    //         /* 6 */ /* Line 2 */ Instruction::CallFunction(1), // print(-1 > 2)
+    //     ],
+    //     vec![
+    //         Value::LiteralValue(LiteralValue::Number(-1.0)),
+    //         Value::LiteralValue(LiteralValue::Number(2.0)),
+    //     ],
+    //     vec!["print".to_string()],
+    // )
+    // .run();
+
+    let source = r#"
+let x: number = 10;
+let y: number = 20.3;
+let z: number = 3;
+    "#;
+
+    let mut c = Compiler::new(Parser::from(source).parse_program()).compile_program().unwrap();
+    c.run();
+
+    println!("{:#?}", c);
+
+    // source compiled to bytecode
     Interpreter::new(
         vec![
-            /* 0 */ /* Line 1 */ Instruction::LoadConst(0), // -1
-            /* 1 */ /* Line 1 */ Instruction::StoreName(0), // a = -1
-            /* 2 */ /* Line 2 */ Instruction::LoadName(0), // a, -1
-            /* 3 */ /* Line 2 */ Instruction::LoadConst(1), // 2
-            /* 4 */ /* Line 2 */ Instruction::BinaryOpEq(BinaryOpEq::Gt), // -1 > 2
-            /* 5 */ /* Line 2 */ Instruction::LoadGlobal(0), // print
-            /* 6 */ /* Line 2 */ Instruction::CallFunction(1), // print(-1 > 2)
+            /* 0 */ /* Line 1 */ Instruction::LoadConst(0), // 10
+            /* 1 */ /* Line 1 */ Instruction::StoreName(0), // x = 10
+            /* 2 */ /* Line 2 */ Instruction::LoadConst(1), // 20.3
+            /* 3 */ /* Line 2 */ Instruction::StoreName(1), // y = 20.3
+            /* 4 */ /* Line 3 */ Instruction::LoadConst(2), // 3
+            /* 5 */ /* Line 3 */ Instruction::StoreName(2), // z = 3
         ],
         vec![
-            Value::LiteralValue(LiteralValue::Number(-1.0)),
-            Value::LiteralValue(LiteralValue::Number(2.0)),
+            Value::LiteralValue(LiteralValue::Number(10.0)),
+            Value::LiteralValue(LiteralValue::Number(20.3)),
+            Value::LiteralValue(LiteralValue::Number(3.0)),
         ],
-        vec!["print".to_string()],
+        vec![
+            "x".to_string(),
+            "y".to_string(),
+            "z".to_string(),
+        ],
     )
     .run();
 }
