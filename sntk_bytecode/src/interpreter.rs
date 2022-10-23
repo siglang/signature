@@ -96,12 +96,12 @@ trait UnaryOpTrait {
 /// ```
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Interpreter {
-    stack: Stack,
-    instructions: Vec<Instruction>,
-    instruction_pointer: usize,
-    environment: HashMap<String, Value>,
-    constants: Vec<Value>,
-    names: Vec<String>,
+    pub stack: Stack,
+    pub instructions: Vec<Instruction>,
+    pub instruction_pointer: usize,
+    pub environment: HashMap<String, Value>,
+    pub constants: Vec<Value>,
+    pub names: Vec<String>,
 }
 
 impl InstructionTrait for Interpreter {
