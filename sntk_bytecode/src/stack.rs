@@ -1,7 +1,7 @@
 use std::*;
 
 /// **The stack on which the interpreter is based.**
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct Stack(Vec<Value>);
 
 /// **The value of a stack.**
