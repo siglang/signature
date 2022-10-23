@@ -19,5 +19,5 @@ macro_rules! binary_op {
     }
 }
 
-instruction! { LoadGlobal LoadConst CallFunction StoreName LoadName DeleteName }
+instruction! { LoadGlobal LoadConst CallFunction StoreName LoadName DeleteName JumpIfTrue JumpIfFalse Jump }
 binary_op! { Add Sub Mul Div Mod }
