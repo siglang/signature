@@ -382,6 +382,11 @@ impl ParserTrait for Parser {
 
                     if self.current_token.token_type != Tokens::RParen {
                         arguments.push(self.parse_expression(Priority::Lowest)?);
+                        self.next_token();
+
+                        if self.current_token.token_type == Tokens::Comma {
+                            self.next_token();
+                        }
 
                         while self.current_token.token_type != Tokens::RParen {
                             arguments.push(self.parse_expression(Priority::Lowest)?);
@@ -828,18 +833,14 @@ impl EEE for Parser {
         match operator {
             Tokens::Minus => {
                 if let Expression::NumberLiteral(right) = *right.clone() {
-                    let result = -right.value;
-
-                    return Some(Ok(Expression::NumberLiteral(NumberLiteral::new(result, position))));
+                    return Some(Ok(Expression::NumberLiteral(NumberLiteral::new(-right.value, position))));
                 }
 
                 return None;
             }
             Tokens::Bang => {
                 if let Expression::BooleanLiteral(right) = *right.clone() {
-                    let result = !right.value;
-
-                    return Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(result, position))));
+                    return Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(!right.value, position))));
                 }
 
                 return None;
