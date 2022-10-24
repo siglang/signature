@@ -3,21 +3,20 @@ use std::collections::*;
 
 /// Provides the basic methods of the bytecode interpreter.
 pub trait InterpreterBase {
-    fn new(instructions: Vec<Instruction>, constants: Vec<Value>, names: Vec<String>) -> Interpreter;
+    fn new(instructions: Vec<Instruction>) -> Interpreter;
     fn run(&mut self);
 }
 
 /// Instructions implementation trait.
 trait InstructionTrait {
-    fn load_global(&mut self, pos: usize);
-    fn load_const(&mut self, pos: usize);
-    fn load_name(&mut self, pos: usize);
-    fn store_name(&mut self, pos: usize);
-    fn delete_name(&mut self, pos: usize);
-    fn call_function(&mut self, pos: usize);
-    fn jump_if_true(&mut self, pos: usize);
-    fn jump_if_false(&mut self, pos: usize);
-    fn jump(&mut self, pos: usize);
+    fn load_global(&mut self, name: String);
+    fn load_const(&mut self, value: Value);
+    fn load_name(&mut self, name: String);
+    fn store_name(&mut self, name: String);
+    fn call_function(&mut self, argc: usize);
+    fn jump_if_true(&mut self, offset: usize);
+    fn jump_if_false(&mut self, offset: usize);
+    fn jump(&mut self, offset: usize);
 }
 
 /// Binary operator instructions implementation trait.
@@ -46,96 +45,42 @@ trait UnaryOpTrait {
 }
 
 /// **Virtual machine interpreter.** it works on a stack basis.
-///
-/// for example:
-/// ```rust
-/// use sntk_bytecode::{code::*, interpreter::*, stack::*};
-///
-/// Interpreter::new(
-///     vec![
-///         /* Line 1 */ Instruction::LoadConst(0), // 5
-///         /* Line 1 */ Instruction::LoadConst(1), // 2
-///         /* Line 1 */ Instruction::BinaryOp(BinaryOp::Add), // 5 + 2
-///         /* Line 1 */ Instruction::StoreName(0), // a = 7
-///         /* Line 2 */ Instruction::LoadName(0), // a, 7
-///         /* Line 2 */ Instruction::LoadGlobal(1), // print
-///         /* Line 2 */ Instruction::CallFunction(1), // print(7)
-///         /* Line 3 */ Instruction::LoadName(0), // a, 7
-///         /* Line 3 */ Instruction::LoadConst(2), // 10
-///         /* Line 3 */ Instruction::LoadConst(3), // 20
-///         /* Line 3 */ Instruction::LoadConst(4), // "hello"
-///         /* Line 3 */ Instruction::LoadConst(5), // "world"
-///         /* Line 3 */ Instruction::BinaryOp(BinaryOp::Add), // "hello" + "world"
-///         /* Line 3 */ Instruction::LoadGlobal(2), // foo
-///         /* Line 3 */ Instruction::CallFunction(4), // foo(7, 10, 20, "helloworld")
-///         /* Line 4 */ Instruction::LoadName(0), // a, 7
-///         /* Line 4 */ Instruction::LoadConst(1), // 2
-///         /* Line 4 */ Instruction::BinaryOp(BinaryOp::Add), // 7 + 2
-///         /* Line 4 */ Instruction::LoadConst(6), // 2
-///         /* Line 4 */ Instruction::BinaryOp(BinaryOp::Mul), // (7 + 2) * 2
-///         /* Line 4 */ Instruction::StoreName(0), // a = 16
-///         /* Line 5 */ Instruction::LoadName(0), // a, 16
-///         /* Line 5 */ Instruction::LoadGlobal(1), // print
-///         /* Line 5 */ Instruction::CallFunction(1), // print(16)
-///     ],
-///     vec![
-///         Value::LiteralValue(LiteralValue::Number(5.0)),
-///         Value::LiteralValue(LiteralValue::Number(2.0)),
-///         Value::LiteralValue(LiteralValue::Number(10.0)),
-///         Value::LiteralValue(LiteralValue::Number(20.0)),
-///         Value::LiteralValue(LiteralValue::String("hello".to_string())),
-///         Value::LiteralValue(LiteralValue::String("world".to_string())),
-///         Value::LiteralValue(LiteralValue::Number(2.0)),
-///     ],
-///     vec![
-///         "a".to_string(),
-///         "print".to_string(),
-///         "foo".to_string(),
-///     ],
-/// ).run()
-/// ```
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Interpreter {
     pub stack: Stack,
     pub instructions: Vec<Instruction>,
     pub instruction_pointer: usize,
     pub environment: HashMap<String, Value>,
-    pub constants: Vec<Value>,
-    pub names: Vec<String>,
 }
 
 impl InstructionTrait for Interpreter {
     /// **Loads a global variable.**
-    fn load_global(&mut self, pos: usize) {
-        self.stack.push(Value::Identifier(self.names[pos].clone()));
+    fn load_global(&mut self, name: String) {
+        self.stack.push(Value::Identifier(name));
     }
 
     /// **Loads a constant.**
-    fn load_const(&mut self, pos: usize) {
-        self.stack.push(self.constants[pos].clone());
+    fn load_const(&mut self, value: Value) {
+        self.stack.push(value);
     }
 
     /// **Loads a name.**
-    fn load_name(&mut self, pos: usize) {
-        self.stack.push(self.environment[&self.names[pos]].clone());
+    fn load_name(&mut self, name: String) {
+        self.stack.push(self.environment.get(&name).unwrap().clone());
     }
 
     /// **Stores a name.**
-    fn store_name(&mut self, pos: usize) {
-        self.environment.insert(self.names[pos].clone(), self.stack.pop().unwrap());
-    }
-
-    /// **Deletes a name.**
-    fn delete_name(&mut self, pos: usize) {
-        self.environment.remove(&self.names[pos]);
+    fn store_name(&mut self, name: String) {
+        let value = self.stack.pop().unwrap();
+        self.environment.insert(name, value);
     }
 
     /// **Calls a function.**
-    fn call_function(&mut self, pos: usize) {
+    fn call_function(&mut self, argc: usize) {
         let function = self.stack.pop().unwrap();
         let mut args = Vec::new();
 
-        for _ in 0..pos {
+        for _ in 0..argc {
             args.push(self.stack.pop().unwrap());
         }
 
@@ -143,7 +88,7 @@ impl InstructionTrait for Interpreter {
 
         match function {
             Value::Identifier(name) => match name.as_str() {
-                "print" => println!("{:?}", args[0]),
+                "print" => println!("{:?}", args),
                 "foo" => println!("foo: {:?}", args),
                 _ => runtime_error!(self; UNKNOWN_FUNCTION; name),
             },
@@ -329,26 +274,23 @@ impl UnaryOpTrait for Interpreter {
 }
 
 impl InterpreterBase for Interpreter {
-    fn new(instructions: Vec<Instruction>, constants: Vec<Value>, names: Vec<String>) -> Self {
+    fn new(instructions: Vec<Instruction>) -> Self {
         Interpreter {
             stack: Stack::new(),
             instructions,
             instruction_pointer: 0,
             environment: HashMap::new(),
-            constants,
-            names,
         }
     }
 
     fn run(&mut self) {
         while self.instruction_pointer < self.instructions.len() {
             match self.instructions[self.instruction_pointer].clone() {
-                Instruction::LoadConst(pos) => self.load_const(pos),
-                Instruction::LoadGlobal(pos) => self.load_global(pos),
-                Instruction::LoadName(pos) => self.load_name(pos),
-                Instruction::StoreName(pos) => self.store_name(pos),
-                Instruction::DeleteName(pos) => self.delete_name(pos),
-                Instruction::CallFunction(pos) => self.call_function(pos),
+                Instruction::LoadConst(value) => self.load_const(value),
+                Instruction::LoadGlobal(name) => self.load_global(name),
+                Instruction::LoadName(name) => self.load_name(name),
+                Instruction::StoreName(name) => self.store_name(name),
+                Instruction::CallFunction(argc) => self.call_function(argc),
                 Instruction::JumpIfTrue(pos) => self.jump_if_true(pos),
                 Instruction::JumpIfFalse(pos) => self.jump_if_false(pos),
                 Instruction::Jump(pos) => self.jump(pos),
