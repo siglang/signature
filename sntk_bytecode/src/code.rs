@@ -1,14 +1,18 @@
-macro_rules! instruction {
-    ($( $op:ident )*) => {
-        /// **Instruction commands**
-        #[derive(Debug, PartialEq, Clone)]
-        pub enum Instruction {
-            $( $op(usize) ),*,
-            BinaryOp(BinaryOp),
-            BinaryOpEq(BinaryOpEq),
-            UnaryOp(UnaryOp),
-        }
-    };
+use crate::stack::*;
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Instruction {
+    LoadGlobal(String),
+    LoadConst(Value),
+    CallFunction(usize),
+    StoreName(String),
+    LoadName(String),
+    JumpIfTrue(usize),
+    JumpIfFalse(usize),
+    Jump(usize),
+    BinaryOp(BinaryOp),
+    BinaryOpEq(BinaryOpEq),
+    UnaryOp(UnaryOp),
 }
 
 macro_rules! binary_op {
@@ -41,7 +45,6 @@ macro_rules! unary_op {
     }
 }
 
-instruction! { LoadGlobal LoadConst CallFunction StoreName LoadName DeleteName JumpIfTrue JumpIfFalse Jump }
 binary_op! { Add Sub Mul Div Mod }
 binary_op_eq! { Eq Neq Lt Gt Lte Gte }
 unary_op! { Not Minus }
