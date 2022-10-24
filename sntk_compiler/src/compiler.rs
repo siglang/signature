@@ -5,36 +5,22 @@ use sntk_bytecode::{code::*, interpreter::*, stack::*};
 use sntk_core::parser::ast::*;
 
 #[derive(Debug, Clone)]
-pub struct Code {
-    pub instructions: Vec<Instruction>,
-    pub constants: Vec<Value>,
-    pub names: Vec<String>,
-}
+pub struct Code(pub Vec<Instruction>);
 
 impl Code {
     fn new() -> Self {
-        Self {
-            instructions: Vec::new(),
-            constants: Vec::new(),
-            names: Vec::new(),
-        }
+        Self(Vec::new())
     }
     fn push_instruction(&mut self, instruction: Instruction) {
-        self.instructions.push(instruction);
+        self.0.push(instruction);
     }
 
     fn push_constant(&mut self, constant: Value) {
-        self.constants.push(constant);
+        self.push_instruction(Instruction::LoadConst(constant));
     }
 
     fn push_name(&mut self, name: String) {
-        self.names.push(name);
-    }
-
-    fn push(&mut self, code: Code) {
-        self.instructions.extend(code.instructions);
-        self.constants.extend(code.constants);
-        self.names.extend(code.names);
+        self.push_instruction(Instruction::LoadName(name));
     }
 }
 
@@ -79,18 +65,7 @@ impl CompilerTrait for Compiler {
             };
         }
 
-        macro_rules! iter {
-            ($f:ident) => {
-                self.code.$f.iter().map(|x| x.clone()).collect()
-            };
-        }
-
-        Ok(Interpreter {
-            instructions: iter! { instructions },
-            constants: iter! { constants },
-            names: iter! { names },
-            ..Default::default()
-        })
+        Ok(Interpreter::new(self.code.clone().0))
     }
 
     /// Compile a `let` statement.
@@ -110,7 +85,7 @@ impl CompilerTrait for Compiler {
 
         self.code.push_name(name.clone().value);
         self.compile_expression(value)?;
-        self.code.push_instruction(Instruction::StoreName(self.code.names.len() - 1));
+        self.code.push_instruction(Instruction::StoreName(name.value));
 
         Ok(())
     }
@@ -129,11 +104,52 @@ impl CompilerTrait for Compiler {
     fn compile_expression(&mut self, expression: Expression) -> CompileResult<()> {
         match expression {
             Expression::NumberLiteral(NumberLiteral { value, .. }) => {
-                self.code.push_instruction(Instruction::LoadConst(self.code.constants.len()));
+                self.code
+                    .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(value))));
                 self.code.push_constant(Value::LiteralValue(LiteralValue::Number(value)));
                 Ok(())
             }
-            _ => unimplemented!(),
+
+            Expression::Identifier(Identifier { value, .. }) => {
+                self.code.push_name(value.clone());
+                self.code.push_instruction(Instruction::LoadName(value));
+                Ok(())
+            }
+
+            // TODO
+            // function(1, 2, 3);
+            //
+            // Instruction:
+            //   0: LoadConst 0
+            //   1: LoadConst 1
+            //   2: LoadConst 2
+            //   3: LoadConst 3
+            //   4: Call 3
+            // Constant:
+            //   0: 1
+            //   1: 2
+            //   2: 3
+            //   3: function
+            Expression::CallExpression(CallExpression { function, arguments, .. }) => {
+                for argument in arguments.clone() {
+                    self.compile_expression(argument)?;
+                }
+
+                match *function.clone() {
+                    Expression::Identifier(Identifier { value, .. }) => {
+                        self.code.push_name(value.clone());
+                        self.code.push_instruction(Instruction::LoadName(value));
+                    }
+                    _ => todo!(),
+                }
+
+                self.code.push_instruction(Instruction::CallFunction(arguments.len()));
+                Ok(())
+            }
+            e => {
+                println!("err: {:?}", e);
+                unimplemented!()
+            }
         }
     }
 }
