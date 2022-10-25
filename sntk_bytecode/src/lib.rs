@@ -1,3 +1,5 @@
+/// **Built-in functions.**
+pub mod builtin;
 /// **Instruction commands, binary operations**
 pub mod code;
 /// The error module contains the error handling for the bytecode runtime.
