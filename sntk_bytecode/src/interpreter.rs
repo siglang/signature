@@ -1,4 +1,4 @@
-use crate::{code::*, error::*, runtime_error, stack::*};
+use crate::{builtin::*, code::*, error::*, runtime_error, stack::*};
 use std::collections::*;
 
 /// Provides the basic methods of the bytecode interpreter.
@@ -87,13 +87,12 @@ impl InstructionTrait for Interpreter {
         args.reverse();
 
         match function {
-            Value::Identifier(name) => match name.as_str() {
-                "print" => println!("{:?}", args),
-                "foo" => println!("foo: {:?}", args),
-                _ => runtime_error!(self; UNKNOWN_FUNCTION; name),
+            Value::Identifier(name) => match get_builtin(name.clone()) {
+                Some(builtin) => builtin(Some(args)),
+                None => runtime_error!(self; UNKNOWN_FUNCTION; name),
             },
             _ => runtime_error!(self; NOT_A_FUNCTION; function),
-        }
+        };
     }
 
     /// **Jumps if the top of the stack is true.**
