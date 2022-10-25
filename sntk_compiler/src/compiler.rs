@@ -1,8 +1,6 @@
-#![allow(unused_variables)] // TODO: remove this
-
 use crate::error::*;
-use sntk_bytecode::{code::*, interpreter::*, stack::*};
-use sntk_core::parser::ast::*;
+use sntk_bytecode::{builtin::*, code::*, interpreter::*, stack::*};
+use sntk_core::{parser::ast::*, tokenizer::token::Tokens};
 
 #[derive(Debug, Clone)]
 pub struct Code(pub Vec<Instruction>);
@@ -11,16 +9,9 @@ impl Code {
     fn new() -> Self {
         Self(Vec::new())
     }
+
     fn push_instruction(&mut self, instruction: Instruction) {
         self.0.push(instruction);
-    }
-
-    fn push_constant(&mut self, constant: Value) {
-        self.push_instruction(Instruction::LoadConst(constant));
-    }
-
-    fn push_name(&mut self, name: String) {
-        self.push_instruction(Instruction::LoadName(name));
     }
 }
 
@@ -73,17 +64,12 @@ impl CompilerTrait for Compiler {
     /// `let x: number = 5;` to bytecode:
     /// ```
     /// Instruction:
-    ///     0: LoadConst 0
-    ///     1: StoreName 0
-    /// Constant:
-    ///     0: 5
-    /// Name:
-    ///     0: x
+    ///     0: LoadConst 5.0
+    ///     1: StoreName "x"
     /// ```
     fn compile_let_statement(&mut self, let_statement: LetStatement) -> CompileResult<()> {
         let LetStatement { name, value, data_type, .. } = let_statement;
 
-        self.code.push_name(name.clone().value);
         self.compile_expression(value)?;
         self.code.push_instruction(Instruction::StoreName(name.value));
 
@@ -106,12 +92,12 @@ impl CompilerTrait for Compiler {
             Expression::NumberLiteral(NumberLiteral { value, .. }) => {
                 self.code
                     .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(value))));
-                self.code.push_constant(Value::LiteralValue(LiteralValue::Number(value)));
+                self.code
+                    .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(value))));
                 Ok(())
             }
 
             Expression::Identifier(Identifier { value, .. }) => {
-                self.code.push_name(value.clone());
                 self.code.push_instruction(Instruction::LoadName(value));
                 Ok(())
             }
@@ -136,16 +122,29 @@ impl CompilerTrait for Compiler {
                 }
 
                 match *function.clone() {
-                    Expression::Identifier(Identifier { value, .. }) => {
-                        self.code.push_name(value.clone());
-                        self.code.push_instruction(Instruction::LoadName(value));
-                    }
+                    Expression::Identifier(Identifier { value, .. }) => match get_builtin(value.clone()) {
+                        Some(_) => self.code.push_instruction(Instruction::LoadGlobal(value.clone())),
+                        None => self.code.push_instruction(Instruction::LoadName(value.clone())),
+                    },
                     _ => todo!(),
                 }
 
                 self.code.push_instruction(Instruction::CallFunction(arguments.len()));
                 Ok(())
             }
+
+            Expression::InfixExpression(InfixExpression { left, operator, right, .. }) => {
+                self.compile_expression(*left)?;
+                self.compile_expression(*right)?;
+
+                match operator {
+                    Tokens::Plus => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Add)),
+                    _ => unimplemented!(),
+                }
+
+                Ok(())
+            }
+
             e => {
                 println!("err: {:?}", e);
                 unimplemented!()
