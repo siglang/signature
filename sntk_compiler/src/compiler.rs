@@ -68,7 +68,11 @@ impl CompilerTrait for Compiler {
     ///     1: StoreName "x"
     /// ```
     fn compile_let_statement(&mut self, let_statement: LetStatement) -> CompileResult<()> {
-        let LetStatement { name, value, data_type, .. } = let_statement;
+        let LetStatement {
+            name,
+            value, /* data_type, */
+            ..
+        } = let_statement;
 
         self.compile_expression(value)?;
         self.code.push_instruction(Instruction::StoreName(name.value));
@@ -77,11 +81,24 @@ impl CompilerTrait for Compiler {
     }
 
     /// Compile a `return` statement.
+    ///
+    /// `return 5;` to bytecode:
+    /// ```
+    /// Instruction:
+    ///     0: LoadConst 5.0
+    ///     1: Return
+    /// ```
     fn compile_return_statement(&mut self, return_statement: ReturnStatement) -> CompileResult<()> {
-        todo!()
+        let ReturnStatement { value, .. } = return_statement;
+
+        self.compile_expression(value)?;
+        self.code.push_instruction(Instruction::Return);
+
+        Ok(())
     }
 
     /// Compile a `type` statement.
+    #[allow(unused_variables)]
     fn compile_type_statement(&mut self, type_statement: TypeStatement) -> CompileResult<()> {
         todo!()
     }
@@ -97,25 +114,23 @@ impl CompilerTrait for Compiler {
                 Ok(())
             }
 
+            Expression::BlockExpression(BlockExpression { statements, .. }) => {
+                self.code.push_instruction(Instruction::Block(
+                    Compiler::new(Program {
+                        statements,
+                        errors: Vec::new(),
+                    })
+                    .compile_program()?
+                    .instructions,
+                ));
+                Ok(())
+            }
+
             Expression::Identifier(Identifier { value, .. }) => {
                 self.code.push_instruction(Instruction::LoadName(value));
                 Ok(())
             }
 
-            // TODO
-            // function(1, 2, 3);
-            //
-            // Instruction:
-            //   0: LoadConst 0
-            //   1: LoadConst 1
-            //   2: LoadConst 2
-            //   3: LoadConst 3
-            //   4: Call 3
-            // Constant:
-            //   0: 1
-            //   1: 2
-            //   2: 3
-            //   3: function
             Expression::CallExpression(CallExpression { function, arguments, .. }) => {
                 for argument in arguments.clone() {
                     self.compile_expression(argument)?;
