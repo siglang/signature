@@ -33,10 +33,11 @@ macro_rules! messages {
 }
 
 messages! {
-    UNKNOWN_FUNCTION => "Unknown function: {0}";
+    NOT_DEFINED => "Name '{0}' is not defined";
     NOT_A_FUNCTION => "Not a function: {0}";
-    INVALID_OPERAND => "Invalid operand: {0}";
     NOT_A_BOOLEAN => "Not a boolean: {0}";
+    INVALID_OPERAND => "Invalid operand: {0}";
+    UNKNOWN_FUNCTION => "Unknown function: {0}";
 }
 
 #[macro_export]
