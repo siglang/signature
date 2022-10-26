@@ -1,4 +1,4 @@
-use std::*;
+use std::{collections::HashMap, *};
 
 /// **The stack on which the interpreter is based.**
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -9,6 +9,7 @@ pub struct Stack(Vec<Value>);
 pub enum Value {
     LiteralValue(LiteralValue),
     Identifier(String),
+    Return(Box<Value>),
     None,
 }
 
@@ -17,6 +18,7 @@ impl fmt::Display for Value {
         match self {
             Value::LiteralValue(literal_value) => write!(f, "{}", literal_value),
             Value::Identifier(name) => write!(f, "{}", name),
+            Value::Return(value) => write!(f, "{}", value),
             Value::None => write!(f, "None"),
         }
     }
@@ -37,6 +39,47 @@ impl fmt::Display for LiteralValue {
             LiteralValue::Boolean(boolean) => write!(f, "{}", boolean),
             LiteralValue::String(string) => write!(f, "\"{}\"", string),
         }
+    }
+}
+
+/// **Environment of the stack.**
+#[derive(Debug, PartialEq, Clone, Default)]
+pub struct Environment {
+    pub values: HashMap<String, Value>,
+    pub parent: Option<Box<Environment>>,
+}
+
+impl Environment {
+    /// Create a new environment.
+    pub fn new() -> Self {
+        Self {
+            values: HashMap::new(),
+            parent: None,
+        }
+    }
+
+    /// Create a new environment with a parent.
+    pub fn new_with_parent(parent: Environment) -> Self {
+        Self {
+            values: HashMap::new(),
+            parent: Some(Box::new(parent)),
+        }
+    }
+
+    /// Get a value from the environment.
+    pub fn get(&self, name: &str) -> Option<Value> {
+        match self.values.get(name) {
+            Some(value) => Some(value.clone()),
+            None => match &self.parent {
+                Some(parent) => parent.get(name),
+                None => None,
+            },
+        }
+    }
+
+    /// Set a value in the environment.
+    pub fn set(&mut self, name: String, value: Value) {
+        self.values.insert(name, value);
     }
 }
 
