@@ -10,16 +10,15 @@ pub enum Instruction {
     JumpIfTrue(usize),
     JumpIfFalse(usize),
     Jump(usize),
-    Return,
     BinaryOp(BinaryOp),
     BinaryOpEq(BinaryOpEq),
     UnaryOp(UnaryOp),
     Block(Vec<Instruction>),
+    Return,
 }
 
 macro_rules! binary_op {
     ($( $op:ident )*) => {
-        /// **Binary operations**
         #[derive(Debug, PartialEq, Clone)]
         pub enum BinaryOp {
             $( $op ),*
@@ -29,7 +28,6 @@ macro_rules! binary_op {
 
 macro_rules! binary_op_eq {
     ($( $op:ident )*) => {
-        /// **Binary operations**
         #[derive(Debug, PartialEq, Clone)]
         pub enum BinaryOpEq {
             $( $op ),*
@@ -39,7 +37,6 @@ macro_rules! binary_op_eq {
 
 macro_rules! unary_op {
     ($( $op:ident )*) => {
-        /// **Unary operations**
         #[derive(Debug, PartialEq, Clone)]
         pub enum UnaryOp {
             $( $op ),*
