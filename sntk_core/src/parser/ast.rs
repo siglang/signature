@@ -154,7 +154,7 @@ macro_rules! make_struct {
 
 make_struct! { @data_type LetStatement => name: Identifier, value: Expression }
 make_struct! { @data_type TypeStatement => name: Identifier, generics: IdentifierGeneric }
-make_struct! { ReturnStatement => return_value: Expression }
+make_struct! { ReturnStatement => value: Expression }
 make_struct! { ExpressionStatement => expression: Expression }
 make_struct! { BlockExpression => statements: Vec<Statement> }
 make_struct! { Identifier => value: String }
