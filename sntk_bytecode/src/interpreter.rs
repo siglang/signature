@@ -76,17 +76,23 @@ impl InstructionTrait for Interpreter {
 
     fn call_function(&mut self, argc: usize) {
         let function = self.stack.pop().unwrap();
-        let mut args = Vec::new();
-
-        for _ in 0..argc {
-            args.push(self.stack.pop().unwrap());
-        }
-
-        args.reverse();
 
         match function {
             Value::Identifier(name) => match get_builtin(name.clone()) {
-                Some(builtin) => builtin(args),
+                Some(builtin) => {
+                    let mut args = Vec::new();
+
+                    for _ in 0..argc {
+                        args.push(self.stack.pop().unwrap());
+                    }
+
+                    args.reverse();
+
+                    match builtin(args) {
+                        Value::None | Value::Identifier(_) | Value::Return(_) => {}
+                        value => self.stack.push(value),
+                    }
+                }
                 None => runtime_error!(self; UNKNOWN_FUNCTION; name),
             },
             _ => runtime_error!(self; NOT_A_FUNCTION; function),
