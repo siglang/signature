@@ -17,8 +17,8 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             Value::LiteralValue(literal_value) => write!(f, "{}", literal_value),
-            Value::Identifier(name) => write!(f, "{}", name),
-            Value::Return(value) => write!(f, "{}", value),
+            Value::Identifier(name) => write!(f, "identifier ({})", name),
+            Value::Return(value) => write!(f, "return ({})", value),
             Value::None => write!(f, "None"),
         }
     }
