@@ -13,9 +13,13 @@ fn main() {
         Parser::from(
             r#"
 let x: number = 10;
-let y: number = 20;
-let z: number = x + y;
-print(x + y + z, x, y, z);
+{
+    let y: number = 20;
+    let z: number = x + y;
+    print(x + y + z, x, y, z);
+};
+print(x);
+print(y, z); /* Error */
     "#,
         )
         .parse_program(),
