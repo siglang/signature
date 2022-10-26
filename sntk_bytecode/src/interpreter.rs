@@ -17,8 +17,8 @@ trait InstructionTrait {
     fn jump_if_true(&mut self, offset: usize);
     fn jump_if_false(&mut self, offset: usize);
     fn jump(&mut self, offset: usize);
-    fn return_value(&mut self);
     fn block(&mut self, instructions: Vec<Instruction>);
+    fn return_value(&mut self);
 }
 
 /// Binary operator instructions implementation trait.
@@ -56,28 +56,24 @@ pub struct Interpreter {
 }
 
 impl InstructionTrait for Interpreter {
-    /// **Loads a global variable.**
     fn load_global(&mut self, name: String) {
         self.stack.push(Value::Identifier(name));
     }
 
-    /// **Loads a constant.**
     fn load_const(&mut self, value: Value) {
         self.stack.push(value);
     }
 
-    /// **Loads a name.**
     fn load_name(&mut self, name: String) {
-        self.stack.push(self.environment.get(&name).unwrap().clone());
+        self.stack
+            .push(self.environment.get(&name).unwrap_or_else(|| runtime_error!(self; NOT_DEFINED; name)));
     }
 
-    /// **Stores a name.**
     fn store_name(&mut self, name: String) {
         let value = self.stack.pop().unwrap();
         self.environment.set(name, value);
     }
 
-    /// **Calls a function.**
     fn call_function(&mut self, argc: usize) {
         let function = self.stack.pop().unwrap();
         let mut args = Vec::new();
@@ -90,14 +86,13 @@ impl InstructionTrait for Interpreter {
 
         match function {
             Value::Identifier(name) => match get_builtin(name.clone()) {
-                Some(builtin) => builtin(Some(args)),
+                Some(builtin) => builtin(args),
                 None => runtime_error!(self; UNKNOWN_FUNCTION; name),
             },
             _ => runtime_error!(self; NOT_A_FUNCTION; function),
         };
     }
 
-    /// **Jumps if the top of the stack is true.**
     fn jump_if_true(&mut self, pos: usize) {
         if let Value::LiteralValue(LiteralValue::Boolean(b)) = self.stack.pop().unwrap() {
             if b {
@@ -108,7 +103,6 @@ impl InstructionTrait for Interpreter {
         }
     }
 
-    /// **Jumps if the top of the stack is false.**
     fn jump_if_false(&mut self, pos: usize) {
         if let Value::LiteralValue(LiteralValue::Boolean(b)) = self.stack.pop().unwrap() {
             if !b {
@@ -119,170 +113,95 @@ impl InstructionTrait for Interpreter {
         }
     }
 
-    /// **Jumps to a position.**
     fn jump(&mut self, pos: usize) {
         self.instruction_pointer = pos;
     }
 
-    /// **Returns a value.**
+    fn block(&mut self, instructions: Vec<Instruction>) {
+        Interpreter::new_with(instructions, Stack::new(), Environment::new_with_parent(self.environment.clone())).run();
+    }
+
     fn return_value(&mut self) {
         let value = self.stack.pop().unwrap();
         self.stack.push(Value::Return(Box::new(value)));
     }
+}
 
-    /// **Blocks a set of instructions.**
-    fn block(&mut self, instructions: Vec<Instruction>) {
-        Interpreter::new_with(instructions, Stack::new(), Environment::new_with_parent(self.environment.clone())).run();
+macro_rules! fn_binary_op {
+    ($name:ident; $op:tt; $($type:ident)*) => {
+        fn $name(&mut self) {
+            let right = self.stack.pop().unwrap();
+            let left = self.stack.pop().unwrap();
+
+            match (left, right) {
+                $(
+                    (Value::LiteralValue(LiteralValue::$type(left)), Value::LiteralValue(LiteralValue::$type(right))) => {
+                        self.stack.push(Value::LiteralValue(LiteralValue::$type(left + &right)));
+                    }
+                )*
+                _ => runtime_error!(self; INVALID_OPERAND; stringify!($op)),
+            }
+        }
+    }
+}
+
+macro_rules! fn_binary_op_eq {
+    ($name:ident; $op:tt) => {
+        fn $name(&mut self) {
+            let right = self.stack.pop().unwrap();
+            let left = self.stack.pop().unwrap();
+
+            match (left, right) {
+                (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
+                    self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left $op right)))
+                }
+                _ => runtime_error!(self; INVALID_OPERAND; stringify!($op)),
+            }
+        }
+    };
+    (@eq $name:ident; $op:tt;) => {
+        fn $name(&mut self) {
+            let right = self.stack.pop().unwrap();
+            let left = self.stack.pop().unwrap();
+
+            self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left $op right)));
+        }
+    }
+}
+
+macro_rules! fn_unary_op {
+    ($name:ident; $op:tt; $type:ident) => {
+        fn $name(&mut self) {
+            let value = self.stack.pop().unwrap();
+
+            match value {
+                Value::LiteralValue(LiteralValue::$type(value)) => self.stack.push(Value::LiteralValue(LiteralValue::$type($op value))),
+                _ => runtime_error!(self; INVALID_OPERAND; stringify!($op)),
+            }
+        }
     }
 }
 
 impl BinaryOpTrait for Interpreter {
-    fn binary_op_add(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        match (left, right) {
-            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
-                self.stack.push(Value::LiteralValue(LiteralValue::Number(left + right)))
-            }
-            (Value::LiteralValue(LiteralValue::String(left)), Value::LiteralValue(LiteralValue::String(right))) => {
-                self.stack.push(Value::LiteralValue(LiteralValue::String(left + &right)))
-            }
-            _ => runtime_error!(self; INVALID_OPERAND; "+"),
-        }
-    }
-
-    fn binary_op_sub(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        match (left, right) {
-            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
-                self.stack.push(Value::LiteralValue(LiteralValue::Number(left - right)))
-            }
-            _ => runtime_error!(self; INVALID_OPERAND; "-"),
-        }
-    }
-
-    fn binary_op_mul(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        match (left, right) {
-            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
-                self.stack.push(Value::LiteralValue(LiteralValue::Number(left * right)))
-            }
-            _ => runtime_error!(self; INVALID_OPERAND; "*"),
-        }
-    }
-
-    fn binary_op_div(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        match (left, right) {
-            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
-                self.stack.push(Value::LiteralValue(LiteralValue::Number(left / right)))
-            }
-            _ => runtime_error!(self; INVALID_OPERAND; "/"),
-        }
-    }
-
-    fn binary_op_mod(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        match (left, right) {
-            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
-                self.stack.push(Value::LiteralValue(LiteralValue::Number(left % right)))
-            }
-            _ => runtime_error!(self; INVALID_OPERAND; "%"),
-        }
-    }
+    fn_binary_op!(binary_op_add; +; Number String);
+    fn_binary_op!(binary_op_sub; -; Number);
+    fn_binary_op!(binary_op_mul; *; Number);
+    fn_binary_op!(binary_op_div; /; Number);
+    fn_binary_op!(binary_op_mod; %; Number);
 }
 
 impl BinaryOpEqTrait for Interpreter {
-    fn binary_op_eq(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left == right)));
-    }
-
-    fn binary_op_neq(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left != right)));
-    }
-
-    fn binary_op_gt(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        match (left, right) {
-            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
-                self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left > right)))
-            }
-            _ => runtime_error!(self; INVALID_OPERAND; ">"),
-        }
-    }
-
-    fn binary_op_lt(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        match (left, right) {
-            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
-                self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left < right)))
-            }
-            _ => runtime_error!(self; INVALID_OPERAND; "<"),
-        }
-    }
-
-    fn binary_op_lt_eq(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        match (left, right) {
-            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
-                self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left <= right)))
-            }
-            _ => runtime_error!(self; INVALID_OPERAND; "<="),
-        }
-    }
-
-    fn binary_op_gt_eq(&mut self) {
-        let right = self.stack.pop().unwrap();
-        let left = self.stack.pop().unwrap();
-
-        match (left, right) {
-            (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
-                self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left >= right)))
-            }
-            _ => runtime_error!(self; INVALID_OPERAND; ">="),
-        }
-    }
+    fn_binary_op_eq!(@eq binary_op_eq; ==;);
+    fn_binary_op_eq!(@eq binary_op_neq; !=;);
+    fn_binary_op_eq!(binary_op_gt; >);
+    fn_binary_op_eq!(binary_op_lt; <);
+    fn_binary_op_eq!(binary_op_gt_eq; >=);
+    fn_binary_op_eq!(binary_op_lt_eq; <=);
 }
 
 impl UnaryOpTrait for Interpreter {
-    fn unary_op_not(&mut self) {
-        let value = self.stack.pop().unwrap();
-
-        match value {
-            Value::LiteralValue(LiteralValue::Boolean(value)) => self.stack.push(Value::LiteralValue(LiteralValue::Boolean(!value))),
-            _ => runtime_error!(self; INVALID_OPERAND; "!"),
-        }
-    }
-
-    fn unary_op_minus(&mut self) {
-        let value = self.stack.pop().unwrap();
-
-        match value {
-            Value::LiteralValue(LiteralValue::Number(value)) => self.stack.push(Value::LiteralValue(LiteralValue::Number(-value))),
-            _ => runtime_error!(self; INVALID_OPERAND; "-"),
-        }
-    }
+    fn_unary_op!(unary_op_not; !; Boolean);
+    fn_unary_op!(unary_op_minus; -; Number);
 }
 
 impl InterpreterBase for Interpreter {
@@ -315,7 +234,6 @@ impl InterpreterBase for Interpreter {
                 Instruction::JumpIfTrue(pos) => self.jump_if_true(pos),
                 Instruction::JumpIfFalse(pos) => self.jump_if_false(pos),
                 Instruction::Jump(pos) => self.jump(pos),
-                Instruction::Return => self.return_value(),
                 Instruction::BinaryOp(op) => match op {
                     BinaryOp::Add => self.binary_op_add(),
                     BinaryOp::Sub => self.binary_op_sub(),
@@ -336,6 +254,7 @@ impl InterpreterBase for Interpreter {
                     UnaryOp::Minus => self.unary_op_minus(),
                 },
                 Instruction::Block(block) => self.block(block),
+                Instruction::Return => self.return_value(),
             }
 
             self.instruction_pointer += 1;
