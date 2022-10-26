@@ -10,9 +10,11 @@ pub enum Instruction {
     JumpIfTrue(usize),
     JumpIfFalse(usize),
     Jump(usize),
+    Return,
     BinaryOp(BinaryOp),
     BinaryOpEq(BinaryOpEq),
     UnaryOp(UnaryOp),
+    Block(Vec<Instruction>),
 }
 
 macro_rules! binary_op {
