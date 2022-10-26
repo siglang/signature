@@ -1,9 +1,9 @@
 use crate::{builtin::*, code::*, error::*, runtime_error, stack::*};
-use std::collections::*;
 
 /// Provides the basic methods of the bytecode interpreter.
 pub trait InterpreterBase {
     fn new(instructions: Vec<Instruction>) -> Interpreter;
+    fn new_with(instructions: Vec<Instruction>, stack: Stack, environment: Environment) -> Interpreter;
     fn run(&mut self);
 }
 
@@ -17,6 +17,8 @@ trait InstructionTrait {
     fn jump_if_true(&mut self, offset: usize);
     fn jump_if_false(&mut self, offset: usize);
     fn jump(&mut self, offset: usize);
+    fn return_value(&mut self);
+    fn block(&mut self, instructions: Vec<Instruction>);
 }
 
 /// Binary operator instructions implementation trait.
@@ -50,7 +52,7 @@ pub struct Interpreter {
     pub stack: Stack,
     pub instructions: Vec<Instruction>,
     pub instruction_pointer: usize,
-    pub environment: HashMap<String, Value>,
+    pub environment: Environment,
 }
 
 impl InstructionTrait for Interpreter {
@@ -72,7 +74,7 @@ impl InstructionTrait for Interpreter {
     /// **Stores a name.**
     fn store_name(&mut self, name: String) {
         let value = self.stack.pop().unwrap();
-        self.environment.insert(name, value);
+        self.environment.set(name, value);
     }
 
     /// **Calls a function.**
@@ -120,6 +122,17 @@ impl InstructionTrait for Interpreter {
     /// **Jumps to a position.**
     fn jump(&mut self, pos: usize) {
         self.instruction_pointer = pos;
+    }
+
+    /// **Returns a value.**
+    fn return_value(&mut self) {
+        let value = self.stack.pop().unwrap();
+        self.stack.push(Value::Return(Box::new(value)));
+    }
+
+    /// **Blocks a set of instructions.**
+    fn block(&mut self, instructions: Vec<Instruction>) {
+        Interpreter::new_with(instructions, Stack::new(), Environment::new_with_parent(self.environment.clone())).run();
     }
 }
 
@@ -278,7 +291,16 @@ impl InterpreterBase for Interpreter {
             stack: Stack::new(),
             instructions,
             instruction_pointer: 0,
-            environment: HashMap::new(),
+            environment: Environment::new(),
+        }
+    }
+
+    fn new_with(instructions: Vec<Instruction>, stack: Stack, environment: Environment) -> Interpreter {
+        Interpreter {
+            stack,
+            instructions,
+            instruction_pointer: 0,
+            environment,
         }
     }
 
@@ -293,6 +315,7 @@ impl InterpreterBase for Interpreter {
                 Instruction::JumpIfTrue(pos) => self.jump_if_true(pos),
                 Instruction::JumpIfFalse(pos) => self.jump_if_false(pos),
                 Instruction::Jump(pos) => self.jump(pos),
+                Instruction::Return => self.return_value(),
                 Instruction::BinaryOp(op) => match op {
                     BinaryOp::Add => self.binary_op_add(),
                     BinaryOp::Sub => self.binary_op_sub(),
@@ -312,6 +335,7 @@ impl InterpreterBase for Interpreter {
                     UnaryOp::Not => self.unary_op_not(),
                     UnaryOp::Minus => self.unary_op_minus(),
                 },
+                Instruction::Block(block) => self.block(block),
             }
 
             self.instruction_pointer += 1;
