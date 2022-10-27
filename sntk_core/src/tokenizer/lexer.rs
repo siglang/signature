@@ -1,4 +1,4 @@
-use super::token::*;
+use crate::tokenizer::token::{Token, Tokens};
 
 pub trait LexerTrait {
     fn new<T>(input: T) -> Self
