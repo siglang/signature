@@ -8,8 +8,8 @@ use crate::{
 
 /// Provides the basic methods of the bytecode interpreter.
 pub trait InterpreterBase {
-    fn new(instructions: Vec<Instruction>) -> Interpreter;
-    fn new_with(instructions: Vec<Instruction>, stack: Stack, environment: Environment) -> Interpreter;
+    fn new(instructions: Vec<Instruction>) -> Self;
+    fn new_with(instructions: Vec<Instruction>, stack: Stack, environment: Environment) -> Self;
     fn run(&mut self);
 }
 
