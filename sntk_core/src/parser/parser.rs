@@ -75,7 +75,7 @@ pub trait EEE {
 /// let parsed = Parser::from(r#"type X<T, U> = fn(T, U[]) -> object T: U;"#).parse_program();
 /// println!("{parsed:#?}");
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Parser {
     pub lexer: Lexer,
     pub current_token: Token,
@@ -91,19 +91,6 @@ where
 {
     fn from(x: T) -> Self {
         Parser::new(Lexer::new(x))
-    }
-}
-
-impl Default for Parser {
-    fn default() -> Self {
-        Self {
-            lexer: Lexer::default(),
-            current_token: Token::default(),
-            peek_token: Token::default(),
-            position: Position::default(),
-            errors: Vec::new(),
-            options: CompilerOptions::default(),
-        }
     }
 }
 
@@ -201,7 +188,7 @@ impl ParserTrait for Parser {
 
         program.errors = self.errors.clone();
 
-        if self.errors.len() > 0 {
+        if !self.errors.is_empty() {
             program.statements = Vec::new();
         }
 
@@ -224,7 +211,7 @@ impl ParserTrait for Parser {
     fn parse_let_statement(&mut self) -> ParseResult<Statement> {
         self.next_token();
 
-        let ident = Identifier::new(ident! { self }.clone(), position! { self });
+        let ident = Identifier::new(ident! { self }, position! { self });
         self.next_token();
 
         self.expect_token(&Tokens::Colon)?;
@@ -290,7 +277,7 @@ impl ParserTrait for Parser {
 
         let data_type = self.parse_data_type()?;
 
-        return if self.current_token.token_type == Tokens::Semicolon {
+        if self.current_token.token_type == Tokens::Semicolon {
             Ok(Statement::TypeStatement(TypeStatement::new(
                 data_type,
                 Identifier::new(ident, position! { self }),
@@ -299,7 +286,7 @@ impl ParserTrait for Parser {
             )))
         } else {
             Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type })
-        };
+        }
     }
 
     /// **Parses an expression statement.**
@@ -318,7 +305,7 @@ impl ParserTrait for Parser {
     /// **Parses an expression.**
     fn parse_expression(&mut self, priority: &Priority) -> ParseResult<Expression> {
         let left_expression = match self.current_token.token_type.clone() {
-            Tokens::IDENT(ident) => Some(Ok(Expression::Identifier(Identifier::new(ident.clone(), position! { self })))),
+            Tokens::IDENT(ident) => Some(Ok(Expression::Identifier(Identifier::new(ident, position! { self })))),
             Tokens::Number(number) => Some(Ok(Expression::NumberLiteral(NumberLiteral::new(number, position! { self })))),
             Tokens::String(string) => Some(Ok(Expression::StringLiteral(StringLiteral::new(string, position! { self })))),
             Tokens::Boolean(boolean) => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(boolean, position! { self })))),
@@ -353,7 +340,7 @@ impl ParserTrait for Parser {
             _ => None,
         };
 
-        if let None = left_expression {
+        if left_expression.is_none() {
             if self.current_token.token_type != Tokens::Semicolon {
                 return Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type });
             }
@@ -430,12 +417,12 @@ impl ParserTrait for Parser {
         match left_expression.clone()? {
             Expression::InfixExpression(infix) => {
                 if let Some(e) = self.eval_infix_expression(&infix) {
-                    return Ok(e?);
+                    return e;
                 };
             }
             Expression::PrefixExpression(prefix) => {
                 if let Some(e) = self.eval_prefix_expression(&prefix) {
-                    return Ok(e?);
+                    return e;
                 };
             }
             _ => {}
@@ -847,14 +834,14 @@ impl EEE for Parser {
                     return Some(Ok(Expression::NumberLiteral(NumberLiteral::new(-right.value, position.clone()))));
                 }
 
-                return None;
+                None
             }
             Tokens::Bang => {
                 if let Expression::BooleanLiteral(right) = *right.clone() {
                     return Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(!right.value, position.clone()))));
                 }
 
-                return None;
+                None
             }
             _ => None,
         }
