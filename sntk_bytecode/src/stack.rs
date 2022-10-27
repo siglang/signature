@@ -1,7 +1,10 @@
-use std::collections::HashMap;
 use crate::{
     error::{ByteCodeRuntime, POP_EMPTY_STACK},
     runtime_error,
+};
+use std::{
+    collections::HashMap,
+    fmt::{self, Write},
 };
 
 /// **The stack on which the interpreter is based.**
@@ -16,8 +19,8 @@ pub enum Value {
     Return(Box<Value>),
 }
 
-impl std::fmt::Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             Value::LiteralValue(literal_value) => write!(f, "{}", literal_value),
             Value::Identifier(name) => write!(f, "identifier ({})", name),
@@ -35,8 +38,8 @@ pub enum LiteralValue {
     Array(Vec<Value>),
 }
 
-impl std::fmt::Display for LiteralValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+impl fmt::Display for LiteralValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             LiteralValue::Number(number) => write!(f, "{}", number),
             LiteralValue::Boolean(boolean) => write!(f, "{}", boolean),
@@ -45,7 +48,7 @@ impl std::fmt::Display for LiteralValue {
                 let mut string = String::new();
 
                 for value in array {
-                    string.push_str(&format!("{}, ", value));
+                    string.write_fmt(format_args!("{}, ", value))?;
                 }
 
                 write!(f, "[{}]", string.trim_end_matches(", "))
