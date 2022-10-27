@@ -1,5 +1,3 @@
-use std::fmt::*;
-
 /// An enumeration of tokens, which are the basic units of that make up a language.
 #[derive(Debug, PartialEq, Clone)]
 #[rustfmt::skip]
@@ -45,8 +43,8 @@ where
     }
 }
 
-impl Display for Tokens {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+impl std::fmt::Display for Tokens {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.stringify())
     }
 }
@@ -80,8 +78,8 @@ impl Default for Token {
     }
 }
 
-impl Display for Token {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Token {:?} at {:?}", self.token_type, self.position)
     }
 }
