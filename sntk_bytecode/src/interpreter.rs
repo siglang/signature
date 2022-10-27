@@ -70,12 +70,12 @@ impl InstructionTrait for Interpreter {
     }
 
     fn store_name(&mut self, name: String) {
-        let value = self.stack.pop().unwrap();
+        let value = self.stack.pop();
         self.environment.set(name, value);
     }
 
     fn call_function(&mut self, argc: usize) {
-        let function = self.stack.pop().unwrap();
+        let function = self.stack.pop();
 
         match function {
             Value::Identifier(name) => match get_builtin(name.clone()) {
@@ -83,15 +83,16 @@ impl InstructionTrait for Interpreter {
                     let mut args = Vec::new();
 
                     for _ in 0..argc {
-                        args.push(self.stack.pop().unwrap());
+                        args.push(self.stack.pop());
                     }
 
                     args.reverse();
 
-                    match builtin(args) {
-                        Value::Identifier(_) | Value::Return(_) => panic!("Builtin function returned an identifier or a return value."),
-                        value => self.stack.push(value),
-                    }
+                    self.stack.push(Value::LiteralValue(builtin(
+                        args.iter()
+                            .map(|arg| LiteralValue::try_from(arg.clone()).unwrap_or_else(|value| runtime_error!(self; NOT_A_LITERAL_VALUE; value)))
+                            .collect(),
+                    )));
                 }
                 None => runtime_error!(self; UNKNOWN_FUNCTION; name),
             },
@@ -100,22 +101,22 @@ impl InstructionTrait for Interpreter {
     }
 
     fn jump_if_true(&mut self, pos: usize) {
-        if let Value::LiteralValue(LiteralValue::Boolean(b)) = self.stack.pop().unwrap() {
+        if let Value::LiteralValue(LiteralValue::Boolean(b)) = self.stack.pop() {
             if b {
                 self.instruction_pointer = pos;
             }
         } else {
-            runtime_error!(self; NOT_A_BOOLEAN; self.stack.pop().unwrap());
+            runtime_error!(self; NOT_A_BOOLEAN; self.stack.pop());
         }
     }
 
     fn jump_if_false(&mut self, pos: usize) {
-        if let Value::LiteralValue(LiteralValue::Boolean(b)) = self.stack.pop().unwrap() {
+        if let Value::LiteralValue(LiteralValue::Boolean(b)) = self.stack.pop() {
             if !b {
                 self.instruction_pointer = pos;
             }
         } else {
-            runtime_error!(self; NOT_A_BOOLEAN; self.stack.pop().unwrap());
+            runtime_error!(self; NOT_A_BOOLEAN; self.stack.pop());
         }
     }
 
@@ -128,7 +129,7 @@ impl InstructionTrait for Interpreter {
     }
 
     fn return_value(&mut self) {
-        let value = self.stack.pop().unwrap();
+        let value = self.stack.pop();
         self.stack.push(Value::Return(Box::new(value)));
     }
 }
@@ -136,8 +137,8 @@ impl InstructionTrait for Interpreter {
 macro_rules! fn_binary_op {
     ($name:ident; $op:tt; $($type:ident)*) => {
         fn $name(&mut self) {
-            let right = self.stack.pop().unwrap();
-            let left = self.stack.pop().unwrap();
+            let right = self.stack.pop();
+            let left = self.stack.pop();
 
             match (left, right) {
                 $(
@@ -154,8 +155,8 @@ macro_rules! fn_binary_op {
 macro_rules! fn_binary_op_eq {
     ($name:ident; $op:tt) => {
         fn $name(&mut self) {
-            let right = self.stack.pop().unwrap();
-            let left = self.stack.pop().unwrap();
+            let right = self.stack.pop();
+            let left = self.stack.pop();
 
             match (left, right) {
                 (Value::LiteralValue(LiteralValue::Number(left)), Value::LiteralValue(LiteralValue::Number(right))) => {
@@ -167,8 +168,8 @@ macro_rules! fn_binary_op_eq {
     };
     (@eq $name:ident; $op:tt;) => {
         fn $name(&mut self) {
-            let right = self.stack.pop().unwrap();
-            let left = self.stack.pop().unwrap();
+            let right = self.stack.pop();
+            let left = self.stack.pop();
 
             self.stack.push(Value::LiteralValue(LiteralValue::Boolean(left $op right)));
         }
@@ -178,7 +179,7 @@ macro_rules! fn_binary_op_eq {
 macro_rules! fn_unary_op {
     ($name:ident; $op:tt; $type:ident) => {
         fn $name(&mut self) {
-            let value = self.stack.pop().unwrap();
+            let value = self.stack.pop();
 
             match value {
                 Value::LiteralValue(LiteralValue::$type(value)) => self.stack.push(Value::LiteralValue(LiteralValue::$type($op value))),
