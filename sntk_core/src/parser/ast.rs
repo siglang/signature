@@ -171,7 +171,7 @@ make_struct! { ObjectLiteral => pairs: Vec<(Expression, Expression)> }
 
 /// Priority is used to determine the priority of the operator.
 /// The higher the priority, the higher the priority.
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, Eq, PartialEq, PartialOrd)]
 pub enum Priority {
     Lowest,
     Dot,
