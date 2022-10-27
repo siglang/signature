@@ -1,6 +1,6 @@
 use crate::stack::*;
 
-pub fn get_builtin(name: String) -> Option<impl FnOnce(Vec<Value>) -> Value> {
+pub fn get_builtin(name: String) -> Option<impl FnOnce(Vec<LiteralValue>) -> LiteralValue> {
     match name.clone().as_str() {
         "print" => Some(Print::call_return()),
         _ => None,
@@ -8,8 +8,8 @@ pub fn get_builtin(name: String) -> Option<impl FnOnce(Vec<Value>) -> Value> {
 }
 
 pub trait BuiltIn {
-    fn call(arguments: Vec<Value>) -> Value;
-    fn call_return() -> Box<dyn FnOnce(Vec<Value>) -> Value> {
+    fn call(arguments: Vec<LiteralValue>) -> LiteralValue;
+    fn call_return() -> Box<dyn FnOnce(Vec<LiteralValue>) -> LiteralValue> {
         Box::new(move |arguments| Self::call(arguments))
     }
 }
@@ -17,9 +17,9 @@ pub trait BuiltIn {
 pub struct Print;
 
 impl BuiltIn for Print {
-    fn call(arguments: Vec<Value>) -> Value {
+    fn call(arguments: Vec<LiteralValue>) -> LiteralValue {
         println!("{}", arguments.iter().map(|x| format!("{} ", x)).collect::<String>());
 
-        Value::LiteralValue(LiteralValue::Boolean(true))
+        LiteralValue::Boolean(true)
     }
 }
