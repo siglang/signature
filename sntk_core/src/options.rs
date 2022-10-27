@@ -1,4 +1,4 @@
-use std::cell::*;
+use std::cell::Cell;
 
 /// Depending on this options, the behavior of the compiler is different.
 ///
