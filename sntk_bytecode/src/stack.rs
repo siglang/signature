@@ -10,7 +10,6 @@ pub enum Value {
     LiteralValue(LiteralValue),
     Identifier(String),
     Return(Box<Value>),
-    None,
 }
 
 impl fmt::Display for Value {
@@ -19,7 +18,6 @@ impl fmt::Display for Value {
             Value::LiteralValue(literal_value) => write!(f, "{}", literal_value),
             Value::Identifier(name) => write!(f, "identifier ({})", name),
             Value::Return(value) => write!(f, "return ({})", value),
-            Value::None => write!(f, "None"),
         }
     }
 }
@@ -30,6 +28,7 @@ pub enum LiteralValue {
     Number(f64),
     Boolean(bool),
     String(String),
+    Array(Vec<Value>),
 }
 
 impl fmt::Display for LiteralValue {
@@ -38,6 +37,15 @@ impl fmt::Display for LiteralValue {
             LiteralValue::Number(number) => write!(f, "{}", number),
             LiteralValue::Boolean(boolean) => write!(f, "{}", boolean),
             LiteralValue::String(string) => write!(f, "\"{}\"", string),
+            LiteralValue::Array(array) => {
+                let mut string = String::new();
+
+                for value in array {
+                    string.push_str(&format!("{}, ", value));
+                }
+
+                write!(f, "[{}]", string.trim_end_matches(", "))
+            }
         }
     }
 }
