@@ -19,7 +19,7 @@ let x: number = 10;
     print(x + y + z, x, y, z);
 };
 print(x);
-print(-1, 2 / 3, [1, 2, 3], "abcd", !true);
+print(-1, 2 / 3, [1, 2, [3, 4, 5]], "abcd", !true);
     "#,
         )
         .parse_program(),
