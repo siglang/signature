@@ -1,5 +1,3 @@
-use std::*;
-
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct ByteCodeRuntime {
     pub message: String,
@@ -18,9 +16,9 @@ impl ByteCodeRuntime {
     }
 }
 
-impl fmt::Display for ByteCodeRuntime {
+impl std::fmt::Display for ByteCodeRuntime {
     #[rustfmt::skip]
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(f, "{} {}", self.message, match self.pointer {
             Some(p) => format!("(at {})", p),
             None => "".to_string()
