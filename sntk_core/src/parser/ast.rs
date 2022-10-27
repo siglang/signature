@@ -1,5 +1,4 @@
-use super::error::*;
-use crate::tokenizer::token::*;
+use crate::{parser::error::ParsingError, tokenizer::token::Tokens};
 
 /// `Program` is the structure where the AST is finally stored.
 ///
