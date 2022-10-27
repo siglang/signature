@@ -1,4 +1,4 @@
-use super::ast::*;
+use super::ast::Position;
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct ParsingError {
