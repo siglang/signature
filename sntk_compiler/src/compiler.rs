@@ -10,8 +10,8 @@ impl Code {
         Self(Vec::new())
     }
 
-    fn push_instruction(&mut self, instruction: Instruction) {
-        self.0.push(instruction);
+    fn push_instruction(&mut self, instruction: &Instruction) {
+        self.0.push(instruction.clone());
     }
 }
 
@@ -28,10 +28,10 @@ pub type CompileResult<T> = Result<T, CompileError>;
 pub trait CompilerTrait {
     fn new(program: Program) -> Self;
     fn compile_program(&mut self) -> CompileResult<Interpreter>;
-    fn compile_let_statement(&mut self, let_statement: LetStatement) -> CompileResult<()>;
-    fn compile_return_statement(&mut self, return_statement: ReturnStatement) -> CompileResult<()>;
-    fn compile_type_statement(&mut self, type_statement: TypeStatement) -> CompileResult<()>;
-    fn compile_expression(&mut self, expression: Expression) -> CompileResult<()>;
+    fn compile_let_statement(&mut self, let_statement: &LetStatement) -> CompileResult<()>;
+    fn compile_return_statement(&mut self, return_statement: &ReturnStatement) -> CompileResult<()>;
+    fn compile_type_statement(&mut self, type_statement: &TypeStatement) -> CompileResult<()>;
+    fn compile_expression(&mut self, expression: &Expression) -> CompileResult<()>;
 }
 
 impl CompilerTrait for Compiler {
@@ -49,10 +49,10 @@ impl CompilerTrait for Compiler {
 
         for statement in self.program.statements.clone() {
             match statement {
-                Statement::LetStatement(statement) => self.compile_let_statement(statement)?,
-                Statement::ReturnStatement(statement) => self.compile_return_statement(statement)?,
-                Statement::TypeStatement(statement) => self.compile_type_statement(statement)?,
-                Statement::ExpressionStatement(ExpressionStatement { expression, .. }) => self.compile_expression(expression)?,
+                Statement::LetStatement(statement) => self.compile_let_statement(&statement)?,
+                Statement::ReturnStatement(statement) => self.compile_return_statement(&statement)?,
+                Statement::TypeStatement(statement) => self.compile_type_statement(&statement)?,
+                Statement::ExpressionStatement(ExpressionStatement { expression, .. }) => self.compile_expression(&expression)?,
             };
         }
 
@@ -67,7 +67,7 @@ impl CompilerTrait for Compiler {
     ///     0: LoadConst 5.0
     ///     1: StoreName "x"
     /// ```
-    fn compile_let_statement(&mut self, let_statement: LetStatement) -> CompileResult<()> {
+    fn compile_let_statement(&mut self, let_statement: &LetStatement) -> CompileResult<()> {
         let LetStatement {
             name,
             value, /* data_type, */
@@ -75,7 +75,7 @@ impl CompilerTrait for Compiler {
         } = let_statement;
 
         self.compile_expression(value)?;
-        self.code.push_instruction(Instruction::StoreName(name.value));
+        self.code.push_instruction(&Instruction::StoreName(name.clone().value));
 
         Ok(())
     }
@@ -88,28 +88,28 @@ impl CompilerTrait for Compiler {
     ///     0: LoadConst 5.0
     ///     1: Return
     /// ```
-    fn compile_return_statement(&mut self, return_statement: ReturnStatement) -> CompileResult<()> {
+    fn compile_return_statement(&mut self, return_statement: &ReturnStatement) -> CompileResult<()> {
         let ReturnStatement { value, .. } = return_statement;
 
         self.compile_expression(value)?;
-        self.code.push_instruction(Instruction::Return);
+        self.code.push_instruction(&Instruction::Return);
 
         Ok(())
     }
 
     /// Compile a `type` statement.
     #[allow(unused_variables)]
-    fn compile_type_statement(&mut self, type_statement: TypeStatement) -> CompileResult<()> {
+    fn compile_type_statement(&mut self, type_statement: &TypeStatement) -> CompileResult<()> {
         todo!()
     }
 
     /// Compile an expression statement.
-    fn compile_expression(&mut self, expression: Expression) -> CompileResult<()> {
+    fn compile_expression(&mut self, expression: &Expression) -> CompileResult<()> {
         match expression {
             Expression::BlockExpression(BlockExpression { statements, .. }) => {
-                self.code.push_instruction(Instruction::Block(
+                self.code.push_instruction(&Instruction::Block(
                     Compiler::new(Program {
-                        statements,
+                        statements: statements.clone(),
                         errors: Vec::new(),
                     })
                     .compile_program()?
@@ -119,49 +119,61 @@ impl CompilerTrait for Compiler {
             }
 
             Expression::Identifier(Identifier { value, .. }) => {
-                self.code.push_instruction(Instruction::LoadName(value));
+                self.code.push_instruction(&Instruction::LoadName(value.clone()));
                 Ok(())
             }
 
             Expression::NumberLiteral(NumberLiteral { value, .. }) => {
                 self.code
-                    .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(value))));
+                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(*value))));
                 Ok(())
             }
 
             Expression::StringLiteral(StringLiteral { value, .. }) => {
                 self.code
-                    .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::String(value))));
+                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::String(value.clone()))));
                 Ok(())
             }
 
             Expression::BooleanLiteral(BooleanLiteral { value, .. }) => {
                 self.code
-                    .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Boolean(value))));
+                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Boolean(*value))));
                 Ok(())
             }
 
             Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => {
-                self.code.push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Array(
-                    elements
-                        .iter()
-                        .map(|element| match element {
-                            Expression::NumberLiteral(NumberLiteral { value, .. }) => Value::LiteralValue(LiteralValue::Number(*value)),
-                            Expression::BooleanLiteral(BooleanLiteral { value, .. }) => Value::LiteralValue(LiteralValue::Boolean(*value)),
-                            Expression::StringLiteral(StringLiteral { value, .. }) => Value::LiteralValue(LiteralValue::String(value.clone())),
-                            _ => unimplemented!(),
-                        })
-                        .collect::<Vec<Value>>(),
-                ))));
+                fn literal_value(expression: Expression) -> Value {
+                    match expression {
+                        Expression::NumberLiteral(NumberLiteral { value, .. }) => Value::LiteralValue(LiteralValue::Number(value)),
+                        Expression::BooleanLiteral(BooleanLiteral { value, .. }) => Value::LiteralValue(LiteralValue::Boolean(value)),
+                        Expression::StringLiteral(StringLiteral { value, .. }) => Value::LiteralValue(LiteralValue::String(value)),
+                        Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => {
+                            Value::LiteralValue(LiteralValue::Array(elements.into_iter().map(literal_value).collect()))
+                        }
+                        _ => panic!(),
+                    }
+                }
+                self.code
+                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Array(
+                        elements.iter().map(|e| literal_value(e.clone())).collect(),
+                    ))));
                 Ok(())
             }
 
+            Expression::FunctionLiteral(FunctionLiteral { .. }) => {
+                todo!()
+            }
+
+            Expression::ObjectLiteral(ObjectLiteral { .. }) => {
+                todo!()
+            }
+
             Expression::PrefixExpression(PrefixExpression { operator, right, .. }) => {
-                self.compile_expression(*right)?;
+                self.compile_expression(right)?;
 
                 match operator {
-                    Tokens::Minus => self.code.push_instruction(Instruction::UnaryOp(UnaryOp::Minus)),
-                    Tokens::Bang => self.code.push_instruction(Instruction::UnaryOp(UnaryOp::Not)),
+                    Tokens::Minus => self.code.push_instruction(&Instruction::UnaryOp(UnaryOp::Minus)),
+                    Tokens::Bang => self.code.push_instruction(&Instruction::UnaryOp(UnaryOp::Not)),
                     _ => panic!("Unknown operator: {}", operator),
                 }
 
@@ -169,22 +181,22 @@ impl CompilerTrait for Compiler {
             }
 
             Expression::InfixExpression(InfixExpression { left, operator, right, .. }) => {
-                self.compile_expression(*left)?;
-                self.compile_expression(*right)?;
+                self.compile_expression(left)?;
+                self.compile_expression(right)?;
 
                 match operator {
-                    Tokens::Plus => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Add)),
-                    Tokens::Minus => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Sub)),
-                    Tokens::Asterisk => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Mul)),
-                    Tokens::Slash => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Div)),
-                    Tokens::Percent => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Mod)),
-                    Tokens::EQ => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Eq)),
-                    Tokens::NEQ => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Neq)),
-                    Tokens::LT => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Lt)),
-                    Tokens::GT => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Gt)),
-                    Tokens::LTE => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Lte)),
-                    Tokens::GTE => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Gte)),
-                    _ => unimplemented!(),
+                    Tokens::Plus => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Add)),
+                    Tokens::Minus => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Sub)),
+                    Tokens::Asterisk => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Mul)),
+                    Tokens::Slash => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Div)),
+                    Tokens::Percent => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Mod)),
+                    Tokens::EQ => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Eq)),
+                    Tokens::NEQ => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Neq)),
+                    Tokens::LT => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Lt)),
+                    Tokens::GT => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Gt)),
+                    Tokens::LTE => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Lte)),
+                    Tokens::GTE => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Gte)),
+                    _ => panic!(),
                 }
 
                 Ok(())
@@ -192,24 +204,27 @@ impl CompilerTrait for Compiler {
 
             Expression::CallExpression(CallExpression { function, arguments, .. }) => {
                 for argument in arguments.clone() {
-                    self.compile_expression(argument.clone())?;
+                    self.compile_expression(&argument)?;
                 }
 
                 match *function.clone() {
                     Expression::Identifier(Identifier { value, .. }) => match get_builtin(value.clone()) {
-                        Some(_) => self.code.push_instruction(Instruction::LoadGlobal(value.clone())),
-                        None => self.code.push_instruction(Instruction::LoadName(value.clone())),
+                        Some(_) => self.code.push_instruction(&Instruction::LoadGlobal(value.clone())),
+                        None => self.code.push_instruction(&Instruction::LoadName(value.clone())),
                     },
                     _ => todo!(),
                 }
 
-                self.code.push_instruction(Instruction::CallFunction(arguments.len()));
+                self.code.push_instruction(&Instruction::CallFunction(arguments.len()));
                 Ok(())
             }
 
-            e => {
-                println!("err: {:?}", e);
-                unimplemented!()
+            Expression::IndexExpression(IndexExpression { .. }) => {
+                todo!()
+            }
+
+            Expression::IfExpression(IfExpression { .. }) => {
+                todo!()
             }
         }
     }
