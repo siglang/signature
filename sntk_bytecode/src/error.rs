@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, Eq, PartialEq, Default, Clone)]
 pub struct ByteCodeRuntime {
     pub message: String,
     pub pointer: Option<usize>,
