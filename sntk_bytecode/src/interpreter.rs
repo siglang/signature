@@ -1,4 +1,10 @@
-use crate::{builtin::*, code::*, error::*, runtime_error, stack::*};
+use crate::{
+    builtin::get_builtin,
+    code::{BinaryOp, BinaryOpEq, Instruction, UnaryOp},
+    error::{ByteCodeRuntime, INVALID_OPERAND, NOT_A_BOOLEAN, NOT_A_FUNCTION, NOT_A_LITERAL_VALUE, NOT_DEFINED, UNKNOWN_FUNCTION},
+    runtime_error,
+    stack::{Environment, LiteralValue, Stack, StackTrait, Value},
+};
 
 /// Provides the basic methods of the bytecode interpreter.
 pub trait InterpreterBase {
