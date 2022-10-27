@@ -1,4 +1,5 @@
-use std::{collections::HashMap, *};
+use crate::{error::*, runtime_error};
+use std::{collections::*, *};
 
 /// **The stack on which the interpreter is based.**
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -50,6 +51,17 @@ impl fmt::Display for LiteralValue {
     }
 }
 
+impl TryFrom<Value> for LiteralValue {
+    type Error = String;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::LiteralValue(literal_value) => Ok(literal_value),
+            _ => Err(format!("Not a literal value: {}", value)),
+        }
+    }
+}
+
 /// **Environment of the stack.**
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Environment {
@@ -95,29 +107,16 @@ impl Environment {
 pub trait StackTrait {
     fn new() -> Self;
     fn push(&mut self, value: Value);
-    fn pop(&mut self) -> Option<Value>;
+    fn pop(&mut self) -> Value;
     fn is_empty(&self) -> bool;
-    fn len(&self) -> usize;
 }
 
+#[rustfmt::skip]
 impl StackTrait for Stack {
-    fn new() -> Self {
-        Stack(Vec::new())
+    fn new() -> Self { Stack(Vec::new()) }
+    fn push(&mut self, value: Value) { self.0.push(value); }
+    fn pop(&mut self) -> Value {
+        self.0.pop().unwrap_or_else(|| runtime_error!(@stack self; POP_EMPTY_STACK;))
     }
-
-    fn push(&mut self, value: Value) {
-        self.0.push(value);
-    }
-
-    fn pop(&mut self) -> Option<Value> {
-        self.0.pop()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    fn len(&self) -> usize {
-        self.0.len()
-    }
+    fn is_empty(&self) -> bool { self.0.is_empty() }
 }
