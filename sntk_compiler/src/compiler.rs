@@ -1,6 +1,19 @@
-use crate::error::*;
-use sntk_bytecode::{builtin::*, code::*, interpreter::*, stack::*};
-use sntk_core::{parser::ast::*, tokenizer::token::Tokens};
+use sntk_bytecode::{
+    builtin::get_builtin,
+    code::{BinaryOp, BinaryOpEq, Instruction, UnaryOp},
+    interpreter::{Interpreter, InterpreterBase},
+    stack::{LiteralValue, Value},
+};
+use sntk_core::{
+    parser::ast::{
+        ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression,
+        IndexExpression, InfixExpression, LetStatement, NumberLiteral, ObjectLiteral, PrefixExpression, Program, ReturnStatement, Statement,
+        StringLiteral, TypeStatement,
+    },
+    tokenizer::token::Tokens,
+};
+
+use crate::error::CompileError;
 
 #[derive(Debug, Clone)]
 pub struct Code(pub Vec<Instruction>);
