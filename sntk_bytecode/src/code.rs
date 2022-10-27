@@ -20,27 +20,21 @@ pub enum Instruction {
 macro_rules! binary_op {
     ($( $op:ident )*) => {
         #[derive(Debug, PartialEq, Clone)]
-        pub enum BinaryOp {
-            $( $op ),*
-        }
+        pub enum BinaryOp { $( $op ),* }
     }
 }
 
 macro_rules! binary_op_eq {
     ($( $op:ident )*) => {
         #[derive(Debug, PartialEq, Clone)]
-        pub enum BinaryOpEq {
-            $( $op ),*
-        }
+        pub enum BinaryOpEq { $( $op ),* }
     }
 }
 
 macro_rules! unary_op {
     ($( $op:ident )*) => {
         #[derive(Debug, PartialEq, Clone)]
-        pub enum UnaryOp {
-            $( $op ),*
-        }
+        pub enum UnaryOp { $( $op ),* }
     }
 }
 
