@@ -106,14 +106,6 @@ impl CompilerTrait for Compiler {
     /// Compile an expression statement.
     fn compile_expression(&mut self, expression: Expression) -> CompileResult<()> {
         match expression {
-            Expression::NumberLiteral(NumberLiteral { value, .. }) => {
-                self.code
-                    .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(value))));
-                self.code
-                    .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(value))));
-                Ok(())
-            }
-
             Expression::BlockExpression(BlockExpression { statements, .. }) => {
                 self.code.push_instruction(Instruction::Block(
                     Compiler::new(Program {
@@ -131,9 +123,76 @@ impl CompilerTrait for Compiler {
                 Ok(())
             }
 
+            Expression::NumberLiteral(NumberLiteral { value, .. }) => {
+                self.code
+                    .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(value))));
+                Ok(())
+            }
+
+            Expression::StringLiteral(StringLiteral { value, .. }) => {
+                self.code
+                    .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::String(value))));
+                Ok(())
+            }
+
+            Expression::BooleanLiteral(BooleanLiteral { value, .. }) => {
+                self.code
+                    .push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Boolean(value))));
+                Ok(())
+            }
+
+            Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => {
+                self.code.push_instruction(Instruction::LoadConst(Value::LiteralValue(LiteralValue::Array(
+                    elements
+                        .iter()
+                        .map(|element| match element {
+                            Expression::NumberLiteral(NumberLiteral { value, .. }) => Value::LiteralValue(LiteralValue::Number(*value)),
+                            Expression::BooleanLiteral(BooleanLiteral { value, .. }) => Value::LiteralValue(LiteralValue::Boolean(*value)),
+                            Expression::StringLiteral(StringLiteral { value, .. }) => Value::LiteralValue(LiteralValue::String(value.clone())),
+                            _ => unimplemented!(),
+                        })
+                        .collect::<Vec<Value>>(),
+                ))));
+                Ok(())
+            }
+
+            Expression::PrefixExpression(PrefixExpression { operator, right, .. }) => {
+                self.compile_expression(*right)?;
+
+                match operator {
+                    Tokens::Minus => self.code.push_instruction(Instruction::UnaryOp(UnaryOp::Minus)),
+                    Tokens::Bang => self.code.push_instruction(Instruction::UnaryOp(UnaryOp::Not)),
+                    _ => panic!("Unknown operator: {}", operator),
+                }
+
+                Ok(())
+            }
+
+            Expression::InfixExpression(InfixExpression { left, operator, right, .. }) => {
+                self.compile_expression(*left)?;
+                self.compile_expression(*right)?;
+
+                match operator {
+                    Tokens::Plus => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Add)),
+                    Tokens::Minus => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Sub)),
+                    Tokens::Asterisk => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Mul)),
+                    Tokens::Slash => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Div)),
+                    Tokens::Percent => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Mod)),
+                    Tokens::EQ => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Eq)),
+                    Tokens::NEQ => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Neq)),
+                    Tokens::LT => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Lt)),
+                    Tokens::GT => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Gt)),
+                    Tokens::LTE => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Lte)),
+                    Tokens::GTE => self.code.push_instruction(Instruction::BinaryOpEq(BinaryOpEq::Gte)),
+                    _ => unimplemented!(),
+                }
+
+                Ok(())
+            }
+
             Expression::CallExpression(CallExpression { function, arguments, .. }) => {
                 for argument in arguments.clone() {
-                    self.compile_expression(argument)?;
+                    self.compile_expression(argument.clone())?;
                 }
 
                 match *function.clone() {
@@ -145,18 +204,6 @@ impl CompilerTrait for Compiler {
                 }
 
                 self.code.push_instruction(Instruction::CallFunction(arguments.len()));
-                Ok(())
-            }
-
-            Expression::InfixExpression(InfixExpression { left, operator, right, .. }) => {
-                self.compile_expression(*left)?;
-                self.compile_expression(*right)?;
-
-                match operator {
-                    Tokens::Plus => self.code.push_instruction(Instruction::BinaryOp(BinaryOp::Add)),
-                    _ => unimplemented!(),
-                }
-
                 Ok(())
             }
 
