@@ -19,15 +19,13 @@ let x: number = 10;
     print(x + y + z, x, y, z);
 };
 print(x);
-print(y, z); /* Error */
+print(-1, 2 / 3, [1, 2, 3], "abcd", !true);
     "#,
         )
         .parse_program(),
     );
     let mut compiled = compiler.compile_program().unwrap();
-    // println!("{:?}", compiled);
     compiled.run();
-    // println!("{:?}", compiled.environment);
 
     // let mut interpreter = Interpreter::new(vec![
     //     Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(5.0))),
