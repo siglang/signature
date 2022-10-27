@@ -89,7 +89,7 @@ impl InstructionTrait for Interpreter {
                     args.reverse();
 
                     match builtin(args) {
-                        Value::None | Value::Identifier(_) | Value::Return(_) => {}
+                        Value::Identifier(_) | Value::Return(_) => panic!("Builtin function returned an identifier or a return value."),
                         value => self.stack.push(value),
                     }
                 }
