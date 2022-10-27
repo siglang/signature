@@ -1,8 +1,19 @@
-use super::{ast::*, error::*};
 use crate::{
-    options::*,
-    tokenizer::{lexer::*, token::*},
-    *,
+    ident,
+    options::CompilerOptions,
+    parser::{
+        ast::{
+            ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, FunctionType,
+            Generic, Identifier, IdentifierGeneric, InfixExpression, LetStatement, NumberLiteral, ObjectLiteral, ObjectType, Position,
+            PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral, TypeStatement,
+        },
+        error::{ParsingError, EXPECTED_EXPRESSION, EXPECTED_NEXT_TOKEN, UNEXPECTED_TOKEN},
+    },
+    parsing_error, position,
+    tokenizer::{
+        lexer::{Lexer, LexerTrait},
+        token::{Token, Tokens},
+    },
 };
 
 pub type ParseResult<T> = Result<T, ParsingError>;
