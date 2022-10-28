@@ -1,6 +1,6 @@
 use crate::{
     builtin::get_builtin,
-    code::{BinaryOp, BinaryOpEq, Instruction, UnaryOp},
+    code::{BinaryOp, BinaryOpEq, Block, Instruction, UnaryOp},
     error::{IrRuntime, INVALID_OPERAND, NOT_A_BOOLEAN, NOT_A_FUNCTION, NOT_A_LITERAL_VALUE, NOT_DEFINED, UNKNOWN_FUNCTION},
     runtime_error,
     stack::{Environment, LiteralValue, Stack, StackTrait, Value},
@@ -20,10 +20,8 @@ trait InstructionTrait {
     fn load_name(&mut self, name: String);
     fn store_name(&mut self, name: String);
     fn call_function(&mut self, argc: usize);
-    fn jump_if_true(&mut self, offset: usize);
-    fn jump_if_false(&mut self, offset: usize);
-    fn jump(&mut self, offset: usize);
-    fn block(&mut self, instructions: Vec<Instruction>);
+    fn if_else(&mut self, consequent: Block, alternative: Option<Block>);
+    fn block(&mut self, instructions: Block);
     fn return_value(&mut self);
 }
 
@@ -106,32 +104,44 @@ impl InstructionTrait for Interpreter {
         };
     }
 
-    fn jump_if_true(&mut self, pos: usize) {
-        if let Value::LiteralValue(LiteralValue::Boolean(b)) = self.stack.pop() {
-            if b {
-                self.instruction_pointer = pos;
+    fn if_else(&mut self, consequent: Block, alternative: Option<Block>) {
+        let condition = self.stack.pop();
+
+        match condition {
+            Value::LiteralValue(LiteralValue::Boolean(condition)) => {
+                if condition {
+                    self.block(consequent);
+                } else if let Some(alternative) = alternative {
+                    self.block(alternative);
+                }
             }
-        } else {
-            runtime_error!(self; NOT_A_BOOLEAN; self.stack.pop());
+            _ => runtime_error!(self; NOT_A_BOOLEAN; condition),
         }
     }
 
-    fn jump_if_false(&mut self, pos: usize) {
-        if let Value::LiteralValue(LiteralValue::Boolean(b)) = self.stack.pop() {
-            if !b {
-                self.instruction_pointer = pos;
+    fn block(&mut self, instructions: Block) {
+        let mut ins = Vec::new();
+
+        for instruction in instructions.0 {
+            match instruction {
+                Instruction::Return => {
+                    ins.push(instruction);
+                    break;
+                }
+                _ => ins.push(instruction),
             }
-        } else {
-            runtime_error!(self; NOT_A_BOOLEAN; self.stack.pop());
         }
-    }
 
-    fn jump(&mut self, pos: usize) {
-        self.instruction_pointer = pos;
-    }
+        let mut interpreter = Interpreter::new_with(ins, Stack::new(), Environment::new_with_parent(self.environment.clone()));
+        interpreter.run();
 
-    fn block(&mut self, instructions: Vec<Instruction>) {
-        Interpreter::new_with(instructions, Stack::new(), Environment::new_with_parent(self.environment.clone())).run();
+        let value = interpreter.stack.pop();
+
+        match value {
+            Value::Return(value) => self.stack.push(*value),
+            Value::Identifier(_) => panic!("Return value must be a literal value"),
+            _ => self.stack.push(value),
+        };
     }
 
     fn return_value(&mut self) {
@@ -244,9 +254,6 @@ impl InterpreterBase for Interpreter {
                 Instruction::LoadName(name) => self.load_name(name),
                 Instruction::StoreName(name) => self.store_name(name),
                 Instruction::CallFunction(argc) => self.call_function(argc),
-                Instruction::JumpIfTrue(pos) => self.jump_if_true(pos),
-                Instruction::JumpIfFalse(pos) => self.jump_if_false(pos),
-                Instruction::Jump(pos) => self.jump(pos),
                 Instruction::BinaryOp(op) => match op {
                     BinaryOp::Add => self.binary_op_add(),
                     BinaryOp::Sub => self.binary_op_sub(),
@@ -268,6 +275,7 @@ impl InterpreterBase for Interpreter {
                 },
                 Instruction::Block(block) => self.block(block),
                 Instruction::Return => self.return_value(),
+                Instruction::If(consequent, alternative) => self.if_else(consequent, alternative),
             }
 
             self.instruction_pointer += 1;
