@@ -1,9 +1,7 @@
 use crate::tokenizer::token::{Token, Tokens};
 
 pub trait LexerTrait {
-    fn new<T>(input: T) -> Self
-    where
-        T: Into<String>;
+    fn new(input: String) -> Self;
     fn read_char(&mut self);
     fn peek_char(&self) -> char;
     fn skip_whitespace(&mut self);
@@ -52,14 +50,8 @@ impl Default for Lexer {
 impl LexerTrait for Lexer {
     /// **Creates a new Lexer instance.**
     /// it takes an argument of type `&str` or `String` (`Into<String>`).
-    fn new<T>(input: T) -> Self
-    where
-        T: Into<String>,
-    {
-        let mut lexer = Lexer {
-            input: input.into(),
-            ..Default::default()
-        };
+    fn new(input: String) -> Self {
+        let mut lexer = Lexer { input, ..Default::default() };
 
         lexer.read_char();
         lexer
