@@ -10,7 +10,7 @@ We will provide the following features:
 
 -   **Easy and simple, and even beginners can learn it quickly and easily.**
     -   it also has a C-like syntax, which makes it easy for other programmers to use the C-like syntax to learn.
--   **Using bytecode**, it provides a fast interpreter.
+-   **Using Sanetaka IR**, it provides a fast interpreter.
 -   **Supports functional programming.**
 -   **Supports macro**. it is similar to Rust's Macros, and will provide a powerful macro system.
 -   **Supports type system.** (static type system)
@@ -27,7 +27,7 @@ this may not be observed. (No, most likely.) however, we strive to provide bette
 -   [x] Tokenizer (Tokens + Lexer)
 -   [x] Parser (AST) **(in progress)**
     -   [ ] EEE (Evaluating an Evaluable Expression) **(in progress)**
--   [ ] Compiler (Bytecode) **(in progress)**
+-   [ ] Compiler (Sanetaka IR) **(in progress)**
     -   [ ] Type Checker
 -   [ ] Interpreter (VM, Stack Machine) **(in progress)**
 -   [ ] Plugin (e.g. Transcompiler)
@@ -51,7 +51,7 @@ this may not be observed. (No, most likely.) however, we strive to provide bette
 graph LR
     _[Source Code] --> |sntkc| Lexer
     Lexer[Tokenizer / Lexer] --> Parser[Parser / AST]
-    Parser --> Compiler[ByteCode / Compiler]
+    Parser --> Compiler[Sanetaka IR / Compiler]
     Compiler --> Run[sntk run]
     Run --> |Run| VM[Virtual Machine / Interpreter]
     Compiler --> Plugin[plugin]
