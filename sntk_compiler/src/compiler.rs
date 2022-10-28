@@ -9,7 +9,7 @@ use sntk_core::{
 };
 use sntk_ir::{
     builtin::get_builtin,
-    code::{BinaryOp, BinaryOpEq, Instruction, UnaryOp},
+    code::{BinaryOp, BinaryOpEq, Block, Instruction, UnaryOp},
     interpreter::{Interpreter, InterpreterBase},
     stack::{LiteralValue, Value},
 };
@@ -119,37 +119,37 @@ impl CompilerTrait for Compiler {
     fn compile_expression(&mut self, expression: &Expression) -> CompileResult<()> {
         match expression {
             Expression::BlockExpression(BlockExpression { statements, .. }) => {
-                self.code.push_instruction(&Instruction::Block(
-                    Compiler::new(Program {
-                        statements: statements.clone(),
-                        errors: Vec::new(),
-                    })
-                    .compile_program()?
-                    .instructions,
-                ));
+                self.code.push_instruction(&Instruction::Block(Block(
+                    Compiler::new(Program::new(statements.clone())).compile_program()?.instructions,
+                )));
+
                 Ok(())
             }
 
             Expression::Identifier(Identifier { value, .. }) => {
                 self.code.push_instruction(&Instruction::LoadName(value.clone()));
+
                 Ok(())
             }
 
             Expression::NumberLiteral(NumberLiteral { value, .. }) => {
                 self.code
                     .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(*value))));
+
                 Ok(())
             }
 
             Expression::StringLiteral(StringLiteral { value, .. }) => {
                 self.code
                     .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::String(value.clone()))));
+
                 Ok(())
             }
 
             Expression::BooleanLiteral(BooleanLiteral { value, .. }) => {
                 self.code
                     .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Boolean(*value))));
+
                 Ok(())
             }
 
@@ -165,6 +165,7 @@ impl CompilerTrait for Compiler {
                         _ => panic!(),
                     }
                 }
+
                 self.code
                     .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Array(
                         elements.iter().map(|e| literal_value(e.clone())).collect(),
@@ -228,6 +229,7 @@ impl CompilerTrait for Compiler {
                 }
 
                 self.code.push_instruction(&Instruction::CallFunction(arguments.len()));
+
                 Ok(())
             }
 
@@ -235,8 +237,24 @@ impl CompilerTrait for Compiler {
                 todo!()
             }
 
-            Expression::IfExpression(IfExpression { .. }) => {
-                todo!()
+            Expression::IfExpression(IfExpression {
+                condition,
+                consequence,
+                alternative,
+                ..
+            }) => {
+                self.compile_expression(condition)?;
+
+                fn compile_block(block: BlockExpression) -> CompileResult<Block> {
+                    Ok(Block(Compiler::new(Program::new(block.statements)).compile_program()?.instructions))
+                }
+
+                self.code.push_instruction(&Instruction::If(
+                    compile_block(*consequence.clone())?,
+                    alternative.clone().map(|expression| compile_block(*expression.clone())).transpose()?,
+                ));
+
+                Ok(())
             }
         }
     }
