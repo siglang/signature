@@ -4,7 +4,7 @@ use crate::{
     parser::{
         ast::{
             ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, FunctionType,
-            Generic, Identifier, IdentifierGeneric, InfixExpression, LetStatement, NumberLiteral, ObjectLiteral, ObjectType, Position,
+            Generic, Identifier, IdentifierGeneric, IfExpression, InfixExpression, LetStatement, NumberLiteral, ObjectLiteral, ObjectType, Position,
             PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral, TypeStatement,
         },
         error::{ParsingError, EXPECTED_EXPRESSION, EXPECTED_NEXT_TOKEN, UNEXPECTED_TOKEN},
@@ -43,6 +43,7 @@ pub trait ParserTrait {
     fn parse_array_literal(&mut self) -> ParseResult<ArrayLiteral>;
     fn parse_object_literal(&mut self) -> ParseResult<ObjectLiteral>;
     fn parse_function_literal(&mut self) -> ParseResult<FunctionLiteral>;
+    fn parse_if_expression(&mut self) -> ParseResult<IfExpression>;
 }
 
 /// Parses type annotations, generics, etc.
@@ -85,11 +86,8 @@ pub struct Parser {
     pub options: CompilerOptions,
 }
 
-impl<T> From<T> for Parser
-where
-    T: Into<String>,
-{
-    fn from(x: T) -> Self {
+impl From<String> for Parser {
+    fn from(x: String) -> Self {
         Parser::new(Lexer::new(x))
     }
 }
@@ -336,7 +334,7 @@ impl ParserTrait for Parser {
             Tokens::LBracket => Some(Ok(Expression::ArrayLiteral(self.parse_array_literal()?))),
             Tokens::ObjectType => Some(Ok(Expression::ObjectLiteral(self.parse_object_literal()?))),
             Tokens::Function => Some(Ok(Expression::FunctionLiteral(self.parse_function_literal()?))),
-            Tokens::If => unimplemented!(),
+            Tokens::If => Some(Ok(Expression::IfExpression(self.parse_if_expression()?))),
             _ => None,
         };
 
@@ -561,6 +559,28 @@ impl ParserTrait for Parser {
         };
 
         Ok(FunctionLiteral::new(generics, parameters, return_type, body, position! { self }))
+    }
+
+    /// **Parses a if expression.**
+    fn parse_if_expression(&mut self) -> ParseResult<IfExpression> {
+        self.next_token();
+
+        let condition = self.parse_expression(&Priority::Lowest)?;
+
+        self.next_token();
+
+        let consequence = self.parse_block_expression()?;
+
+        let alternative = if self.peek_token(&Tokens::Else) {
+            self.next_token();
+            self.next_token();
+
+            Some(self.parse_block_expression()?)
+        } else {
+            None
+        };
+
+        Ok(IfExpression::new(Box::new(condition), consequence, alternative, position! { self }))
     }
 }
 
