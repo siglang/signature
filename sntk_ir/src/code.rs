@@ -7,15 +7,16 @@ pub enum Instruction {
     CallFunction(usize),
     StoreName(String),
     LoadName(String),
-    JumpIfTrue(usize),
-    JumpIfFalse(usize),
-    Jump(usize),
+    If(Block, Option<Block>),
     BinaryOp(BinaryOp),
     BinaryOpEq(BinaryOpEq),
     UnaryOp(UnaryOp),
-    Block(Vec<Instruction>),
+    Block(Block),
     Return,
 }
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Block(pub Vec<Instruction>);
 
 macro_rules! binary_op {
     ($( $op:ident )*) => {
