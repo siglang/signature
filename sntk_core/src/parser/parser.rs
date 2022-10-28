@@ -148,7 +148,7 @@ impl ParserBase for Parser {
             Tokens::Assign => Priority::Equals,
             Tokens::Plus | Tokens::Minus => Priority::Sum,
             Tokens::Slash | Tokens::Asterisk => Priority::Product,
-            Tokens::LT | Tokens::GT => Priority::LessGreater,
+            Tokens::LT | Tokens::GT | Tokens::LTE | Tokens::GTE => Priority::LessGreater,
             Tokens::EQ | Tokens::NEQ => Priority::Equals,
             Tokens::LParen => Priority::Call,
             Tokens::LBracket => Priority::Index,
@@ -338,10 +338,8 @@ impl ParserTrait for Parser {
             _ => None,
         };
 
-        if left_expression.is_none() {
-            if self.current_token.token_type != Tokens::Semicolon {
-                return Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type });
-            }
+        if left_expression.is_none() && self.current_token.token_type != Tokens::Semicolon {
+            return Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type });
         }
 
         let mut left_expression = left_expression.ok_or_else(|| parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type })?;
@@ -566,21 +564,35 @@ impl ParserTrait for Parser {
         self.next_token();
 
         let condition = self.parse_expression(&Priority::Lowest)?;
-
         self.next_token();
 
         let consequence = self.parse_block_expression()?;
+        self.next_token();
 
-        let alternative = if self.peek_token(&Tokens::Else) {
-            self.next_token();
+        let alternative = if self.current_token.token_type == Tokens::Else {
             self.next_token();
 
-            Some(self.parse_block_expression()?)
+            if self.current_token.token_type == Tokens::If {
+                Some(Box::new(BlockExpression {
+                    statements: vec![Statement::ExpressionStatement(ExpressionStatement::new(
+                        Expression::IfExpression(self.parse_if_expression()?),
+                        position! { self },
+                    ))],
+                    position: position! { self },
+                }))
+            } else {
+                Some(Box::new(self.parse_block_expression()?))
+            }
         } else {
             None
         };
 
-        Ok(IfExpression::new(Box::new(condition), consequence, alternative, position! { self }))
+        Ok(IfExpression::new(
+            Box::new(condition),
+            Box::new(consequence),
+            alternative,
+            position! { self },
+        ))
     }
 }
 
