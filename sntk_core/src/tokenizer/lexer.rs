@@ -233,8 +233,6 @@ impl LexerTrait for Lexer {
             '+' => Plus,
             '*' => Asterisk,
             '%' => Percent,
-            '<' => LT,
-            '>' => GT,
             '.' => Dot,
             ',' => Comma,
             ';' => Semicolon,
@@ -249,6 +247,8 @@ impl LexerTrait for Lexer {
             '-' => next!('>' => Arrow; Minus),
             '=' => next!('=' => EQ; Assign),
             '!' => next!('=' => NEQ; Bang),
+            '<' => next!('=' => LTE; LT),
+            '>' => next!('=' => GTE; GT),
             '/' => next!(@no_read '*' => {
                 self.read_comment();
                 self.next_token();
