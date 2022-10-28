@@ -43,7 +43,7 @@ impl fmt::Display for LiteralValue {
         match self {
             LiteralValue::Number(number) => write!(f, "{}", number),
             LiteralValue::Boolean(boolean) => write!(f, "{}", boolean),
-            LiteralValue::String(string) => write!(f, "\"{}\"", string),
+            LiteralValue::String(string) => write!(f, "{}", string),
             LiteralValue::Array(array) => {
                 let mut string = String::new();
 
