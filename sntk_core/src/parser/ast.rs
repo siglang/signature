@@ -9,6 +9,15 @@ pub struct Program {
     pub errors: Vec<ParsingError>,
 }
 
+impl Program {
+    pub fn new(statements: Vec<Statement>) -> Self {
+        Self {
+            statements,
+            errors: Vec::new(),
+        }
+    }
+}
+
 /// In the Sanetaka language, statements contain the following data:
 ///
 /// * `let` statement (`let ident = value;`)
@@ -161,7 +170,7 @@ make_struct! { NumberLiteral => value: f64 }
 make_struct! { PrefixExpression => operator: Tokens, right: Box<Expression> }
 make_struct! { InfixExpression => left: Box<Expression>, operator: Tokens, right: Box<Expression> }
 make_struct! { BooleanLiteral => value: bool }
-make_struct! { IfExpression => condition: Box<Expression>, consequence: BlockExpression, alternative: Option<BlockExpression> }
+make_struct! { IfExpression => condition: Box<Expression>, consequence: Box<BlockExpression>, alternative: Option<Box<BlockExpression>> }
 make_struct! { FunctionLiteral => generics: Option<IdentifierGeneric>, parameters: Vec<(Identifier, DataType)>, return_type: DataType, body: BlockExpression }
 make_struct! { CallExpression => function: Box<Expression>, arguments: Vec<Expression> }
 make_struct! { StringLiteral => value: String }
