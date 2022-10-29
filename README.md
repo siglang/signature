@@ -242,7 +242,7 @@ Program {
                             statements: [
                                 ReturnStatement(
                                     ReturnStatement {
-                                        return_value: FunctionLiteral(
+                                        value: FunctionLiteral(
                                             FunctionLiteral {
                                                 generics: None,
                                                 parameters: [],
@@ -262,7 +262,7 @@ Program {
                                                     statements: [
                                                         ReturnStatement(
                                                             ReturnStatement {
-                                                                return_value: ObjectLiteral(
+                                                                value: ObjectLiteral(
                                                                     ObjectLiteral {
                                                                         pairs: [
                                                                             (
