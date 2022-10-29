@@ -38,7 +38,6 @@ messages! {
     NOT_A_BOOLEAN => "Not a boolean: {0}";
     NOT_A_LITERAL_VALUE => "Not a literal value: {0}";
     INVALID_OPERAND => "Invalid operand: {0}";
-    UNKNOWN_FUNCTION => "Unknown function: {0}";
     POP_EMPTY_STACK => "Pop empty stack";
 }
 
