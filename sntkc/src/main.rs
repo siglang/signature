@@ -16,10 +16,11 @@ let a: fn(number, number) -> fn() -> number =
     fn(a: number, b: string) -> fn() -> number
 {
     print(a, b);
-    return fn() -> number -> a * 10;
+
+    return fn(x: number) -> number -> a * x;
 };
 
-print(a);
+print(a(10, "hello")(5));
             "#
             .to_string(),
         )
