@@ -1,6 +1,11 @@
-use sntk_core::parser::ast::{ArrayLiteral, BooleanLiteral, Expression, NumberLiteral, ObjectLiteral, StringLiteral};
-use sntk_ir::stack::{LiteralValue, Value};
+use sntk_core::parser::ast::{ArrayLiteral, BooleanLiteral, Expression, NumberLiteral, ObjectLiteral, Program, Statement, StringLiteral};
+use sntk_ir::{
+    code::Block,
+    stack::{LiteralValue, Value},
+};
 use std::collections::HashMap;
+
+use crate::compiler::{CompileResult, Compiler, CompilerTrait};
 
 pub fn literal_value(expression: Expression) -> Value {
     match expression {
@@ -21,4 +26,8 @@ pub fn literal_value(expression: Expression) -> Value {
         }
         value => panic!("Unexpected value: {:?}", value),
     }
+}
+
+pub fn compile_block(statements: Vec<Statement>) -> CompileResult<Block> {
+    Ok(Block(Compiler::new(Program::new(statements)).compile_program()?.instructions))
 }
