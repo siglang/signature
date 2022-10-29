@@ -7,11 +7,9 @@ use std::{
     fmt::{self, Write},
 };
 
-/// **The stack on which the interpreter is based.**
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Stack(Vec<Value>);
 
-/// **The value of a stack.**
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     LiteralValue(LiteralValue),
@@ -29,13 +27,13 @@ impl fmt::Display for Value {
     }
 }
 
-/// **The literal value of a stack.**
 #[derive(Debug, PartialEq, Clone)]
 pub enum LiteralValue {
     Number(f64),
     Boolean(bool),
     String(String),
     Array(Vec<Value>),
+    Object(HashMap<String, Value>),
 }
 
 impl fmt::Display for LiteralValue {
@@ -52,6 +50,15 @@ impl fmt::Display for LiteralValue {
                 }
 
                 write!(f, "[{}]", string.trim_end_matches(", "))
+            }
+            LiteralValue::Object(object) => {
+                let mut string = String::new();
+
+                for (key, value) in object {
+                    string.write_fmt(format_args!("{}: {}, ", key, value))?;
+                }
+
+                write!(f, "{{ {} }}", string.trim_end_matches(", "))
             }
         }
     }
