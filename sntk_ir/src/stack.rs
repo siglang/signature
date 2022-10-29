@@ -132,15 +132,28 @@ pub trait StackTrait {
     fn new() -> Self;
     fn push(&mut self, value: Value);
     fn pop(&mut self) -> Value;
+    fn pop_option(&mut self) -> Option<Value>;
     fn is_empty(&self) -> bool;
 }
 
-#[rustfmt::skip]
 impl StackTrait for Stack {
-    fn new() -> Self { Stack(Vec::new()) }
-    fn push(&mut self, value: Value) { self.0.push(value); }
+    fn new() -> Self {
+        Stack(Vec::new())
+    }
+
+    fn push(&mut self, value: Value) {
+        self.0.push(value);
+    }
+
     fn pop(&mut self) -> Value {
         self.0.pop().unwrap_or_else(|| runtime_error!(@stack self; POP_EMPTY_STACK;))
     }
-    fn is_empty(&self) -> bool { self.0.is_empty() }
+
+    fn pop_option(&mut self) -> Option<Value> {
+        self.0.pop()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
