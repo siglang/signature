@@ -1,4 +1,4 @@
-use crate::error::CompileError;
+use crate::{error::CompileError, helpers::literal_value};
 use sntk_core::{
     parser::ast::{
         ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression,
@@ -154,22 +154,11 @@ impl CompilerTrait for Compiler {
             }
 
             Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => {
-                fn literal_value(expression: Expression) -> Value {
-                    match expression {
-                        Expression::NumberLiteral(NumberLiteral { value, .. }) => Value::LiteralValue(LiteralValue::Number(value)),
-                        Expression::BooleanLiteral(BooleanLiteral { value, .. }) => Value::LiteralValue(LiteralValue::Boolean(value)),
-                        Expression::StringLiteral(StringLiteral { value, .. }) => Value::LiteralValue(LiteralValue::String(value)),
-                        Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => {
-                            Value::LiteralValue(LiteralValue::Array(elements.into_iter().map(literal_value).collect()))
-                        }
-                        _ => panic!(),
-                    }
-                }
-
                 self.code
                     .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Array(
                         elements.iter().map(|e| literal_value(e.clone())).collect(),
                     ))));
+
                 Ok(())
             }
 
@@ -177,8 +166,13 @@ impl CompilerTrait for Compiler {
                 todo!()
             }
 
-            Expression::ObjectLiteral(ObjectLiteral { .. }) => {
-                todo!()
+            Expression::ObjectLiteral(ObjectLiteral { pairs, .. }) => {
+                self.code
+                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Object(
+                        pairs.iter().map(|(k, v)| (k.value.clone(), literal_value(v.clone()))).collect(),
+                    ))));
+
+                Ok(())
             }
 
             Expression::PrefixExpression(PrefixExpression { operator, right, .. }) => {
