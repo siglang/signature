@@ -45,22 +45,30 @@ impl fmt::Display for LiteralValue {
             LiteralValue::Boolean(boolean) => write!(f, "{}", boolean),
             LiteralValue::String(string) => write!(f, "{}", string),
             LiteralValue::Array(array) => {
-                let mut string = String::new();
+                if array.is_empty() {
+                    write!(f, "[ ]")
+                } else {
+                    let mut string = String::new();
 
-                for value in array {
-                    string.write_fmt(format_args!("{}, ", value))?;
+                    for value in array {
+                        string.write_fmt(format_args!("{}, ", value))?;
+                    }
+
+                    write!(f, "[{}]", string.trim_end_matches(", "))
                 }
-
-                write!(f, "[{}]", string.trim_end_matches(", "))
             }
             LiteralValue::Object(object) => {
-                let mut string = String::new();
+                if object.is_empty() {
+                    write!(f, "{{ }}")
+                } else {
+                    let mut string = String::new();
 
-                for (key, value) in object {
-                    string.write_fmt(format_args!("{}: {}, ", key, value))?;
+                    for (key, value) in object {
+                        string.write_fmt(format_args!("{}: {}, ", key, value))?;
+                    }
+
+                    write!(f, "{{{}}}", string.trim_end_matches(", "))
                 }
-
-                write!(f, "{{ {} }}", string.trim_end_matches(", "))
             }
             LiteralValue::Function { parameters, .. } => {
                 let mut string = String::new();
