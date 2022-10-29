@@ -225,7 +225,13 @@ impl CompilerTrait for Compiler {
                         Some(_) => self.code.push_instruction(&Instruction::LoadGlobal(value)),
                         None => self.code.push_instruction(&Instruction::LoadName(value)),
                     },
-                    _ => todo!(),
+                    Expression::FunctionLiteral(FunctionLiteral { .. }) => {
+                        self.compile_expression(function)?;
+                    }
+                    Expression::CallExpression(CallExpression { .. }) => {
+                        self.compile_expression(function)?;
+                    }
+                    expression => panic!("Unknown function: {:?}", expression),
                 }
 
                 self.code.push_instruction(&Instruction::CallFunction(arguments.len()));
