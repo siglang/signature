@@ -1,4 +1,7 @@
-use crate::{error::CompileError, helpers::literal_value};
+use crate::{
+    error::CompileError,
+    helpers::{compile_block, literal_value},
+};
 use sntk_core::{
     parser::ast::{
         ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression,
@@ -9,7 +12,7 @@ use sntk_core::{
 };
 use sntk_ir::{
     builtin::get_builtin,
-    code::{BinaryOp, BinaryOpEq, Block, Instruction, UnaryOp},
+    code::{BinaryOp, BinaryOpEq, Instruction, UnaryOp},
     interpreter::{Interpreter, InterpreterBase},
     stack::{LiteralValue, Value},
 };
@@ -119,9 +122,7 @@ impl CompilerTrait for Compiler {
     fn compile_expression(&mut self, expression: &Expression) -> CompileResult<()> {
         match expression {
             Expression::BlockExpression(BlockExpression { statements, .. }) => {
-                self.code.push_instruction(&Instruction::Block(Block(
-                    Compiler::new(Program::new(statements.clone())).compile_program()?.instructions,
-                )));
+                self.code.push_instruction(&Instruction::Block(compile_block(statements.clone())?));
 
                 Ok(())
             }
@@ -177,7 +178,7 @@ impl CompilerTrait for Compiler {
                 self.code
                     .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Function {
                         parameters: parameters.iter().map(|p| p.clone().0.value).collect(),
-                        body: Block(Compiler::new(Program::new(statments)).compile_program()?.instructions),
+                        body: compile_block(statments)?,
                     })));
 
                 Ok(())
@@ -259,13 +260,12 @@ impl CompilerTrait for Compiler {
             }) => {
                 self.compile_expression(condition)?;
 
-                fn compile_block(block: BlockExpression) -> CompileResult<Block> {
-                    Ok(Block(Compiler::new(Program::new(block.statements)).compile_program()?.instructions))
-                }
-
                 self.code.push_instruction(&Instruction::If(
-                    compile_block(*consequence.clone())?,
-                    alternative.clone().map(|expression| compile_block(*expression.clone())).transpose()?,
+                    compile_block(consequence.statements.clone())?,
+                    alternative
+                        .clone()
+                        .map(|expression| compile_block(expression.statements.clone()))
+                        .transpose()?,
                 ));
 
                 Ok(())
