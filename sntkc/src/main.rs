@@ -31,6 +31,15 @@ let x: number = if a < b {
 };
 
 print(x);
+print(object {
+    a: 2,
+    b: "foo",
+    c: object {
+        d: [1, 2, 3],
+    }, /* test */
+    4: "bar",
+    "foo": "bar",
+});
             "#
             .to_string(),
         )
