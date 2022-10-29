@@ -1,6 +1,6 @@
 use crate::{parser::error::ParsingError, tokenizer::token::Tokens};
 
-/// `Program` is the structure where the AST is finally stored.
+/// **`Program` is the structure where the AST is finally stored.**
 ///
 /// and, this structure also stores errors that occurred during parsing.
 #[derive(Debug, Default)]
@@ -18,21 +18,20 @@ impl Program {
     }
 }
 
-/// In the Sanetaka language, statements contain the following data:
-///
-/// * `let` statement (`let ident = value;`)
-/// * `return` statement (`return value;`)
-/// * `block` statement (`{ statements }`)
-/// * `expression` statement (`value;`)
+/// **In the Sanetaka language, statements contain the following data:**
 #[derive(Debug, PartialEq, Clone)]
 pub enum Statement {
+    /// `let` statement (`let ident = value;`)
     LetStatement(LetStatement),
+    /// `return` statement (`return value;`)
     ReturnStatement(ReturnStatement),
+    /// `type` statement (`type Ident = T;`)
     TypeStatement(TypeStatement),
+    /// expression statement (`value;`)
     ExpressionStatement(ExpressionStatement),
 }
 
-/// `value` in Statement corresponds to Expression.
+/// **`value` in Statement corresponds to Expression.**
 ///
 /// when expression ends, a semicolon (`;`) is required.
 #[derive(Debug, PartialEq, Clone)]
@@ -64,23 +63,26 @@ pub enum Expression {
     ObjectLiteral(ObjectLiteral),
 }
 
-/// * `Number`: a number literal. `data: number`
-/// * `String`: a string literal. `data: string`
-/// * `Boolean`: a boolean literal. `data: boolean`
-/// * `Array`: an array literal. `data: type[]`
-/// * `Hash`: a hash literal. `data: hash(key_type, value_type)`
-/// * `Fn`: a function literal. `data: fn((parameter_type)s) -> return_type`
 #[derive(Debug, PartialEq, Clone)]
 pub enum DataType {
+    /// a number literal. `data: number`
     Number,
+    /// a string literal. `data: string`
     String,
+    /// a boolean literal. `data: boolean`
     Boolean,
-    Void,
+    /// an array literal. `data: type[]`
     Array(Box<DataType>),
+    /// `Object`: a hash literal. `data: hash(key_type, value_type)`
     Object(ObjectType),
+    /// a function literal. `data: fn((parameter_type)s) -> return_type`
     Fn(FunctionType),
+    /// a generic type. `data: T<U>`
     Generic(Generic),
+    /// a custom type. `data: T`
     Custom(String),
+    /// `Void`: a void literal. `data: void`
+    Void,
 }
 
 /// `<T, U, V>`: a generic type. `T`, `U` and `V` are identifiers.
