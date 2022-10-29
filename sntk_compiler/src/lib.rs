@@ -2,3 +2,5 @@
 pub mod compiler;
 /// The error module contains the error handling for the parser.
 pub mod error;
+/// Helper functions for the compiler.
+pub mod helpers;
