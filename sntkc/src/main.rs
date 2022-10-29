@@ -21,6 +21,10 @@ let a: fn(number, number) -> fn() -> number =
 };
 
 print(a(10, "hello")(5));
+
+print(fn(x: number) -> number {
+    print(x);
+}(10));
             "#
             .to_string(),
         )
