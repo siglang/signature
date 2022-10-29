@@ -12,34 +12,14 @@ fn main() {
     let mut compiler = Compiler::new(
         Parser::from(
             r#"
-let a: number = 3;
-let b: number = 2;
-
-let x: number = if a < b {
-    print("a < b");
-
-    return 1;
-} else if a > b {
-    print("a > b");
-
-    return 2;
-    print("This will not be printed");
-} else {
-    print("a == b");
-
-    return 3;
+let a: fn(number, number) -> fn() -> number =
+    fn(a: number, b: string) -> fn() -> number
+{
+    print(a, b);
+    return fn() -> number -> a * 10;
 };
 
-print(x);
-print(object {
-    a: 2,
-    b: "foo",
-    c: object {
-        d: [1, 2, 3],
-    }, /* test */
-    4: "bar",
-    "foo": "bar",
-});
+print(a);
             "#
             .to_string(),
         )
