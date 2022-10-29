@@ -176,7 +176,7 @@ make_struct! { CallExpression => function: Box<Expression>, arguments: Vec<Expre
 make_struct! { StringLiteral => value: String }
 make_struct! { ArrayLiteral => elements: Vec<Expression> }
 make_struct! { IndexExpression => left: Box<Expression>, index: Box<Expression> }
-make_struct! { ObjectLiteral => pairs: Vec<(Expression, Expression)> }
+make_struct! { ObjectLiteral => pairs: Vec<(StringLiteral, Expression)> }
 
 /// Priority is used to determine the priority of the operator.
 /// The higher the priority, the higher the priority.
