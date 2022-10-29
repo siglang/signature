@@ -1,7 +1,7 @@
 use crate::{
     builtin::get_builtin,
     code::{BinaryOp, BinaryOpEq, Block, Instruction, UnaryOp},
-    error::{IrRuntime, INVALID_OPERAND, NOT_A_BOOLEAN, NOT_A_FUNCTION, NOT_A_LITERAL_VALUE, NOT_DEFINED, UNKNOWN_FUNCTION},
+    error::{IrRuntime, INVALID_OPERAND, NOT_A_BOOLEAN, NOT_A_FUNCTION, NOT_A_LITERAL_VALUE, NOT_DEFINED},
     runtime_error,
     stack::{Environment, LiteralValue, Stack, StackTrait, Value},
 };
@@ -81,25 +81,41 @@ impl InstructionTrait for Interpreter {
     fn call_function(&mut self, argc: usize) {
         let function = self.stack.pop();
 
+        let mut arguments = Vec::new();
+
+        for _ in 0..argc {
+            arguments.push(self.stack.pop());
+        }
+
+        arguments.reverse();
+
         match function {
-            Value::Identifier(name) => match get_builtin(name.clone()) {
-                Some(builtin) => {
-                    let mut args = Vec::new();
-
-                    for _ in 0..argc {
-                        args.push(self.stack.pop());
-                    }
-
-                    args.reverse();
-
+            Value::Identifier(name) => {
+                if let Some(builtin) = get_builtin(name) {
                     self.stack.push(Value::LiteralValue(builtin(
-                        args.iter()
+                        arguments
+                            .iter()
                             .map(|arg| LiteralValue::try_from(arg.clone()).unwrap_or_else(|value| runtime_error!(self; NOT_A_LITERAL_VALUE; value)))
                             .collect(),
                     )));
                 }
-                None => runtime_error!(self; UNKNOWN_FUNCTION; name),
-            },
+            }
+            Value::LiteralValue(LiteralValue::Function { parameters, body }) => {
+                for (parameter, argument) in parameters.iter().zip(arguments.iter()) {
+                    self.environment.set(parameter.clone(), argument.clone());
+                }
+
+                let mut interpreter =
+                    Interpreter::new_with(body.0, self.stack.clone(), Environment::new_with_parent(self.environment.clone()));
+
+                interpreter.run();
+
+                if let Some(Value::Return(value)) = interpreter.stack.pop_option() {
+                    self.stack.push(*value);
+                } else {
+                    unimplemented!()
+                }
+            }
             _ => runtime_error!(self; NOT_A_FUNCTION; function),
         };
     }
@@ -159,7 +175,7 @@ macro_rules! fn_binary_op {
             match (left, right) {
                 $(
                     (Value::LiteralValue(LiteralValue::$type(left)), Value::LiteralValue(LiteralValue::$type(right))) => {
-                        self.stack.push(Value::LiteralValue(LiteralValue::$type(left + &right)));
+                        self.stack.push(Value::LiteralValue(LiteralValue::$type(left $op &right)));
                     }
                 )*
                 _ => runtime_error!(self; INVALID_OPERAND; stringify!($op)),
