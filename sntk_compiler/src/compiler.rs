@@ -163,10 +163,21 @@ impl CompilerTrait for Compiler {
             }
 
             Expression::FunctionLiteral(FunctionLiteral { parameters, body, .. }) => {
+                let mut statments = Vec::new();
+
+                for statment in body.statements.clone() {
+                    if let Statement::ReturnStatement(_) = statment {
+                        statments.push(statment);
+                        break;
+                    } else {
+                        statments.push(statment);
+                    }
+                }
+
                 self.code
                     .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Function {
                         parameters: parameters.iter().map(|p| p.clone().0.value).collect(),
-                        body: Block(Compiler::new(Program::new(body.statements.clone())).compile_program()?.instructions),
+                        body: Block(Compiler::new(Program::new(statments)).compile_program()?.instructions),
                     })));
 
                 Ok(())
@@ -225,10 +236,7 @@ impl CompilerTrait for Compiler {
                         Some(_) => self.code.push_instruction(&Instruction::LoadGlobal(value)),
                         None => self.code.push_instruction(&Instruction::LoadName(value)),
                     },
-                    Expression::FunctionLiteral(FunctionLiteral { .. }) => {
-                        self.compile_expression(function)?;
-                    }
-                    Expression::CallExpression(CallExpression { .. }) => {
+                    Expression::FunctionLiteral(FunctionLiteral { .. }) | Expression::CallExpression(CallExpression { .. }) => {
                         self.compile_expression(function)?;
                     }
                     expression => panic!("Unknown function: {:?}", expression),
