@@ -162,8 +162,14 @@ impl CompilerTrait for Compiler {
                 Ok(())
             }
 
-            Expression::FunctionLiteral(FunctionLiteral { .. }) => {
-                todo!()
+            Expression::FunctionLiteral(FunctionLiteral { parameters, body, .. }) => {
+                self.code
+                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Function {
+                        parameters: parameters.iter().map(|p| p.clone().0.value).collect(),
+                        body: Block(Compiler::new(Program::new(body.statements.clone())).compile_program()?.instructions),
+                    })));
+
+                Ok(())
             }
 
             Expression::ObjectLiteral(ObjectLiteral { pairs, .. }) => {
