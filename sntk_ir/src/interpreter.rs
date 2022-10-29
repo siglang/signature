@@ -1,10 +1,11 @@
 use crate::{
     builtin::get_builtin,
     code::{BinaryOp, BinaryOpEq, Block, Instruction, UnaryOp},
-    error::{IrRuntime, INVALID_OPERAND, NOT_A_BOOLEAN, NOT_A_FUNCTION, NOT_A_LITERAL_VALUE, NOT_DEFINED},
+    error::{IrRuntime, INVAILD_ARGUMENTS, INVALID_OPERAND, NOT_A_BOOLEAN, NOT_A_FUNCTION, NOT_A_LITERAL_VALUE, NOT_DEFINED},
     runtime_error,
     stack::{Environment, LiteralValue, Stack, StackTrait, Value},
 };
+use std::collections::HashMap;
 
 /// Provides the basic methods of the ir interpreter.
 pub trait InterpreterBase {
@@ -101,19 +102,21 @@ impl InstructionTrait for Interpreter {
                 }
             }
             Value::LiteralValue(LiteralValue::Function { parameters, body }) => {
+                if parameters.len() != argc {
+                    runtime_error!(self; INVAILD_ARGUMENTS; format!("expected {} arguments, got {}", parameters.len(), argc));
+                }
+
                 for (parameter, argument) in parameters.iter().zip(arguments.iter()) {
                     self.environment.set(parameter.clone(), argument.clone());
                 }
 
-                let mut interpreter =
-                    Interpreter::new_with(body.0, self.stack.clone(), Environment::new_with_parent(self.environment.clone()));
-
+                let mut interpreter = Interpreter::new_with(body.0, self.stack.clone(), Environment::new_with_parent(self.environment.clone()));
                 interpreter.run();
 
                 if let Some(Value::Return(value)) = interpreter.stack.pop_option() {
                     self.stack.push(*value);
                 } else {
-                    unimplemented!()
+                    self.stack.push(Value::LiteralValue(LiteralValue::Object(HashMap::new())));
                 }
             }
             _ => runtime_error!(self; NOT_A_FUNCTION; function),
