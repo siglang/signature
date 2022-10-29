@@ -473,7 +473,14 @@ impl ParserTrait for Parser {
         let mut elements = Vec::new();
 
         while self.current_token.token_type != Tokens::RBrace {
-            let key = self.parse_expression(&Priority::Lowest)?;
+            let key = match self.parse_expression(&Priority::Lowest)? {
+                Expression::StringLiteral(string) => string,
+                Expression::Identifier(identifier) => StringLiteral::new(identifier.value, identifier.position),
+                Expression::NumberLiteral(number) => StringLiteral::new(number.value.to_string(), position! { self }),
+                Expression::BooleanLiteral(boolean) => StringLiteral::new(boolean.value.to_string(), position! { self }),
+                _ => return Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
+            };
+
             self.next_token();
 
             self.expect_token(&Tokens::Colon)?;
