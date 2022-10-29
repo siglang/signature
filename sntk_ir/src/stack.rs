@@ -1,4 +1,5 @@
 use crate::{
+    code::Block,
     error::{IrRuntime, POP_EMPTY_STACK},
     runtime_error,
 };
@@ -34,6 +35,7 @@ pub enum LiteralValue {
     String(String),
     Array(Vec<Value>),
     Object(HashMap<String, Value>),
+    Function { parameters: Vec<String>, body: Block },
 }
 
 impl fmt::Display for LiteralValue {
@@ -59,6 +61,15 @@ impl fmt::Display for LiteralValue {
                 }
 
                 write!(f, "{{ {} }}", string.trim_end_matches(", "))
+            }
+            LiteralValue::Function { parameters, .. } => {
+                let mut string = String::new();
+
+                for parameter in parameters {
+                    string.write_fmt(format_args!("{}, ", parameter))?;
+                }
+
+                write!(f, "fn({})", string.trim_end_matches(", "))
             }
         }
     }
