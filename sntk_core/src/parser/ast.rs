@@ -83,6 +83,7 @@ pub enum DataType {
     Custom(String),
     /// `Void`: a void literal. `data: void`
     Void,
+    Unknown,
 }
 
 impl std::fmt::Display for DataType {
@@ -97,6 +98,7 @@ impl std::fmt::Display for DataType {
             DataType::Generic(generic) => write!(f, "{}", generic),
             DataType::Custom(name) => write!(f, "{}", name),
             DataType::Void => write!(f, "void"),
+            DataType::Unknown => write!(f, "Unknown"),
         }
     }
 }
@@ -224,7 +226,7 @@ make_struct! { ObjectLiteral => pairs: Vec<(StringLiteral, Expression)> }
 
 /// Priority is used to determine the priority of the operator.
 /// The higher the priority, the higher the priority.
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, Eq, PartialEq, PartialOrd)]
 pub enum Priority {
     Lowest,
     Dot,
