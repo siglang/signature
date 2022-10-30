@@ -1,5 +1,5 @@
 use crate::code::Block;
-use std::{collections::HashMap, fmt::Write};
+use std::fmt::Write;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -24,7 +24,7 @@ pub enum LiteralValue {
     Boolean(bool),
     String(String),
     Array(Vec<Value>),
-    Record(HashMap<String, Value>),
+    // Record(HashMap<String, Value>),
     Function { parameters: Vec<String>, body: Block },
 }
 
@@ -47,19 +47,19 @@ impl std::fmt::Display for LiteralValue {
                     write!(f, "[{}]", string.trim_end_matches(", "))
                 }
             }
-            LiteralValue::Record(record) => {
-                if record.is_empty() {
-                    write!(f, "{{ }}")
-                } else {
-                    let mut string = String::new();
+            // LiteralValue::Record(record) => {
+            //     if record.is_empty() {
+            //         write!(f, "{{ }}")
+            //     } else {
+            //         let mut string = String::new();
 
-                    for (key, value) in record {
-                        string.write_fmt(format_args!("{}: {}, ", key, value))?;
-                    }
+            //         for (key, value) in record {
+            //             string.write_fmt(format_args!("{}: {}, ", key, value))?;
+            //         }
 
-                    write!(f, "record {{{}}}", string.trim_end_matches(", "))
-                }
-            }
+            //         write!(f, "record {{{}}}", string.trim_end_matches(", "))
+            //     }
+            // }
             LiteralValue::Function { parameters, .. } => {
                 let mut string = String::new();
 
