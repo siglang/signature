@@ -1,4 +1,4 @@
-use crate::stack::LiteralValue;
+use crate::value::LiteralValue;
 
 pub fn get_builtin(name: String) -> Option<impl FnOnce(Vec<LiteralValue>) -> LiteralValue> {
     match name.as_str() {
