@@ -4,8 +4,8 @@ use crate::{
     parser::{
         ast::{
             ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, FunctionType,
-            Generic, Identifier, IdentifierGeneric, IfExpression, InfixExpression, LetStatement, NumberLiteral, ObjectLiteral, ObjectType, Position,
-            PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral, TypeStatement,
+            Generic, Identifier, IdentifierGeneric, IfExpression, InfixExpression, LetStatement, NumberLiteral, Position, PrefixExpression, Priority,
+            Program, RecordLiteral, RecordType, ReturnStatement, Statement, StringLiteral, TypeStatement,
         },
         error::{ParsingError, EXPECTED_EXPRESSION, EXPECTED_NEXT_TOKEN, UNEXPECTED_TOKEN},
     },
@@ -41,7 +41,7 @@ pub trait ParserTrait {
     fn parse_expression(&mut self, precedence: &Priority) -> ParseResult<Expression>;
     fn parse_block_expression(&mut self) -> ParseResult<BlockExpression>;
     fn parse_array_literal(&mut self) -> ParseResult<ArrayLiteral>;
-    fn parse_object_literal(&mut self) -> ParseResult<ObjectLiteral>;
+    fn parse_record_literal(&mut self) -> ParseResult<RecordLiteral>;
     fn parse_function_literal(&mut self) -> ParseResult<FunctionLiteral>;
     fn parse_if_expression(&mut self) -> ParseResult<IfExpression>;
 }
@@ -51,7 +51,7 @@ pub trait TypeParser {
     fn parse_data_type(&mut self) -> ParseResult<DataType>;
     fn parse_data_type_without_next(&mut self) -> ParseResult<DataType>;
     fn parse_function_type(&mut self) -> ParseResult<FunctionType>;
-    fn parse_object_type(&mut self) -> ParseResult<ObjectType>;
+    fn parse_record_type(&mut self) -> ParseResult<RecordType>;
     fn parse_generic(&mut self) -> ParseResult<Generic>;
     fn parse_generic_identifier(&mut self) -> ParseResult<IdentifierGeneric>;
 }
@@ -73,7 +73,7 @@ pub trait EEE {
 /// ```rust
 /// use sntk_core::parser::parser::*;
 ///
-/// let parsed = Parser::from(r#"type X<T, U> = fn(T, U[]) -> object T: U;"#).parse_program();
+/// let parsed = Parser::from(r#"type X<T, U> = fn(T, U[]) -> record T: U;"#).parse_program();
 /// println!("{parsed:#?}");
 /// ```
 #[derive(Debug, Default)]
@@ -332,7 +332,7 @@ impl ParserTrait for Parser {
             }
             Tokens::LBrace => Some(Ok(Expression::BlockExpression(self.parse_block_expression()?))),
             Tokens::LBracket => Some(Ok(Expression::ArrayLiteral(self.parse_array_literal()?))),
-            Tokens::ObjectType => Some(Ok(Expression::ObjectLiteral(self.parse_object_literal()?))),
+            Tokens::RecordType => Some(Ok(Expression::RecordLiteral(self.parse_record_literal()?))),
             Tokens::Function => Some(Ok(Expression::FunctionLiteral(self.parse_function_literal()?))),
             Tokens::If => Some(Ok(Expression::IfExpression(self.parse_if_expression()?))),
             _ => None,
@@ -465,22 +465,15 @@ impl ParserTrait for Parser {
         Ok(ArrayLiteral::new(elements, position! { self }))
     }
 
-    /// **Parses a object type.**
-    fn parse_object_literal(&mut self) -> ParseResult<ObjectLiteral> {
+    /// **Parses a record type.**
+    fn parse_record_literal(&mut self) -> ParseResult<RecordLiteral> {
         self.next_token();
         self.next_token();
 
         let mut elements = Vec::new();
 
         while self.current_token.token_type != Tokens::RBrace {
-            let key = match self.parse_expression(&Priority::Lowest)? {
-                Expression::StringLiteral(string) => string,
-                Expression::Identifier(identifier) => StringLiteral::new(identifier.value, identifier.position),
-                Expression::NumberLiteral(number) => StringLiteral::new(number.value.to_string(), position! { self }),
-                Expression::BooleanLiteral(boolean) => StringLiteral::new(boolean.value.to_string(), position! { self }),
-                _ => return Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
-            };
-
+            let key = self.parse_expression(&Priority::Lowest)?;
             self.next_token();
 
             self.expect_token(&Tokens::Colon)?;
@@ -501,7 +494,7 @@ impl ParserTrait for Parser {
             return Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBrace, self.current_token.token_type });
         }
 
-        Ok(ObjectLiteral::new(elements, position! { self }))
+        Ok(RecordLiteral::new(elements, position! { self }))
     }
 
     /// **Parses a function literal.**
@@ -629,7 +622,7 @@ impl TypeParser for Parser {
             Tokens::BooleanType => Ok(DataType::Boolean),
             Tokens::VoidType => Ok(DataType::Void),
             Tokens::Function => Ok(DataType::Fn(self.parse_function_type()?)),
-            Tokens::ObjectType => Ok(DataType::Object(self.parse_object_type()?)),
+            Tokens::RecordType => Ok(DataType::Record(self.parse_record_type()?)),
             Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
             _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
         };
@@ -691,17 +684,17 @@ impl TypeParser for Parser {
         Ok(FunctionType::new(generics, parameters, return_type))
     }
 
-    /// **Parses a object type.**
+    /// **Parses a record type.**
     ///
-    /// `object string: number` -> `Object(String, Number)`
-    fn parse_object_type(&mut self) -> ParseResult<ObjectType> {
+    /// `record string: number` -> `Record(String, Number)`
+    fn parse_record_type(&mut self) -> ParseResult<RecordType> {
         self.next_token();
 
         let key_type = self.parse_data_type()?;
         self.expect_token(&Tokens::Colon)?;
         let value_type = self.parse_data_type_without_next()?;
 
-        Ok(ObjectType::new(key_type, value_type))
+        Ok(RecordType::new(key_type, value_type))
     }
 
     /// **Parses a generic type.**
