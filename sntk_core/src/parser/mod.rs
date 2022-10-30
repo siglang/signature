@@ -8,7 +8,7 @@ pub mod error;
 /// ```rust
 /// use sntk_core::parser::parser::*;
 ///
-/// let parsed = Parser::from(r#"type X<T, U> = fn(T, U[]) -> object T: U;"#).parse_program();
+/// let parsed = Parser::from(r#"type X<T, U> = fn(T, U[]) -> record T: U;"#).parse_program();
 /// println!("{parsed:#?}");
 /// ```
 pub mod parser;
