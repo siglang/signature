@@ -6,7 +6,6 @@ use crate::{
     stack::{Environment, Stack, StackTrait},
     value::{LiteralValue, Value},
 };
-use std::collections::HashMap;
 
 /// Provides the basic methods of the ir interpreter.
 pub trait InterpreterBase {
@@ -117,7 +116,7 @@ impl InstructionTrait for Interpreter {
                 if let Some(Value::Return(value)) = interpreter.stack.pop_option() {
                     self.stack.push(*value);
                 } else {
-                    self.stack.push(Value::LiteralValue(LiteralValue::Record(HashMap::new())));
+                    self.stack.push(Value::LiteralValue(LiteralValue::Boolean(true)));
                 }
             }
             _ => runtime_error!(self; NOT_A_FUNCTION; function),
