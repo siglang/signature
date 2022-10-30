@@ -3,7 +3,8 @@ use crate::{
     code::{BinaryOp, BinaryOpEq, Block, Instruction, UnaryOp},
     error::{IrRuntime, INVAILD_ARGUMENTS, INVALID_OPERAND, NOT_A_BOOLEAN, NOT_A_FUNCTION, NOT_A_LITERAL_VALUE, NOT_DEFINED},
     runtime_error,
-    stack::{Environment, LiteralValue, Stack, StackTrait, Value},
+    stack::{Environment, Stack, StackTrait},
+    value::{LiteralValue, Value},
 };
 use std::collections::HashMap;
 
