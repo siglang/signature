@@ -1,4 +1,4 @@
-use crate::stack::Value;
+use crate::value::Value;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Instruction {
