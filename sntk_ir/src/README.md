@@ -5,5 +5,6 @@ Sanetaka IR library for the language
 -   [error.rs](error.rs) - Error messages
 -   [interpreter.rs](interpreter.rs) - Sanetaka IR interpreter
 -   [stack.rs](stack.rs) - Stack Machine
+-   [value.rs](value.rs) - Value of the interpreter
 
 For more details, see the documentation for the code.
