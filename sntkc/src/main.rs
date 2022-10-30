@@ -6,7 +6,7 @@ fn main() {
     let mut compiler = Compiler::new(
         Parser::from(
             r#"
-let x: string[] = ["a", "b", "c"];
+let x: boolean[] = [true, false];
 print(x);
             "#
             .to_string(),
