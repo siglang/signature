@@ -1,5 +1,5 @@
 use crate::compiler::{CompileResult, Compiler, CompilerTrait};
-use sntk_core::parser::ast::{ArrayLiteral, BooleanLiteral, Expression, NumberLiteral, ObjectLiteral, Program, Statement, StringLiteral};
+use sntk_core::parser::ast::{ArrayLiteral, BooleanLiteral, Expression, NumberLiteral, Program, RecordLiteral, Statement, StringLiteral};
 use sntk_ir::{
     code::Block,
     value::{LiteralValue, Value},
@@ -13,15 +13,7 @@ pub fn literal_value(expression: Expression) -> Value {
         Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => {
             Value::LiteralValue(LiteralValue::Array(elements.into_iter().map(literal_value).collect()))
         }
-        Expression::ObjectLiteral(ObjectLiteral { /* pairs, */ .. }) => {
-            // let mut object = HashMap::new();
-
-            // for (key, value) in pairs {
-            //     object.insert(literal_value(value), literal_value(value));
-            // }
-
-            // Value::LiteralValue(LiteralValue::Object(object))
-
+        Expression::RecordLiteral(RecordLiteral { /* pairs, */ .. }) => {
             unimplemented!()
         }
         Expression::FunctionLiteral { .. } => unimplemented!(),
