@@ -117,7 +117,7 @@ impl InstructionTrait for Interpreter {
                 if let Some(Value::Return(value)) = interpreter.stack.pop_option() {
                     self.stack.push(*value);
                 } else {
-                    self.stack.push(Value::LiteralValue(LiteralValue::Object(HashMap::new())));
+                    self.stack.push(Value::LiteralValue(LiteralValue::Record(HashMap::new())));
                 }
             }
             _ => runtime_error!(self; NOT_A_FUNCTION; function),
