@@ -1,10 +1,9 @@
+use crate::compiler::{CompileResult, Compiler, CompilerTrait};
 use sntk_core::parser::ast::{ArrayLiteral, BooleanLiteral, Expression, NumberLiteral, ObjectLiteral, Program, Statement, StringLiteral};
 use sntk_ir::{
     code::Block,
     value::{LiteralValue, Value},
 };
-
-use crate::compiler::{CompileResult, Compiler, CompilerTrait};
 
 pub fn literal_value(expression: Expression) -> Value {
     match expression {
