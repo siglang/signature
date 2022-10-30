@@ -43,9 +43,9 @@ impl TypeSystemTrait for TypeSystem {
 
                     Ok(TypeSystem(DataType::Array(Box::new(data_type))))
                 }
-                LiteralValue::Record(_) => {
-                    unimplemented!()
-                }
+                // LiteralValue::Record(_) => {
+                //     unimplemented!()
+                // }
                 LiteralValue::Function { .. } => unimplemented!(),
             },
             Value::Identifier(_) => unimplemented!(),
@@ -71,7 +71,7 @@ impl TypeSystemTrait for TypeSystem {
             TypeSystem(DataType::Boolean) => Ok(TypeSystem::get_type(value, position)? == TypeSystem(DataType::Boolean)),
             TypeSystem(DataType::String) => Ok(TypeSystem::get_type(value, position)? == TypeSystem(DataType::String)),
             TypeSystem(DataType::Array(_)) => unimplemented!(),
-            TypeSystem(DataType::Record(_)) => unimplemented!(),
+            // TypeSystem(DataType::Record(_)) => unimplemented!(),
             TypeSystem(DataType::Fn(_)) => unimplemented!(),
             TypeSystem(DataType::Generic(_)) => unimplemented!(),
             TypeSystem(DataType::Custom(_)) => unimplemented!(),
