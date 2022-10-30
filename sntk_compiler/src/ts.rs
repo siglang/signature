@@ -1,10 +1,10 @@
 use crate::{
     compiler::CompileResult,
-    error::{CompileError, TypeError, EXPECTED_DATA_TYPE, UNKNOWN_ARRAY_TYPE},
+    error::{CompileError, TypeError, EXPECTED_DATA_TYPE, UNKNOWN_ARRAY_TYPE, /* UNKNOWN_OBJECT_TYPE */},
     helpers::literal_value,
     type_error,
 };
-use sntk_core::parser::ast::{DataType, Expression, Position};
+use sntk_core::parser::ast::{DataType, Expression, /* ObjectType, */ Position};
 use sntk_ir::value::{LiteralValue, Value};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -43,7 +43,21 @@ impl TypeSystemTrait for TypeSystem {
 
                     Ok(TypeSystem(DataType::Array(Box::new(data_type))))
                 }
-                LiteralValue::Object(_) => unimplemented!(),
+                LiteralValue::Object(/* pairs */ _) => {
+                    // let mut data_type = DataType::Object(ObjectType(Box::new(DataType::Unknown), Box::new(DataType::Unknown)));
+
+                    // if pairs.is_empty() {
+                    //     return Err(type_error!(UNKNOWN_OBJECT_TYPE; data_type; position.clone();));
+                    // }
+
+                    // let first_pair = &pairs;
+
+                    // // data_type = TypeSystem::get_data_type(&pairs.values()
+
+                    // Ok(())
+
+                    unimplemented!()
+                }
                 LiteralValue::Function { .. } => unimplemented!(),
             },
             Value::Identifier(_) => unimplemented!(),
