@@ -7,7 +7,7 @@ use crate::{
 use sntk_core::{
     parser::ast::{
         ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, Identifier,
-        IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, ObjectLiteral, PrefixExpression, Program, ReturnStatement,
+        IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, RecordLiteral, ReturnStatement,
         Statement, StringLiteral, TypeStatement,
     },
     tokenizer::token::Tokens,
@@ -204,7 +204,7 @@ impl CompilerTrait for Compiler {
                 Ok(())
             }
 
-            // TODO: Add type checking for, FunctionLiteral, and ObjectLiteral.
+            // TODO: Add type checking for, FunctionLiteral, and RecordLiteral.
             Expression::FunctionLiteral(FunctionLiteral { parameters, body, .. }) => {
                 let mut statments = Vec::new();
 
@@ -226,7 +226,7 @@ impl CompilerTrait for Compiler {
                 Ok(())
             }
 
-            Expression::ObjectLiteral(ObjectLiteral { .. }) => {
+            Expression::RecordLiteral(RecordLiteral { .. }) => {
                 unimplemented!()
 
                 // self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
