@@ -3,7 +3,6 @@ use sntk_ir::{
     code::Block,
     value::{LiteralValue, Value},
 };
-use std::collections::HashMap;
 
 use crate::compiler::{CompileResult, Compiler, CompilerTrait};
 
@@ -15,14 +14,16 @@ pub fn literal_value(expression: Expression) -> Value {
         Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => {
             Value::LiteralValue(LiteralValue::Array(elements.into_iter().map(literal_value).collect()))
         }
-        Expression::ObjectLiteral(ObjectLiteral { pairs, .. }) => {
-            let mut object = HashMap::new();
+        Expression::ObjectLiteral(ObjectLiteral { /* pairs, */ .. }) => {
+            // let mut object = HashMap::new();
 
-            for (key, value) in pairs {
-                object.insert(key.value, literal_value(value));
-            }
+            // for (key, value) in pairs {
+            //     object.insert(literal_value(value), literal_value(value));
+            // }
 
-            Value::LiteralValue(LiteralValue::Object(object))
+            // Value::LiteralValue(LiteralValue::Object(object))
+
+            unimplemented!()
         }
         Expression::FunctionLiteral { .. } => unimplemented!(),
         value => panic!("Unexpected value: {:?}", value),
