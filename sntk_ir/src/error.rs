@@ -12,7 +12,7 @@ impl IrRuntime {
             message = message.replace(&format!("{{{i}}}"), arg);
         });
 
-        IrRuntime { message, pointer }
+        Self { message, pointer }
     }
 }
 
