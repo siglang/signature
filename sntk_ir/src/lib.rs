@@ -8,3 +8,5 @@ pub mod error;
 pub mod interpreter;
 /// **The stack on which the interpreter is based.**
 pub mod stack;
+/// **Value of the interpreter.**
+pub mod value;
