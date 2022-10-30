@@ -14,7 +14,7 @@ impl ParsingError {
             message = message.replace(&format!("{{{i}}}"), arg);
         });
 
-        ParsingError { message, position }
+        Self { message, position }
     }
 }
 
