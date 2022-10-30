@@ -60,7 +60,7 @@ pub enum Expression {
     /// `array[index]`: an index expression. an array or hash can access it.
     IndexExpression(IndexExpression),
     /// `{ key: value, key: value }`: a hash literal. it starts with `{` and ends with `}`. a key and a value are separated by a colon (`:`).
-    ObjectLiteral(ObjectLiteral),
+    RecordLiteral(RecordLiteral),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -73,8 +73,8 @@ pub enum DataType {
     Boolean,
     /// an array literal. `data: type[]`
     Array(Box<DataType>),
-    /// `Object`: a hash literal. `data: hash(key_type, value_type)`
-    Object(ObjectType),
+    /// `Record`: a hash literal. `data: hash(key_type, value_type)`
+    Record(RecordType),
     /// a function literal. `data: fn((parameter_type)s) -> return_type`
     Fn(FunctionType),
     /// a generic type. `data: T<U>`
@@ -93,7 +93,7 @@ impl std::fmt::Display for DataType {
             DataType::String => write!(f, "String"),
             DataType::Boolean => write!(f, "Boolean"),
             DataType::Array(data_type) => write!(f, "{}[]", data_type),
-            DataType::Object(object_type) => write!(f, "object ({}, {})", object_type.0, object_type.1),
+            DataType::Record(record_type) => write!(f, "record ({}, {})", record_type.0, record_type.1),
             DataType::Fn(function_type) => write!(f, "{}", function_type),
             DataType::Generic(generic) => write!(f, "{}", generic),
             DataType::Custom(name) => write!(f, "{}", name),
@@ -107,17 +107,17 @@ impl std::fmt::Display for DataType {
 pub type IdentifierGeneric = Vec<Identifier>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectType(pub Box<DataType>, pub Box<DataType>);
+pub struct RecordType(pub Box<DataType>, pub Box<DataType>);
 
-impl ObjectType {
+impl RecordType {
     pub fn new(key_type: DataType, value_type: DataType) -> Self {
-        ObjectType(Box::new(key_type), Box::new(value_type))
+        RecordType(Box::new(key_type), Box::new(value_type))
     }
 }
 
-impl std::fmt::Display for ObjectType {
+impl std::fmt::Display for RecordType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "object ({}, {})", self.0, self.1)
+        write!(f, "record ({}, {})", self.0, self.1)
     }
 }
 
@@ -222,7 +222,7 @@ make_struct! { CallExpression => function: Box<Expression>, arguments: Vec<Expre
 make_struct! { StringLiteral => value: String }
 make_struct! { ArrayLiteral => elements: Vec<Expression> }
 make_struct! { IndexExpression => left: Box<Expression>, index: Box<Expression> }
-make_struct! { ObjectLiteral => pairs: Vec<(StringLiteral, Expression)> }
+make_struct! { RecordLiteral => pairs: Vec<(Expression, Expression)> }
 
 /// Priority is used to determine the priority of the operator.
 /// The higher the priority, the higher the priority.
