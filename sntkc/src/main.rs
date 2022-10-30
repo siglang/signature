@@ -1,12 +1,6 @@
-#![allow(unused_imports)]
-
 use sntk_compiler::compiler::{Compiler, CompilerTrait};
 use sntk_core::parser::parser::{Parser, ParserTrait};
-use sntk_ir::{
-    code::{BinaryOp, BinaryOpEq, Block, Instruction},
-    interpreter::{Interpreter, InterpreterBase},
-    stack::{LiteralValue, Value},
-};
+use sntk_ir::interpreter::InterpreterBase;
 
 fn main() {
     let mut compiler = Compiler::new(
@@ -24,26 +18,15 @@ print(a(10, "hello")(5));
 
 print(fn(x: number) -> number {
     print(x);
-}(10));
+}(10));x
             "#
             .to_string(),
         )
         .parse_program(),
     );
-    let mut compiled = compiler.compile_program().unwrap();
-    compiled.run();
 
-    // let mut interpreter = Interpreter::new(vec![
-    //     Instruction::LoadConst(Value::LiteralValue(LiteralValue::Boolean(false))),
-    //     Instruction::If(
-    //         Block(vec![
-    //             Instruction::LoadConst(Value::LiteralValue(LiteralValue::String("hello world".to_string()))),
-    //             Instruction::LoadGlobal("print".to_string()),
-    //             Instruction::CallFunction(1),
-    //         ]),
-    //         None,
-    //     ),
-    // ]);
-
-    // interpreter.run();
+    match &mut compiler.compile_program() {
+        Ok(interpreter) => interpreter.run(),
+        Err(error) => println!("{error}"),
+    }
 }
