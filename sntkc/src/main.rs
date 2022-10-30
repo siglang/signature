@@ -6,8 +6,10 @@ fn main() {
     let mut compiler = Compiler::new(
         Parser::from(
             r#"
-let x: boolean[] = [true, false];
-print(x);
+let x: record string: number = record {
+    "foo": 1,
+    "bar": 2,
+};
             "#
             .to_string(),
         )
