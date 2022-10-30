@@ -85,6 +85,22 @@ pub enum DataType {
     Void,
 }
 
+impl std::fmt::Display for DataType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            DataType::Number => write!(f, "Number"),
+            DataType::String => write!(f, "String"),
+            DataType::Boolean => write!(f, "Boolean"),
+            DataType::Array(data_type) => write!(f, "{}[]", data_type),
+            DataType::Object(object_type) => write!(f, "object ({}, {})", object_type.0, object_type.1),
+            DataType::Fn(function_type) => write!(f, "{}", function_type),
+            DataType::Generic(generic) => write!(f, "{}", generic),
+            DataType::Custom(name) => write!(f, "{}", name),
+            DataType::Void => write!(f, "void"),
+        }
+    }
+}
+
 /// `<T, U, V>`: a generic type. `T`, `U` and `V` are identifiers.
 pub type IdentifierGeneric = Vec<Identifier>;
 
@@ -97,6 +113,12 @@ impl ObjectType {
     }
 }
 
+impl std::fmt::Display for ObjectType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "object ({}, {})", self.0, self.1)
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionType(Option<IdentifierGeneric>, Vec<DataType>, Box<DataType>);
 
@@ -106,12 +128,32 @@ impl FunctionType {
     }
 }
 
+impl std::fmt::Display for FunctionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        // TODO: generics
+        let parameters = self.1.iter().map(|parameter| parameter.to_string()).collect::<Vec<String>>().join(", ");
+        write!(f, "fn({}) -> {}", parameters, self.2)
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Generic(Box<DataType>, Vec<DataType>);
 
 impl Generic {
     pub fn new(data_type: DataType, generic_types: Vec<DataType>) -> Self {
         Generic(Box::new(data_type), generic_types)
+    }
+}
+
+impl std::fmt::Display for Generic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let generic_types = self
+            .1
+            .iter()
+            .map(|generic_type| generic_type.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+        write!(f, "{}<{}>", self.0, generic_types)
     }
 }
 
@@ -182,7 +224,7 @@ make_struct! { ObjectLiteral => pairs: Vec<(StringLiteral, Expression)> }
 
 /// Priority is used to determine the priority of the operator.
 /// The higher the priority, the higher the priority.
-#[derive(Debug, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub enum Priority {
     Lowest,
     Dot,
