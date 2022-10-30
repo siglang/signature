@@ -107,7 +107,7 @@ impl std::fmt::Display for DataType {
 pub type IdentifierGeneric = Vec<Identifier>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectType(Box<DataType>, Box<DataType>);
+pub struct ObjectType(pub Box<DataType>, pub Box<DataType>);
 
 impl ObjectType {
     pub fn new(key_type: DataType, value_type: DataType) -> Self {
@@ -122,7 +122,7 @@ impl std::fmt::Display for ObjectType {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct FunctionType(Option<IdentifierGeneric>, Vec<DataType>, Box<DataType>);
+pub struct FunctionType(pub Option<IdentifierGeneric>, pub Vec<DataType>, pub Box<DataType>);
 
 impl FunctionType {
     pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<DataType>, return_type: DataType) -> Self {
@@ -139,7 +139,7 @@ impl std::fmt::Display for FunctionType {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Generic(Box<DataType>, Vec<DataType>);
+pub struct Generic(pub Box<DataType>, pub Vec<DataType>);
 
 impl Generic {
     pub fn new(data_type: DataType, generic_types: Vec<DataType>) -> Self {
