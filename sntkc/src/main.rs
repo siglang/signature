@@ -6,19 +6,8 @@ fn main() {
     let mut compiler = Compiler::new(
         Parser::from(
             r#"
-let a: fn(number, number) -> fn() -> number =
-    fn(a: number, b: string) -> fn() -> number
-{
-    print(a, b);
-
-    return fn(x: number) -> number -> a * x;
-};
-
-print(a(10, "hello")(5));
-
-print(fn(x: number) -> number {
-    print(x);
-}(10));x
+let x: string[] = ["a", "b", "c"];
+print(x);
             "#
             .to_string(),
         )
