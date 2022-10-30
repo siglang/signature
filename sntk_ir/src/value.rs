@@ -24,7 +24,7 @@ pub enum LiteralValue {
     Boolean(bool),
     String(String),
     Array(Vec<Value>),
-    Object(HashMap<String, Value>),
+    Record(HashMap<String, Value>),
     Function { parameters: Vec<String>, body: Block },
 }
 
@@ -47,17 +47,17 @@ impl std::fmt::Display for LiteralValue {
                     write!(f, "[{}]", string.trim_end_matches(", "))
                 }
             }
-            LiteralValue::Object(object) => {
-                if object.is_empty() {
+            LiteralValue::Record(record) => {
+                if record.is_empty() {
                     write!(f, "{{ }}")
                 } else {
                     let mut string = String::new();
 
-                    for (key, value) in object {
+                    for (key, value) in record {
                         string.write_fmt(format_args!("{}: {}, ", key, value))?;
                     }
 
-                    write!(f, "{{{}}}", string.trim_end_matches(", "))
+                    write!(f, "record {{{}}}", string.trim_end_matches(", "))
                 }
             }
             LiteralValue::Function { parameters, .. } => {
