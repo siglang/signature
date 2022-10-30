@@ -54,4 +54,5 @@ macro_rules! messages {
 messages! {
     EXPECTED_DATA_TYPE => "Expected {0} type, got {1} instead";
     UNKNOWN_TYPE => "Unknown type: {0}";
+    UNKNOWN_ARRAY_TYPE => "Unknown array type";
 }
