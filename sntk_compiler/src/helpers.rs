@@ -24,6 +24,7 @@ pub fn literal_value(expression: Expression) -> Value {
 
             Value::LiteralValue(LiteralValue::Object(object))
         }
+        Expression::FunctionLiteral { .. } => unimplemented!(),
         value => panic!("Unexpected value: {:?}", value),
     }
 }
