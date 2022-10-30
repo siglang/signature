@@ -7,7 +7,7 @@ use crate::{
 use sntk_core::{
     parser::ast::{
         ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, Identifier,
-        IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, RecordLiteral, ReturnStatement,
+        IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement,
         Statement, StringLiteral, TypeStatement,
     },
     tokenizer::token::Tokens,
@@ -226,13 +226,13 @@ impl CompilerTrait for Compiler {
                 Ok(())
             }
 
-            Expression::RecordLiteral(RecordLiteral { .. }) => {
-                unimplemented!()
+            // Expression::RecordLiteral(RecordLiteral { .. }) => {
+            //     unimplemented!()
 
-                // self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
+            //     // self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
 
-                // Ok(())
-            }
+            //     // Ok(())
+            // }
 
             Expression::PrefixExpression(PrefixExpression { operator, right, .. }) => {
                 self.compile_expression(right, None)?;
