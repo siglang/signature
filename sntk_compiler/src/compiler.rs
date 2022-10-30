@@ -119,13 +119,14 @@ impl CompilerTrait for Compiler {
     /// Compile an expression statement.
     fn compile_expression(&mut self, expression: &Expression, data_type: Option<DataType>) -> CompileResult<()> {
         macro_rules! match_type {
-            ($type:expr; $e:expr; $pos:expr) => {
-                let data_type = data_type.unwrap_or_else(|| TypeSystem::get_data_type_from_expression($e));
+            ($type:expr; $e:expr; $pos:expr;) => {
+                let data_type = match data_type {
+                    Some(data_type) => data_type,
+                    None => TypeSystem::get_data_type_from_expression($e, &$pos)?,
+                };
 
                 if !TypeSystem(data_type.clone()).eq_from_type(&TypeSystem($type)) {
-                    return Err(type_error!(
-                        EXPECTED_DATA_TYPE; $type, data_type; $pos;
-                    ));
+                    return Err(type_error! { EXPECTED_DATA_TYPE; $type, data_type; $pos; });
                 }
             };
         }
@@ -143,43 +144,67 @@ impl CompilerTrait for Compiler {
                 Ok(())
             }
 
-            Expression::NumberLiteral(NumberLiteral { value, position }) => {
-                match_type! { DataType::Number; expression; position.clone() };
+            Expression::NumberLiteral(NumberLiteral { position, .. }) => {
+                match_type! { DataType::Number; expression; position.clone(); };
 
-                self.code
-                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Number(*value))));
-
-                Ok(())
-            }
-
-            Expression::StringLiteral(StringLiteral { value, position }) => {
-                match_type! { DataType::String; expression; position.clone() };
-
-                self.code
-                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::String(value.clone()))));
+                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
 
                 Ok(())
             }
 
-            Expression::BooleanLiteral(BooleanLiteral { value, position }) => {
-                match_type! { DataType::Boolean; expression; position.clone() };
+            Expression::StringLiteral(StringLiteral { position, .. }) => {
+                match_type! { DataType::String; expression; position.clone(); };
 
-                self.code
-                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Boolean(*value))));
-
-                Ok(())
-            }
-
-            // TODO: Add type checking for ArrayLiteral, FunctionLiteral, and ObjectLiteral.
-            Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => {
-                self.code
-                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Array(
-                        elements.iter().map(|e| literal_value(e.clone())).collect(),
-                    ))));
+                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
 
                 Ok(())
             }
 
+            Expression::BooleanLiteral(BooleanLiteral { position, .. }) => {
+                match_type! { DataType::Boolean; expression; position.clone(); };
+
+                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
+
+                Ok(())
+            }
+
+            Expression::ArrayLiteral(ArrayLiteral { elements, position }) => {
+                let array = literal_value(expression.clone());
+                let array_type = TypeSystem::get_data_type(&array, position)?;
+
+                match &array_type {
+                    DataType::Array(array_type) => {
+                        for element in elements.clone() {
+                            let element_type = TypeSystem::get_data_type_from_expression(&element, position)?;
+
+                            if !TypeSystem(*array_type.clone()).eq_from_type(&TypeSystem(element_type.clone())) {
+                                return Err(type_error! { EXPECTED_DATA_TYPE; array_type, element_type; position.clone(); });
+                            }
+                        }
+                    }
+                    r#type => {
+                        return Err(type_error! { EXPECTED_DATA_TYPE; match data_type {
+                            Some(data_type) => data_type,
+                            None => DataType::Array(Box::new(DataType::Unknown)),
+                        }, r#type; position.clone(); })
+                    }
+                }
+
+                let data_type = match data_type {
+                    Some(data_type) => data_type,
+                    None => TypeSystem::get_data_type_from_expression(expression, position)?,
+                };
+
+                if !TypeSystem(data_type.clone()).eq_from_type(&TypeSystem(array_type.clone())) {
+                    return Err(type_error! { EXPECTED_DATA_TYPE; array_type, data_type; position.clone(); });
+                }
+
+                self.code.push_instruction(&Instruction::LoadConst(array));
+
+                Ok(())
+            }
+
+            // TODO: Add type checking for, FunctionLiteral, and ObjectLiteral.
             Expression::FunctionLiteral(FunctionLiteral { parameters, body, .. }) => {
                 let mut statments = Vec::new();
 
