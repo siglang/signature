@@ -59,8 +59,8 @@ pub enum Expression {
     BooleanLiteral(BooleanLiteral),
     /// `array[index]`: an index expression. an array or hash can access it.
     IndexExpression(IndexExpression),
-    /// `{ key: value, key: value }`: a hash literal. it starts with `{` and ends with `}`. a key and a value are separated by a colon (`:`).
-    RecordLiteral(RecordLiteral),
+    // /// `{ key: value, key: value }`: a hash literal. it starts with `{` and ends with `}`. a key and a value are separated by a colon (`:`).
+    // RecordLiteral(RecordLiteral),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -73,8 +73,8 @@ pub enum DataType {
     Boolean,
     /// an array literal. `data: type[]`
     Array(Box<DataType>),
-    /// `Record`: a hash literal. `data: hash(key_type, value_type)`
-    Record(RecordType),
+    // /// `Record`: a hash literal. `data: hash(key_type, value_type)`
+    // Record(RecordType),
     /// a function literal. `data: fn((parameter_type)s) -> return_type`
     Fn(FunctionType),
     /// a generic type. `data: T<U>`
@@ -93,7 +93,7 @@ impl std::fmt::Display for DataType {
             DataType::String => write!(f, "String"),
             DataType::Boolean => write!(f, "Boolean"),
             DataType::Array(data_type) => write!(f, "{}[]", data_type),
-            DataType::Record(record_type) => write!(f, "record ({}, {})", record_type.0, record_type.1),
+            // DataType::Record(record_type) => write!(f, "record ({}, {})", record_type.0, record_type.1),
             DataType::Fn(function_type) => write!(f, "{}", function_type),
             DataType::Generic(generic) => write!(f, "{}", generic),
             DataType::Custom(name) => write!(f, "{}", name),
@@ -106,20 +106,20 @@ impl std::fmt::Display for DataType {
 /// `<T, U, V>`: a generic type. `T`, `U` and `V` are identifiers.
 pub type IdentifierGeneric = Vec<Identifier>;
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct RecordType(pub Box<DataType>, pub Box<DataType>);
+// #[derive(Debug, PartialEq, Clone)]
+// pub struct RecordType(pub Box<DataType>, pub Box<DataType>);
 
-impl RecordType {
-    pub fn new(key_type: DataType, value_type: DataType) -> Self {
-        RecordType(Box::new(key_type), Box::new(value_type))
-    }
-}
+// impl RecordType {
+//     pub fn new(key_type: DataType, value_type: DataType) -> Self {
+//         RecordType(Box::new(key_type), Box::new(value_type))
+//     }
+// }
 
-impl std::fmt::Display for RecordType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "record ({}, {})", self.0, self.1)
-    }
-}
+// impl std::fmt::Display for RecordType {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+//         write!(f, "record ({}, {})", self.0, self.1)
+//     }
+// }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionType(pub Option<IdentifierGeneric>, pub Vec<DataType>, pub Box<DataType>);
@@ -222,7 +222,7 @@ make_struct! { CallExpression => function: Box<Expression>, arguments: Vec<Expre
 make_struct! { StringLiteral => value: String }
 make_struct! { ArrayLiteral => elements: Vec<Expression> }
 make_struct! { IndexExpression => left: Box<Expression>, index: Box<Expression> }
-make_struct! { RecordLiteral => pairs: Vec<(Expression, Expression)> }
+// make_struct! { RecordLiteral => pairs: Vec<(Expression, Expression)> }
 
 /// Priority is used to determine the priority of the operator.
 /// The higher the priority, the higher the priority.
