@@ -1,7 +1,7 @@
 use sntk_core::parser::ast::{ArrayLiteral, BooleanLiteral, Expression, NumberLiteral, ObjectLiteral, Program, Statement, StringLiteral};
 use sntk_ir::{
     code::Block,
-    stack::{LiteralValue, Value},
+    value::{LiteralValue, Value},
 };
 use std::collections::HashMap;
 
