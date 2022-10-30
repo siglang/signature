@@ -5,7 +5,7 @@ use crate::{
         ast::{
             ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, FunctionType,
             Generic, Identifier, IdentifierGeneric, IfExpression, InfixExpression, LetStatement, NumberLiteral, Position, PrefixExpression, Priority,
-            Program, RecordLiteral, RecordType, ReturnStatement, Statement, StringLiteral, TypeStatement,
+            Program, ReturnStatement, Statement, StringLiteral, TypeStatement,
         },
         error::{ParsingError, EXPECTED_EXPRESSION, EXPECTED_NEXT_TOKEN, UNEXPECTED_TOKEN},
     },
@@ -41,7 +41,7 @@ pub trait ParserTrait {
     fn parse_expression(&mut self, precedence: &Priority) -> ParseResult<Expression>;
     fn parse_block_expression(&mut self) -> ParseResult<BlockExpression>;
     fn parse_array_literal(&mut self) -> ParseResult<ArrayLiteral>;
-    fn parse_record_literal(&mut self) -> ParseResult<RecordLiteral>;
+    // fn parse_record_literal(&mut self) -> ParseResult<RecordLiteral>;
     fn parse_function_literal(&mut self) -> ParseResult<FunctionLiteral>;
     fn parse_if_expression(&mut self) -> ParseResult<IfExpression>;
 }
@@ -51,7 +51,7 @@ pub trait TypeParser {
     fn parse_data_type(&mut self) -> ParseResult<DataType>;
     fn parse_data_type_without_next(&mut self) -> ParseResult<DataType>;
     fn parse_function_type(&mut self) -> ParseResult<FunctionType>;
-    fn parse_record_type(&mut self) -> ParseResult<RecordType>;
+    // fn parse_record_type(&mut self) -> ParseResult<RecordType>;
     fn parse_generic(&mut self) -> ParseResult<Generic>;
     fn parse_generic_identifier(&mut self) -> ParseResult<IdentifierGeneric>;
 }
@@ -332,7 +332,7 @@ impl ParserTrait for Parser {
             }
             Tokens::LBrace => Some(Ok(Expression::BlockExpression(self.parse_block_expression()?))),
             Tokens::LBracket => Some(Ok(Expression::ArrayLiteral(self.parse_array_literal()?))),
-            Tokens::RecordType => Some(Ok(Expression::RecordLiteral(self.parse_record_literal()?))),
+            // Tokens::RecordType => Some(Ok(Expression::RecordLiteral(self.parse_record_literal()?))),
             Tokens::Function => Some(Ok(Expression::FunctionLiteral(self.parse_function_literal()?))),
             Tokens::If => Some(Ok(Expression::IfExpression(self.parse_if_expression()?))),
             _ => None,
@@ -465,37 +465,37 @@ impl ParserTrait for Parser {
         Ok(ArrayLiteral::new(elements, position! { self }))
     }
 
-    /// **Parses a record type.**
-    fn parse_record_literal(&mut self) -> ParseResult<RecordLiteral> {
-        self.next_token();
-        self.next_token();
+    // /// **Parses a record type.**
+    // fn parse_record_literal(&mut self) -> ParseResult<RecordLiteral> {
+    //     self.next_token();
+    //     self.next_token();
 
-        let mut elements = Vec::new();
+    //     let mut elements = Vec::new();
 
-        while self.current_token.token_type != Tokens::RBrace {
-            let key = self.parse_expression(&Priority::Lowest)?;
-            self.next_token();
+    //     while self.current_token.token_type != Tokens::RBrace {
+    //         let key = self.parse_expression(&Priority::Lowest)?;
+    //         self.next_token();
 
-            self.expect_token(&Tokens::Colon)?;
+    //         self.expect_token(&Tokens::Colon)?;
 
-            let value = self.parse_expression(&Priority::Lowest)?;
-            self.next_token();
+    //         let value = self.parse_expression(&Priority::Lowest)?;
+    //         self.next_token();
 
-            elements.push((key, value));
+    //         elements.push((key, value));
 
-            if self.current_token.token_type == Tokens::RBrace {
-                break;
-            }
+    //         if self.current_token.token_type == Tokens::RBrace {
+    //             break;
+    //         }
 
-            self.expect_token(&Tokens::Comma)?;
-        }
+    //         self.expect_token(&Tokens::Comma)?;
+    //     }
 
-        if self.current_token.token_type != Tokens::RBrace {
-            return Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBrace, self.current_token.token_type });
-        }
+    //     if self.current_token.token_type != Tokens::RBrace {
+    //         return Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBrace, self.current_token.token_type });
+    //     }
 
-        Ok(RecordLiteral::new(elements, position! { self }))
-    }
+    //     Ok(RecordLiteral::new(elements, position! { self }))
+    // }
 
     /// **Parses a function literal.**
     ///
@@ -622,7 +622,7 @@ impl TypeParser for Parser {
             Tokens::BooleanType => Ok(DataType::Boolean),
             Tokens::VoidType => Ok(DataType::Void),
             Tokens::Function => Ok(DataType::Fn(self.parse_function_type()?)),
-            Tokens::RecordType => Ok(DataType::Record(self.parse_record_type()?)),
+            // Tokens::RecordType => Ok(DataType::Record(self.parse_record_type()?)),
             Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
             _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
         };
@@ -687,15 +687,15 @@ impl TypeParser for Parser {
     /// **Parses a record type.**
     ///
     /// `record string: number` -> `Record(String, Number)`
-    fn parse_record_type(&mut self) -> ParseResult<RecordType> {
-        self.next_token();
+    // fn parse_record_type(&mut self) -> ParseResult<RecordType> {
+    //     self.next_token();
 
-        let key_type = self.parse_data_type()?;
-        self.expect_token(&Tokens::Colon)?;
-        let value_type = self.parse_data_type_without_next()?;
+    //     let key_type = self.parse_data_type()?;
+    //     self.expect_token(&Tokens::Colon)?;
+    //     let value_type = self.parse_data_type_without_next()?;
 
-        Ok(RecordType::new(key_type, value_type))
-    }
+    //     Ok(RecordType::new(key_type, value_type))
+    // }
 
     /// **Parses a generic type.**
     ///
