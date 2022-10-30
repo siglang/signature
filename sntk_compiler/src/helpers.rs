@@ -1,5 +1,5 @@
 use crate::compiler::{CompileResult, Compiler, CompilerTrait};
-use sntk_core::parser::ast::{ArrayLiteral, BooleanLiteral, Expression, NumberLiteral, Program, RecordLiteral, Statement, StringLiteral};
+use sntk_core::parser::ast::{ArrayLiteral, BooleanLiteral, Expression, NumberLiteral, Program, Statement, StringLiteral};
 use sntk_ir::{
     code::Block,
     value::{LiteralValue, Value},
@@ -13,9 +13,9 @@ pub fn literal_value(expression: Expression) -> Value {
         Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => {
             Value::LiteralValue(LiteralValue::Array(elements.into_iter().map(literal_value).collect()))
         }
-        Expression::RecordLiteral(RecordLiteral { /* pairs, */ .. }) => {
-            unimplemented!()
-        }
+        // Expression::RecordLiteral(RecordLiteral { /* pairs, */ .. }) => {
+        //     unimplemented!()
+        // }
         Expression::FunctionLiteral { .. } => unimplemented!(),
         value => panic!("Unexpected value: {:?}", value),
     }
