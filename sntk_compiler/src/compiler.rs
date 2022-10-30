@@ -226,13 +226,12 @@ impl CompilerTrait for Compiler {
                 Ok(())
             }
 
-            Expression::ObjectLiteral(ObjectLiteral { pairs, .. }) => {
-                self.code
-                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Object(
-                        pairs.iter().map(|(k, v)| (k.value.clone(), literal_value(v.clone()))).collect(),
-                    ))));
+            Expression::ObjectLiteral(ObjectLiteral { .. }) => {
+                unimplemented!()
 
-                Ok(())
+                // self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
+
+                // Ok(())
             }
 
             Expression::PrefixExpression(PrefixExpression { operator, right, .. }) => {
