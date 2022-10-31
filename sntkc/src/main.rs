@@ -3,20 +3,17 @@ use sntk_core::parser::parser::{Parser, ParserTrait};
 use sntk_ir::interpreter::InterpreterBase;
 
 fn main() {
-    let mut compiler = Compiler::new(
-        Parser::from(
-            r#"
-let x: record string: number = record {
-    "foo": 1,
-    "bar": 2,
-};
-            "#
-            .to_string(),
-        )
-        .parse_program(),
-    );
+    let parsed = Parser::from(
+        r#"
+let x: void = fn(x: number) -> number -> x * 10;
 
-    match &mut compiler.compile_program() {
+print(x(10));
+    "#
+        .to_string(),
+    )
+    .parse_program();
+
+    match &mut Compiler::new(parsed).compile_program() {
         Ok(interpreter) => interpreter.run(),
         Err(error) => println!("{error}"),
     }
