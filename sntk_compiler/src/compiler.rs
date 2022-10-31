@@ -1,14 +1,14 @@
 use crate::{
     error::{CompileError, TypeError, EXPECTED_DATA_TYPE},
-    helpers::{compile_block, literal_value},
+    helpers::{compile_block, literal_value, type_checked_array, type_checked_function},
     ts::{TypeSystem, TypeSystemTrait},
     type_error,
 };
 use sntk_core::{
     parser::ast::{
-        ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, Identifier,
-        IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement,
-        Statement, StringLiteral, TypeStatement,
+        BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression,
+        IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral,
+        TypeStatement,
     },
     tokenizer::token::Tokens,
 };
@@ -16,7 +16,6 @@ use sntk_ir::{
     builtin::get_builtin,
     code::{BinaryOp, BinaryOpEq, Instruction, UnaryOp},
     interpreter::{Interpreter, InterpreterBase},
-    value::{LiteralValue, Value},
 };
 
 #[derive(Debug, Clone)]
@@ -69,6 +68,7 @@ impl CompilerTrait for Compiler {
                 Statement::LetStatement(statement) => self.compile_let_statement(&statement)?,
                 Statement::ReturnStatement(statement) => self.compile_return_statement(&statement)?,
                 Statement::TypeStatement(statement) => self.compile_type_statement(&statement)?,
+                Statement::StructStatement(_) => unimplemented!(),
                 Statement::ExpressionStatement(ExpressionStatement { expression, .. }) => self.compile_expression(&expression, None)?,
             };
         }
@@ -147,7 +147,7 @@ impl CompilerTrait for Compiler {
             Expression::NumberLiteral(NumberLiteral { position, .. }) => {
                 match_type! { DataType::Number; expression; position.clone(); };
 
-                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
+                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())?));
 
                 Ok(())
             }
@@ -155,7 +155,7 @@ impl CompilerTrait for Compiler {
             Expression::StringLiteral(StringLiteral { position, .. }) => {
                 match_type! { DataType::String; expression; position.clone(); };
 
-                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
+                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())?));
 
                 Ok(())
             }
@@ -163,76 +163,28 @@ impl CompilerTrait for Compiler {
             Expression::BooleanLiteral(BooleanLiteral { position, .. }) => {
                 match_type! { DataType::Boolean; expression; position.clone(); };
 
-                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
+                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())?));
 
                 Ok(())
             }
 
-            Expression::ArrayLiteral(ArrayLiteral { elements, position }) => {
-                let array = literal_value(expression.clone());
-                let array_type = TypeSystem::get_data_type(&array, position)?;
-
-                match &array_type {
-                    DataType::Array(array_type) => {
-                        for element in elements.clone() {
-                            let element_type = TypeSystem::get_data_type_from_expression(&element, position)?;
-
-                            if !TypeSystem(*array_type.clone()).eq_from_type(&TypeSystem(element_type.clone())) {
-                                return Err(type_error! { EXPECTED_DATA_TYPE; array_type, element_type; position.clone(); });
-                            }
-                        }
-                    }
-                    r#type => {
-                        return Err(type_error! { EXPECTED_DATA_TYPE; match data_type {
-                            Some(data_type) => data_type,
-                            None => DataType::Array(Box::new(DataType::Unknown)),
-                        }, r#type; position.clone(); })
-                    }
-                }
-
-                let data_type = match data_type {
-                    Some(data_type) => data_type,
-                    None => TypeSystem::get_data_type_from_expression(expression, position)?,
-                };
-
-                if !TypeSystem(data_type.clone()).eq_from_type(&TypeSystem(array_type.clone())) {
-                    return Err(type_error! { EXPECTED_DATA_TYPE; array_type, data_type; position.clone(); });
-                }
-
-                self.code.push_instruction(&Instruction::LoadConst(array));
-
-                Ok(())
-            }
-
-            // TODO: Add type checking for, FunctionLiteral, and RecordLiteral.
-            Expression::FunctionLiteral(FunctionLiteral { parameters, body, .. }) => {
-                let mut statments = Vec::new();
-
-                for statment in body.statements.clone() {
-                    if let Statement::ReturnStatement(_) = statment {
-                        statments.push(statment);
-                        break;
-                    } else {
-                        statments.push(statment);
-                    }
-                }
-
+            Expression::ArrayLiteral(expression) => {
                 self.code
-                    .push_instruction(&Instruction::LoadConst(Value::LiteralValue(LiteralValue::Function {
-                        parameters: parameters.iter().map(|p| p.clone().0.value).collect(),
-                        body: compile_block(statments)?,
-                    })));
+                    .push_instruction(&Instruction::LoadConst(type_checked_array(expression, data_type.clone())?));
 
                 Ok(())
             }
 
-            // Expression::RecordLiteral(RecordLiteral { .. }) => {
-            //     unimplemented!()
+            Expression::FunctionLiteral(expression) => {
+                self.code
+                    .push_instruction(&Instruction::LoadConst(type_checked_function(expression, data_type.clone())?));
 
-            //     // self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())));
+                Ok(())
+            }
 
-            //     // Ok(())
-            // }
+            Expression::StructLiteral(_) => {
+                todo!()
+            }
 
             Expression::PrefixExpression(PrefixExpression { operator, right, .. }) => {
                 self.compile_expression(right, None)?;

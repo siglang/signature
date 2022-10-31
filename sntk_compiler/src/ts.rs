@@ -43,9 +43,6 @@ impl TypeSystemTrait for TypeSystem {
 
                     Ok(TypeSystem(DataType::Array(Box::new(data_type))))
                 }
-                // LiteralValue::Record(_) => {
-                //     unimplemented!()
-                // }
                 LiteralValue::Function { .. } => unimplemented!(),
             },
             Value::Identifier(_) => unimplemented!(),
@@ -54,7 +51,7 @@ impl TypeSystemTrait for TypeSystem {
     }
 
     fn get_type_from_expression(expression: &Expression, position: &Position) -> CompileResult<TypeSystem> {
-        TypeSystem::get_type(&literal_value(expression.clone()), position)
+        TypeSystem::get_type(&literal_value(expression.clone())?, position)
     }
 
     fn get_data_type(value: &Value, position: &Position) -> CompileResult<DataType> {
