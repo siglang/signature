@@ -24,7 +24,6 @@ pub enum LiteralValue {
     Boolean(bool),
     String(String),
     Array(Vec<Value>),
-    // Record(HashMap<String, Value>),
     Function { parameters: Vec<String>, body: Block },
 }
 
