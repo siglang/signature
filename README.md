@@ -58,3 +58,7 @@ graph LR
     Plugin --> Transcompile[Transcompile]
     Transcompile --> TResult[JavaScript, etc..]
 ```
+
+---
+
+[Syntax Documentation](SYNTAX.md) (TODO)
