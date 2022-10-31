@@ -14,9 +14,9 @@ pub enum Tokens {
 
     LT, GT, LTE, GTE, EQ, NEQ,
 
-    Let, If, Else, Return, Function, Type,
+    Let, If, Else, Return, Function, Type, Struct,
 
-    NumberType, StringType, BooleanType, /* ArrayType = type[] */ /* RecordType */ /* FnType = Function */ VoidType,
+    NumberType, StringType, BooleanType, /* ArrayType = type[] */ /* FnType = Function */ VoidType,
 }
 
 impl<T> From<T> for Tokens
@@ -31,12 +31,12 @@ where
             "return" => Tokens::Return,
             "fn" => Tokens::Function,
             "type" => Tokens::Type,
+            "struct" => Tokens::Struct,
             "true" => Tokens::Boolean(true),
             "false" => Tokens::Boolean(false),
             "number" => Tokens::NumberType,
             "string" => Tokens::StringType,
             "boolean" => Tokens::BooleanType,
-            // "record" => Tokens::RecordType,
             "void" => Tokens::VoidType,
             s => Tokens::IDENT(s.to_string()),
         }
