@@ -1,10 +1,12 @@
 use crate::{
     compiler::{CompileResult, Compiler, CompilerTrait},
     error::{CompileError, TypeError, EXPECTED_DATA_TYPE},
-    ts::{TypeSystem, TypeSystemTrait},
+    tc::{Type, TypeTrait},
     type_error,
 };
-use sntk_core::parser::ast::{ArrayLiteral, BooleanLiteral, DataType, Expression, FunctionLiteral, NumberLiteral, Program, Statement, StringLiteral};
+use sntk_core::parser::ast::{
+    ArrayLiteral, BooleanLiteral, DataType, Expression, FunctionLiteral, NumberLiteral, Position, Program, Statement, StringLiteral,
+};
 use sntk_ir::{
     code::Block,
     value::{LiteralValue, Value},
@@ -21,7 +23,9 @@ pub fn literal_value(expression: Expression) -> CompileResult<Value> {
                 .map(|element| literal_value(element))
                 .collect::<CompileResult<Vec<Value>>>()?,
         )),
-        Expression::FunctionLiteral(FunctionLiteral { parameters, body, .. }) => {
+        Expression::FunctionLiteral(FunctionLiteral {
+            parameters, body, position, ..
+        }) => {
             let mut statments = Vec::new();
 
             for statment in body.statements.clone() {
@@ -35,7 +39,7 @@ pub fn literal_value(expression: Expression) -> CompileResult<Value> {
 
             Value::LiteralValue(LiteralValue::Function {
                 parameters: parameters.iter().map(|p| (p.clone().0.value, p.clone().1)).collect(),
-                body: compile_block(statments)?,
+                body: compile_block(statments, &position)?.0,
             })
         }
         value => panic!("Unexpected value: {:?}", value),
@@ -43,8 +47,10 @@ pub fn literal_value(expression: Expression) -> CompileResult<Value> {
 }
 
 #[inline]
-pub fn compile_block(statements: Vec<Statement>) -> CompileResult<Block> {
-    Ok(Block(Compiler::new(Program::new(statements)).compile_program()?.instructions))
+pub fn compile_block(statements: Vec<Statement>, position: &Position) -> CompileResult<(Block, DataType)> {
+    let block = Block(Compiler::new(Program::new(statements)).compile_program()?.instructions);
+
+    Ok((block.clone(), Type::get_data_type_from_instruction(block.0, position)?))
 }
 
 #[inline(always)]
@@ -52,14 +58,14 @@ pub fn type_checked_array(expression: &ArrayLiteral, data_type: Option<DataType>
     let ArrayLiteral { elements, position } = expression;
 
     let array = literal_value(Expression::ArrayLiteral(expression.clone()))?;
-    let array_type = TypeSystem::get_data_type(&array, position)?;
+    let array_type = Type::get_data_type(&array, position)?;
 
     match &array_type {
         DataType::Array(array_type) => {
             for element in elements.clone() {
-                let element_type = TypeSystem::get_data_type_from_expression(&element, position)?;
+                let element_type = Type::get_data_type_from_expression(&element, position)?;
 
-                if !TypeSystem(*array_type.clone()).eq_from_type(&TypeSystem(element_type.clone())) {
+                if !Type(*array_type.clone()).eq_from_type(&Type(element_type.clone())) {
                     return Err(type_error! { EXPECTED_DATA_TYPE; array_type, element_type; position.clone(); });
                 }
             }
@@ -74,10 +80,10 @@ pub fn type_checked_array(expression: &ArrayLiteral, data_type: Option<DataType>
 
     let data_type = match data_type {
         Some(data_type) => data_type,
-        None => TypeSystem::get_data_type_from_expression(&Expression::ArrayLiteral(expression.clone()), position)?,
+        None => Type::get_data_type_from_expression(&Expression::ArrayLiteral(expression.clone()), position)?,
     };
 
-    if !TypeSystem(data_type.clone()).eq_from_type(&TypeSystem(array_type.clone())) {
+    if !Type(data_type.clone()).eq_from_type(&Type(array_type.clone())) {
         return Err(type_error! { EXPECTED_DATA_TYPE; array_type, data_type; position.clone(); });
     }
 
@@ -96,7 +102,7 @@ pub fn type_checked_function(expression: &FunctionLiteral, data_type: Option<Dat
     } = expression;
 
     let function = literal_value(Expression::FunctionLiteral(expression.clone()))?;
-    let function_type = TypeSystem::get_data_type(&function, position)?;
+    let function_type = Type::get_data_type(&function, position)?;
 
     println!("function_type: {:?}", function_type);
 

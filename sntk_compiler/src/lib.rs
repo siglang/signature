@@ -5,5 +5,5 @@ pub mod error;
 /// Helper functions for the compiler.
 pub mod helpers;
 pub mod macros;
-/// Type System
-pub mod ts;
+/// Type Checker.
+pub mod tc;

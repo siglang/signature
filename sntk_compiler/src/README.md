@@ -4,6 +4,6 @@ Compiler library for the language
 -   [error.rs](error.rs) - Error messages
 -   [helpers.rs](helpers.rs) - Helper functions
 -   [macros.rs](macros.rs) - Macros
--   [ts.rs](ts.rs) - Type system
+-   [tc.rs](tc.rs) - Type checker
 
 For more details, see the documentation for the code.

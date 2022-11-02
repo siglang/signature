@@ -1,7 +1,7 @@
 use crate::{
     error::{CompileError, TypeError, EXPECTED_DATA_TYPE},
     helpers::{compile_block, literal_value, type_checked_array, type_checked_function},
-    ts::{TypeSystem, TypeSystemTrait},
+    tc::{Type, TypeTrait},
     type_error,
 };
 use sntk_core::{
@@ -122,18 +122,26 @@ impl CompilerTrait for Compiler {
             ($type:expr; $e:expr; $pos:expr;) => {
                 let data_type = match data_type {
                     Some(data_type) => data_type,
-                    None => TypeSystem::get_data_type_from_expression($e, &$pos)?,
+                    None => Type::get_data_type_from_expression($e, &$pos)?,
                 };
 
-                if !TypeSystem(data_type.clone()).eq_from_type(&TypeSystem($type)) {
-                    return Err(type_error! { EXPECTED_DATA_TYPE; $type, data_type; $pos; });
+                if !Type(data_type.clone()).eq_from_type(&Type($type)) {
+                    return Err(type_error! { EXPECTED_DATA_TYPE; data_type, $type; $pos; });
                 }
             };
         }
 
         match expression {
-            Expression::BlockExpression(BlockExpression { statements, .. }) => {
-                self.code.push_instruction(&Instruction::Block(compile_block(statements.clone())?));
+            Expression::BlockExpression(BlockExpression { statements, position }) => {
+                let block = compile_block(statements.clone(), position)?;
+
+                if let Some(data_type) = data_type {
+                    if !Type(block.clone().1).eq_from_type(&Type(data_type.clone())) {
+                        return Err(type_error! { EXPECTED_DATA_TYPE; data_type, block.1; position.clone(); });
+                    }
+                }
+
+                self.code.push_instruction(&Instruction::Block(block.0));
 
                 Ok(())
             }
@@ -198,9 +206,23 @@ impl CompilerTrait for Compiler {
                 Ok(())
             }
 
-            Expression::InfixExpression(InfixExpression { left, operator, right, .. }) => {
-                self.compile_expression(left, None)?;
-                self.compile_expression(right, None)?;
+            Expression::InfixExpression(InfixExpression {
+                left,
+                operator,
+                right,
+                position,
+            }) => {
+                let left_data_type = Type::get_data_type_from_expression(left, position)?;
+                let right_data_type = Type::get_data_type_from_expression(right, position)?;
+
+                self.compile_expression(left, Some(right_data_type.clone()))?;
+                self.compile_expression(right, Some(left_data_type.clone()))?;
+
+                if let Some(data_type) = data_type {
+                    if !Type(data_type.clone()).eq_from_type(&Type(left_data_type.clone())) {
+                        return Err(type_error! { EXPECTED_DATA_TYPE; data_type, left_data_type; position.clone(); });
+                    }
+                }
 
                 match operator {
                     Tokens::Plus => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Add)),
@@ -249,16 +271,17 @@ impl CompilerTrait for Compiler {
                 condition,
                 consequence,
                 alternative,
-                ..
+                position,
             }) => {
                 self.compile_expression(condition, None)?;
 
                 self.code.push_instruction(&Instruction::If(
-                    compile_block(consequence.statements.clone())?,
+                    compile_block(consequence.statements.clone(), position)?.0,
                     alternative
                         .clone()
-                        .map(|expression| compile_block(expression.statements.clone()))
-                        .transpose()?,
+                        .map(|expression| compile_block(expression.statements.clone(), position))
+                        .transpose()?
+                        .map(|block| block.0),
                 ));
 
                 Ok(())
