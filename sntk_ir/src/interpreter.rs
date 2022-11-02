@@ -107,7 +107,7 @@ impl InstructionTrait for Interpreter {
                 }
 
                 for (parameter, argument) in parameters.iter().zip(arguments.iter()) {
-                    self.environment.set(parameter.clone(), argument.clone());
+                    self.environment.set(parameter.0.clone(), argument.clone());
                 }
 
                 let mut interpreter = Interpreter::new_with(body.0, self.stack.clone(), Environment::new_with_parent(self.environment.clone()));

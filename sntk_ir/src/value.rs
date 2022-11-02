@@ -1,3 +1,5 @@
+use sntk_core::parser::ast::DataType;
+
 use crate::code::Block;
 use std::fmt::Write;
 
@@ -24,7 +26,7 @@ pub enum LiteralValue {
     Boolean(bool),
     String(String),
     Array(Vec<Value>),
-    Function { parameters: Vec<String>, body: Block },
+    Function { parameters: Vec<(String, DataType)>, body: Block },
 }
 
 impl std::fmt::Display for LiteralValue {
@@ -46,24 +48,11 @@ impl std::fmt::Display for LiteralValue {
                     write!(f, "[{}]", string.trim_end_matches(", "))
                 }
             }
-            // LiteralValue::Record(record) => {
-            //     if record.is_empty() {
-            //         write!(f, "{{ }}")
-            //     } else {
-            //         let mut string = String::new();
-
-            //         for (key, value) in record {
-            //             string.write_fmt(format_args!("{}: {}, ", key, value))?;
-            //         }
-
-            //         write!(f, "record {{{}}}", string.trim_end_matches(", "))
-            //     }
-            // }
             LiteralValue::Function { parameters, .. } => {
                 let mut string = String::new();
 
-                for parameter in parameters {
-                    string.write_fmt(format_args!("{}, ", parameter))?;
+                for (parameter, data_type) in parameters {
+                    string.write_fmt(format_args!("{}: {}, ", parameter, data_type))?;
                 }
 
                 write!(f, "fn({})", string.trim_end_matches(", "))
