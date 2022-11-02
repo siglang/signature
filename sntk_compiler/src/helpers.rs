@@ -34,7 +34,7 @@ pub fn literal_value(expression: Expression) -> CompileResult<Value> {
             }
 
             Value::LiteralValue(LiteralValue::Function {
-                parameters: parameters.iter().map(|p| p.clone().0.value).collect(),
+                parameters: parameters.iter().map(|p| (p.clone().0.value, p.clone().1)).collect(),
                 body: compile_block(statments)?,
             })
         }
@@ -95,5 +95,10 @@ pub fn type_checked_function(expression: &FunctionLiteral, data_type: Option<Dat
         position,
     } = expression;
 
-    Ok(literal_value(Expression::FunctionLiteral(expression.clone()))?)
+    let function = literal_value(Expression::FunctionLiteral(expression.clone()))?;
+    let function_type = TypeSystem::get_data_type(&function, position)?;
+
+    println!("function_type: {:?}", function_type);
+
+    Ok(function)
 }

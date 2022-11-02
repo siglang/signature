@@ -1,11 +1,16 @@
+#![allow(unused_imports)] // TODO: remove this
+
 use crate::{
     compiler::CompileResult,
     error::{CompileError, TypeError, EXPECTED_DATA_TYPE, UNKNOWN_ARRAY_TYPE},
     helpers::literal_value,
     type_error,
 };
-use sntk_core::parser::ast::{DataType, Expression, Position};
-use sntk_ir::value::{LiteralValue, Value};
+use sntk_core::parser::ast::{DataType, Expression, FunctionType, Position};
+use sntk_ir::{
+    code::Instruction,
+    value::{LiteralValue, Value}, interpreter::{Interpreter, InterpreterBase},
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct TypeSystem(pub DataType);
@@ -43,7 +48,26 @@ impl TypeSystemTrait for TypeSystem {
 
                     Ok(TypeSystem(DataType::Array(Box::new(data_type))))
                 }
-                LiteralValue::Function { .. } => unimplemented!(),
+                #[allow(unused_variables)]
+                LiteralValue::Function { parameters, body } => {
+                    unimplemented!();
+
+                    // let return_type = match body[body.len() - 1] {
+                    //     Instruction::Return => {
+                    //         match &body[body.len() - 2] {
+                    //             Instruction::LoadConst(value) => TypeSystem::get_data_type(value, position)?,
+                    //             _ => DataType::Boolean, // TODO: Change this to Unit type
+                    //         }
+                    //     }
+                    //     _ => DataType::Boolean,
+                    // };
+
+                    // Ok(TypeSystem(DataType::Fn(FunctionType::new(
+                    //     None, // TODO: Generic type
+                    //     parameters.iter().map(|parameter| parameter.1.clone()).collect(),
+                    //     return_type,
+                    // ))))
+                }
             },
             Value::Identifier(_) => unimplemented!(),
             Value::Return(value) => TypeSystem::get_type(value, position),
@@ -67,9 +91,8 @@ impl TypeSystemTrait for TypeSystem {
             TypeSystem(DataType::Number) => Ok(TypeSystem::get_type(value, position)? == TypeSystem(DataType::Number)),
             TypeSystem(DataType::Boolean) => Ok(TypeSystem::get_type(value, position)? == TypeSystem(DataType::Boolean)),
             TypeSystem(DataType::String) => Ok(TypeSystem::get_type(value, position)? == TypeSystem(DataType::String)),
-            TypeSystem(DataType::Array(_)) => unimplemented!(),
-            // TypeSystem(DataType::Record(_)) => unimplemented!(),
-            TypeSystem(DataType::Fn(_)) => unimplemented!(),
+            TypeSystem(DataType::Array(_)) => Ok(TypeSystem::get_type(value, position)? == self.clone()),
+            TypeSystem(DataType::Fn(_)) => Ok(TypeSystem::get_type(value, position)? == self.clone()),
             TypeSystem(DataType::Generic(_)) => unimplemented!(),
             TypeSystem(DataType::Custom(_)) => unimplemented!(),
             TypeSystem(DataType::Void) => unimplemented!(),
