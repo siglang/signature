@@ -145,11 +145,10 @@ impl ParserBase for Parser {
     fn get_priority(&self, token_type: &Tokens) -> Priority {
         match token_type {
             Tokens::Dot | Tokens::Arrow => Priority::Dot,
-            Tokens::Assign => Priority::Equals,
+            Tokens::Assign | Tokens::EQ | Tokens::NEQ => Priority::Equals,
             Tokens::Plus | Tokens::Minus => Priority::Sum,
             Tokens::Slash | Tokens::Asterisk => Priority::Product,
             Tokens::LT | Tokens::GT | Tokens::LTE | Tokens::GTE => Priority::LessGreater,
-            Tokens::EQ | Tokens::NEQ => Priority::Equals,
             Tokens::LParen => Priority::Call,
             Tokens::LBracket => Priority::Index,
             _ => Priority::Lowest,
