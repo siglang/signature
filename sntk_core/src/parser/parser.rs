@@ -4,9 +4,11 @@ use crate::{
     options::CompilerOptions,
     parser::{
         ast::{
-            ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, FunctionType,
-            Generic, Identifier, IdentifierGeneric, IfExpression, InfixExpression, LetStatement, NumberLiteral, Position, PrefixExpression, Priority,
-            Program, ReturnStatement, Statement, StringLiteral, StructLiteral, StructStatement, TypeStatement,
+            ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression,
+            ExpressionStatement, FunctionLiteral, FunctionType, Generic, Identifier,
+            IdentifierGeneric, IfExpression, InfixExpression, LetStatement, NumberLiteral,
+            Position, PrefixExpression, Priority, Program, ReturnStatement, Statement,
+            StringLiteral, StructLiteral, StructStatement, TypeStatement,
         },
         error::{ParsingError, EXPECTED_EXPRESSION, EXPECTED_NEXT_TOKEN, UNEXPECTED_TOKEN},
     },
@@ -62,10 +64,20 @@ pub trait TypeParser {
 /// In the parsing phase, evaluable expressions are pre-evaluated. it is providing a fast runtime.
 pub trait EEE {
     fn eval_expression(&mut self, expression: &Expression) -> Option<ParseResult<Expression>>;
-    fn eval_infix_expression(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>>;
-    fn eval_infix_expression_opt_1(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>>;
-    fn eval_infix_expression_opt_2(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>>;
-    fn eval_prefix_expression(&mut self, prefix: &PrefixExpression) -> Option<ParseResult<Expression>>;
+    fn eval_infix_expression(&mut self, infix: &InfixExpression)
+        -> Option<ParseResult<Expression>>;
+    fn eval_infix_expression_opt_1(
+        &mut self,
+        infix: &InfixExpression,
+    ) -> Option<ParseResult<Expression>>;
+    fn eval_infix_expression_opt_2(
+        &mut self,
+        infix: &InfixExpression,
+    ) -> Option<ParseResult<Expression>>;
+    fn eval_prefix_expression(
+        &mut self,
+        prefix: &PrefixExpression,
+    ) -> Option<ParseResult<Expression>>;
 }
 
 /// **Parses the input string into an AST.**
@@ -97,7 +109,10 @@ impl ParserBase for Parser {
     /// **Creates a new Parser instance.**
     /// it takes an argument of type `Lexer`.
     fn new(lexer: Lexer) -> Self {
-        Parser { lexer, ..Default::default() }
+        Parser {
+            lexer,
+            ..Default::default()
+        }
     }
 
     /// **creates a new Parser instance with custom options.**
@@ -124,7 +139,9 @@ impl ParserBase for Parser {
 
             Ok(())
         } else {
-            Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; token_type, self.current_token.token_type })
+            Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; token_type, self.current_token.token_type },
+            )
         }
     }
 
@@ -223,9 +240,16 @@ impl ParserTrait for Parser {
             return if self.peek_token(&Tokens::Semicolon) {
                 self.next_token();
 
-                Ok(LetStatement::new(data_type, ident, expression, position! { self }))
+                Ok(LetStatement::new(
+                    data_type,
+                    ident,
+                    expression,
+                    position! { self },
+                ))
             } else {
-                Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type })
+                Err(
+                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+                )
             };
         }
 
@@ -244,7 +268,9 @@ impl ParserTrait for Parser {
 
                 Ok(ReturnStatement::new(expression, position! { self }))
             } else {
-                Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type })
+                Err(
+                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+                )
             };
         }
 
@@ -279,7 +305,9 @@ impl ParserTrait for Parser {
                 position! { self },
             ))
         } else {
-            Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type })
+            Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+            )
         }
     }
 
@@ -340,17 +368,31 @@ impl ParserTrait for Parser {
 
             Ok(ExpressionStatement::new(expression, position! { self }))
         } else {
-            Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type })
+            Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type },
+            )
         }
     }
 
     /// **Parses an expression.**
     fn parse_expression(&mut self, priority: &Priority) -> ParseResult<Expression> {
         let left_expression = match self.current_token.token_type.clone() {
-            Tokens::IDENT(ident) => Some(Ok(Expression::Identifier(Identifier::new(ident, position! { self })))),
-            Tokens::Number(number) => Some(Ok(Expression::NumberLiteral(NumberLiteral::new(number, position! { self })))),
-            Tokens::String(string) => Some(Ok(Expression::StringLiteral(StringLiteral::new(string, position! { self })))),
-            Tokens::Boolean(boolean) => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(boolean, position! { self })))),
+            Tokens::IDENT(ident) => Some(Ok(Expression::Identifier(Identifier::new(
+                ident,
+                position! { self },
+            )))),
+            Tokens::Number(number) => Some(Ok(Expression::NumberLiteral(NumberLiteral::new(
+                number,
+                position! { self },
+            )))),
+            Tokens::String(string) => Some(Ok(Expression::StringLiteral(StringLiteral::new(
+                string,
+                position! { self },
+            )))),
+            Tokens::Boolean(boolean) => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(
+                boolean,
+                position! { self },
+            )))),
             Tokens::Bang | Tokens::Minus => {
                 let operator = self.current_token.token_type.clone();
 
@@ -369,14 +411,20 @@ impl ParserTrait for Parser {
                 self.next_token();
 
                 if self.current_token.token_type != Tokens::RParen {
-                    return Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RParen, self.current_token.token_type });
+                    return Err(
+                        parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RParen, self.current_token.token_type },
+                    );
                 }
 
                 Some(expression)
             }
-            Tokens::LBrace => Some(Ok(Expression::BlockExpression(self.parse_block_expression()?))),
+            Tokens::LBrace => Some(Ok(Expression::BlockExpression(
+                self.parse_block_expression()?,
+            ))),
             Tokens::LBracket => Some(Ok(Expression::ArrayLiteral(self.parse_array_literal()?))),
-            Tokens::Function => Some(Ok(Expression::FunctionLiteral(self.parse_function_literal()?))),
+            Tokens::Function => Some(Ok(Expression::FunctionLiteral(
+                self.parse_function_literal()?,
+            ))),
             Tokens::Struct => Some(Ok(Expression::StructLiteral(self.parse_struct_literal()?))),
             Tokens::If => Some(Ok(Expression::IfExpression(self.parse_if_expression()?))),
             Tokens::Typeof => {
@@ -394,7 +442,9 @@ impl ParserTrait for Parser {
             return Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type });
         }
 
-        let mut left_expression = left_expression.ok_or_else(|| parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type })?;
+        let mut left_expression = left_expression.ok_or_else(
+            || parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type },
+        )?;
 
         while !self.peek_token(&Tokens::Semicolon) && priority < &self.peek_priority() {
             self.next_token();
@@ -515,7 +565,9 @@ impl ParserTrait for Parser {
         }
 
         if self.current_token.token_type != Tokens::RBracket {
-            return Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBracket, self.current_token.token_type });
+            return Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBracket, self.current_token.token_type },
+            );
         }
 
         Ok(ArrayLiteral::new(elements, position! { self }))
@@ -550,7 +602,9 @@ impl ParserTrait for Parser {
         }
 
         if self.current_token.token_type != Tokens::RBrace {
-            return Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBrace, self.current_token.token_type });
+            return Err(
+                parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBrace, self.current_token.token_type },
+            );
         }
 
         Ok(StructLiteral::new(
@@ -584,9 +638,14 @@ impl ParserTrait for Parser {
 
                 let data_type = self.parse_data_type()?;
 
-                parameters.push((Identifier::new(identifier.clone(), position! { self }), data_type));
+                parameters.push((
+                    Identifier::new(identifier.clone(), position! { self }),
+                    data_type,
+                ));
             } else {
-                return Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type });
+                return Err(
+                    parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type },
+                );
             }
 
             if self.current_token.token_type == Tokens::RParen {
@@ -614,10 +673,20 @@ impl ParserTrait for Parser {
                     position! { self },
                 )
             }
-            _ => return Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::LBrace, self.current_token.token_type }),
+            _ => {
+                return Err(
+                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::LBrace, self.current_token.token_type },
+                )
+            }
         };
 
-        Ok(FunctionLiteral::new(generics, parameters, return_type, body, position! { self }))
+        Ok(FunctionLiteral::new(
+            generics,
+            parameters,
+            return_type,
+            body,
+            position! { self },
+        ))
     }
 
     /// **Parses a if expression.**
@@ -698,7 +767,9 @@ impl TypeParser for Parser {
             self.next_token();
 
             if self.current_token.token_type != Tokens::RBracket {
-                return Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBracket, self.current_token.token_type });
+                return Err(
+                    parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBracket, self.current_token.token_type },
+                );
             }
 
             data_type = data_type.map(|t| DataType::Array(Box::new(t)));
@@ -825,7 +896,10 @@ impl EEE for Parser {
     /// * `10 <= 20`: InfixExpression(10, LessEqual, 20) -> BooleanLiteral(true)
     ///
     /// * `"Foo" + "Bar"`: InfixExpression(StringLiteral("Foo"), Add, StringLiteral("Bar")) -> StringLiteral("FooBar")
-    fn eval_infix_expression(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>> {
+    fn eval_infix_expression(
+        &mut self,
+        infix: &InfixExpression,
+    ) -> Option<ParseResult<Expression>> {
         match self.options.eee_opt_level() {
             1 => self.eval_infix_expression_opt_1(infix),
             2 => self.eval_infix_expression_opt_2(infix),
@@ -836,8 +910,16 @@ impl EEE for Parser {
     /// **Evaluates operators.**
     ///
     /// extends `eval_infix_expression` with `eee_opt_level`: `1`
-    fn eval_infix_expression_opt_1(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>> {
-        let InfixExpression { left, operator, right, .. } = infix;
+    fn eval_infix_expression_opt_1(
+        &mut self,
+        infix: &InfixExpression,
+    ) -> Option<ParseResult<Expression>> {
+        let InfixExpression {
+            left,
+            operator,
+            right,
+            ..
+        } = infix;
 
         macro_rules! f64_ops {
             ($op:tt) => {{
@@ -869,8 +951,16 @@ impl EEE for Parser {
     /// **Evaluates operators.**
     ///
     /// extends `eval_infix_expression` with `eee_opt_level`: `2`
-    fn eval_infix_expression_opt_2(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>> {
-        let InfixExpression { left, operator, right, .. } = infix;
+    fn eval_infix_expression_opt_2(
+        &mut self,
+        infix: &InfixExpression,
+    ) -> Option<ParseResult<Expression>> {
+        let InfixExpression {
+            left,
+            operator,
+            right,
+            ..
+        } = infix;
 
         macro_rules! f64_ops {
             ($op:tt) => {{
@@ -890,7 +980,10 @@ impl EEE for Parser {
         }
 
         match operator {
-            Tokens::EQ => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(left == right, position! { self })))),
+            Tokens::EQ => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(
+                left == right,
+                position! { self },
+            )))),
             Tokens::NEQ => f64_ops! { != },
             Tokens::GT => f64_ops! { > },
             Tokens::LT => f64_ops! { < },
@@ -904,20 +997,33 @@ impl EEE for Parser {
     ///
     /// * `-10`: PrefixExpression(Minus, 10) -> NumberLiteral(-10)
     /// * `!true`: PrefixExpression(Bang, true) -> BooleanLiteral(false)
-    fn eval_prefix_expression(&mut self, prefix: &PrefixExpression) -> Option<ParseResult<Expression>> {
-        let PrefixExpression { operator, right, position } = prefix;
+    fn eval_prefix_expression(
+        &mut self,
+        prefix: &PrefixExpression,
+    ) -> Option<ParseResult<Expression>> {
+        let PrefixExpression {
+            operator,
+            right,
+            position,
+        } = prefix;
 
         match operator {
             Tokens::Minus => {
                 if let Expression::NumberLiteral(right) = *right.clone() {
-                    return Some(Ok(Expression::NumberLiteral(NumberLiteral::new(-right.value, position.clone()))));
+                    return Some(Ok(Expression::NumberLiteral(NumberLiteral::new(
+                        -right.value,
+                        position.clone(),
+                    ))));
                 }
 
                 None
             }
             Tokens::Bang => {
                 if let Expression::BooleanLiteral(right) = *right.clone() {
-                    return Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(!right.value, position.clone()))));
+                    return Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(
+                        !right.value,
+                        position.clone(),
+                    ))));
                 }
 
                 None

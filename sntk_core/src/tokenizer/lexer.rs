@@ -51,7 +51,10 @@ impl LexerTrait for Lexer {
     /// **Creates a new Lexer instance.**
     /// it takes an argument of type `&str` or `String` (`Into<String>`).
     fn new(input: String) -> Self {
-        let mut lexer = Lexer { input, ..Default::default() };
+        let mut lexer = Lexer {
+            input,
+            ..Default::default()
+        };
 
         lexer.read_char();
         lexer
@@ -182,7 +185,8 @@ impl LexerTrait for Lexer {
             self.read_char();
             self.read_char();
 
-            while self.current_char != '\0' && (self.current_char != '*' || self.peek_char() != '/') {
+            while self.current_char != '\0' && (self.current_char != '*' || self.peek_char() != '/')
+            {
                 self.read_char();
             }
 
@@ -258,8 +262,12 @@ impl LexerTrait for Lexer {
         };
 
         match self.current_char {
-            c if c.is_alphabetic() => Token::new(Tokens::from(self.read_identifier()), self.current_position),
-            c if c.is_numeric() => Token::new(Tokens::Number(self.read_number()), self.current_position),
+            c if c.is_alphabetic() => {
+                Token::new(Tokens::from(self.read_identifier()), self.current_position)
+            }
+            c if c.is_numeric() => {
+                Token::new(Tokens::Number(self.read_number()), self.current_position)
+            }
             _ => {
                 self.read_char();
                 token

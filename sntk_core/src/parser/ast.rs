@@ -63,7 +63,7 @@ pub enum Expression {
     BooleanLiteral(BooleanLiteral),
     /// `array[index]`: an index expression. an array can access it.
     IndexExpression(IndexExpression),
-    /// `struct { field: value, ... }`: a struct literal.` 
+    /// `struct { field: value, ... }`: a struct literal.`
     StructLiteral(StructLiteral),
 }
 
@@ -98,7 +98,7 @@ impl std::fmt::Display for DataType {
             DataType::Fn(function_type) => write!(f, "{}", function_type),
             DataType::Generic(generic) => write!(f, "{}", generic),
             DataType::Custom(name) => write!(f, "{}", name),
-            DataType::Void => write!(f, "void"),
+            DataType::Void => write!(f, "Void"),
             DataType::Unknown => write!(f, "Unknown"),
         }
     }
@@ -108,10 +108,18 @@ impl std::fmt::Display for DataType {
 pub type IdentifierGeneric = Vec<Identifier>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct FunctionType(pub Option<IdentifierGeneric>, pub Vec<DataType>, pub Box<DataType>);
+pub struct FunctionType(
+    pub Option<IdentifierGeneric>,
+    pub Vec<DataType>,
+    pub Box<DataType>,
+);
 
 impl FunctionType {
-    pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<DataType>, return_type: DataType) -> Self {
+    pub fn new(
+        generics: Option<IdentifierGeneric>,
+        parameters: Vec<DataType>,
+        return_type: DataType,
+    ) -> Self {
         FunctionType(generics, parameters, Box::new(return_type))
     }
 }
@@ -119,7 +127,12 @@ impl FunctionType {
 impl std::fmt::Display for FunctionType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         // TODO: generics
-        let parameters = self.1.iter().map(|parameter| parameter.to_string()).collect::<Vec<String>>().join(", ");
+        let parameters = self
+            .1
+            .iter()
+            .map(|parameter| parameter.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
         write!(f, "fn({}) -> {}", parameters, self.2)
     }
 }
