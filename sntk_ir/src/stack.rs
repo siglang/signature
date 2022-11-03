@@ -68,9 +68,7 @@ impl StackTrait for Stack {
     }
 
     fn pop(&mut self) -> Value {
-        self.0
-            .pop()
-            .unwrap_or_else(|| runtime_error!(@stack self; POP_EMPTY_STACK;))
+        self.0.pop().unwrap_or_else(|| runtime_error!(@stack self; POP_EMPTY_STACK;))
     }
 
     fn pop_option(&mut self) -> Option<Value> {
