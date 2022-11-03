@@ -4,7 +4,7 @@ use crate::{
     helpers::literal_value,
     type_error,
 };
-use sntk_core::parser::ast::{DataType, Expression, FunctionType, Position};
+use sntk_core::parser::ast::{DataType, Expression, Position};
 use sntk_ir::{
     code::{BinaryOp, Block, Instruction, UnaryOp},
     value::{LiteralValue, Value},
@@ -15,11 +15,23 @@ pub struct Type(pub DataType);
 
 pub trait TypeTrait {
     fn get_type(value: &Value, position: &Position) -> CompileResult<Type>;
-    fn get_type_from_expression(expression: &Expression, position: &Position) -> CompileResult<Type>;
+    fn get_type_from_expression(
+        expression: &Expression,
+        position: &Position,
+    ) -> CompileResult<Type>;
     fn get_data_type(value: &Value, position: &Position) -> CompileResult<DataType>;
-    fn get_data_type_from_expression(expression: &Expression, position: &Position) -> CompileResult<DataType>;
-    fn get_type_from_instruction(instruction: Vec<Instruction>, position: &Position) -> CompileResult<Type>;
-    fn get_data_type_from_instruction(instruction: Vec<Instruction>, position: &Position) -> CompileResult<DataType>;
+    fn get_data_type_from_expression(
+        expression: &Expression,
+        position: &Position,
+    ) -> CompileResult<DataType>;
+    fn get_type_from_instruction(
+        instruction: Vec<Instruction>,
+        position: &Position,
+    ) -> CompileResult<Type>;
+    fn get_data_type_from_instruction(
+        instruction: Vec<Instruction>,
+        position: &Position,
+    ) -> CompileResult<DataType>;
     fn eq_from_value(&self, value: &Value, position: &Position) -> CompileResult<bool>;
     fn eq_from_type(&self, other: &Type) -> bool;
 }
@@ -33,11 +45,7 @@ impl TypeTrait for Type {
                 LiteralValue::String(_) => Ok(Type(DataType::String)),
                 LiteralValue::Array(elements) => expand_array_type(elements, position, None),
                 LiteralValue::Function { parameters, body } => {
-                    Ok(Type(DataType::Fn(FunctionType::new(
-                        None, // TODO: Generic type
-                        parameters.iter().map(|parameter| parameter.1.clone()).collect(),
-                        Type::get_type_from_instruction(body.0.clone(), position)?.0,
-                    ))))
+                    expand_function_type(parameters, body, position, None)
                 }
             },
             Value::Identifier(_) => unimplemented!(),
@@ -45,7 +53,10 @@ impl TypeTrait for Type {
         }
     }
 
-    fn get_type_from_expression(expression: &Expression, position: &Position) -> CompileResult<Type> {
+    fn get_type_from_expression(
+        expression: &Expression,
+        position: &Position,
+    ) -> CompileResult<Type> {
         Type::get_type(&literal_value(expression.clone())?, position)
     }
 
@@ -53,11 +64,18 @@ impl TypeTrait for Type {
         Ok(Type::get_type(value, position)?.0)
     }
 
-    fn get_data_type_from_expression(expression: &Expression, position: &Position) -> CompileResult<DataType> {
+    fn get_data_type_from_expression(
+        expression: &Expression,
+        position: &Position,
+    ) -> CompileResult<DataType> {
         Ok(Type::get_type_from_expression(expression, position)?.0)
     }
 
-    fn get_type_from_instruction(instruction: Vec<Instruction>, position: &Position) -> CompileResult<Type> {
+    fn get_type_from_instruction(
+        instruction: Vec<Instruction>,
+        position: &Position,
+    ) -> CompileResult<Type> {
+        // println!("instruction: {:?}", instruction); TODO
         match instruction.last().unwrap() /* TODO: Error Handling */ {
             Instruction::LoadConst(value) => Type::get_type(value, position),
             Instruction::BinaryOp(op) => match op {
@@ -84,15 +102,24 @@ impl TypeTrait for Type {
         }
     }
 
-    fn get_data_type_from_instruction(instruction: Vec<Instruction>, position: &Position) -> CompileResult<DataType> {
+    fn get_data_type_from_instruction(
+        instruction: Vec<Instruction>,
+        position: &Position,
+    ) -> CompileResult<DataType> {
         Ok(Type::get_type_from_instruction(instruction, position)?.0)
     }
 
     fn eq_from_value(&self, value: &Value, position: &Position) -> CompileResult<bool> {
         match self {
-            Type(DataType::Number) => Ok(Type::get_type(value, position)? == Type(DataType::Number)),
-            Type(DataType::Boolean) => Ok(Type::get_type(value, position)? == Type(DataType::Boolean)),
-            Type(DataType::String) => Ok(Type::get_type(value, position)? == Type(DataType::String)),
+            Type(DataType::Number) => {
+                Ok(Type::get_type(value, position)? == Type(DataType::Number))
+            }
+            Type(DataType::Boolean) => {
+                Ok(Type::get_type(value, position)? == Type(DataType::Boolean))
+            }
+            Type(DataType::String) => {
+                Ok(Type::get_type(value, position)? == Type(DataType::String))
+            }
             Type(DataType::Array(_)) => Ok(Type::get_type(value, position)? == self.clone()),
             Type(DataType::Fn(_)) => Ok(Type::get_type(value, position)? == self.clone()),
             Type(DataType::Generic(_)) => unimplemented!(),
@@ -107,12 +134,19 @@ impl TypeTrait for Type {
     }
 }
 
-pub fn expand_array_type(elements: &Vec<Value>, position: &Position, t_data_type: Option<&DataType>) -> CompileResult<Type> {
+#[inline]
+pub fn expand_array_type(
+    elements: &Vec<Value>,
+    position: &Position,
+    t_data_type /* Comparison target */: Option<&DataType>,
+) -> CompileResult<Type> {
     let data_type = match t_data_type {
         Some(data_type) => data_type.clone(),
         None => {
             if elements.is_empty() {
-                return Err(type_error!(UNKNOWN_ARRAY_TYPE; DataType::Number, DataType::Boolean, DataType::String; position.clone();));
+                return Err(
+                    type_error!(UNKNOWN_ARRAY_TYPE; DataType::Number, DataType::Boolean, DataType::String; position.clone();),
+                );
             }
 
             DataType::Array(Box::new(Type::get_data_type(&elements[0], position)?))
@@ -130,15 +164,30 @@ pub fn expand_array_type(elements: &Vec<Value>, position: &Position, t_data_type
 
     for element in elements {
         if !Type::get_type(element, position)?.eq_from_type(&Type(element_type.clone())) {
-            return Err(type_error!(EXPECTED_DATA_TYPE; element_type.clone(), Type::get_data_type(element, position)?; position.clone();));
+            return Err(
+                type_error!(EXPECTED_DATA_TYPE; element_type.clone(), Type::get_data_type(element, position)?; position.clone();),
+            );
         }
     }
 
     if let Some(t_data_type) = t_data_type {
         if Type(t_data_type.clone()) != Type(data_type.clone()) {
-            return Err(type_error!(EXPECTED_DATA_TYPE; t_data_type.clone(), data_type.clone(); position.clone();));
+            return Err(
+                type_error!(EXPECTED_DATA_TYPE; t_data_type.clone(), data_type.clone(); position.clone();),
+            );
         }
     }
 
     Ok(Type(data_type))
+}
+
+#[inline]
+#[allow(unused_variables)]
+pub fn expand_function_type(
+    parameters: &Vec<(String, DataType)>,
+    body: &Block,
+    position: &Position,
+    t_data_type /* Comparison target */: Option<&DataType>,
+) -> CompileResult<Type> {
+    unimplemented!()
 }
