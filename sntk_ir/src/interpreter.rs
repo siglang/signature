@@ -1,7 +1,10 @@
 use crate::{
     builtin::get_builtin,
     code::{BinaryOp, BinaryOpEq, Block, Instruction, UnaryOp},
-    error::{IrRuntime, INVAILD_ARGUMENTS, INVALID_OPERAND, NOT_A_BOOLEAN, NOT_A_FUNCTION, NOT_A_LITERAL_VALUE, NOT_DEFINED},
+    error::{
+        IrRuntime, INVAILD_ARGUMENTS, INVALID_OPERAND, NOT_A_BOOLEAN, NOT_A_FUNCTION,
+        NOT_A_LITERAL_VALUE, NOT_DEFINED,
+    },
     runtime_error,
     stack::{Environment, Stack, StackTrait},
     value::{LiteralValue, Value},
@@ -70,8 +73,11 @@ impl InstructionTrait for Interpreter {
     }
 
     fn load_name(&mut self, name: String) {
-        self.stack
-            .push(self.environment.get(&name).unwrap_or_else(|| runtime_error!(self; NOT_DEFINED; name)));
+        self.stack.push(
+            self.environment
+                .get(&name)
+                .unwrap_or_else(|| runtime_error!(self; NOT_DEFINED; name)),
+        );
     }
 
     fn store_name(&mut self, name: String) {
@@ -96,7 +102,11 @@ impl InstructionTrait for Interpreter {
                     self.stack.push(Value::LiteralValue(builtin(
                         arguments
                             .iter()
-                            .map(|arg| LiteralValue::try_from(arg.clone()).unwrap_or_else(|value| runtime_error!(self; NOT_A_LITERAL_VALUE; value)))
+                            .map(|arg| {
+                                LiteralValue::try_from(arg.clone()).unwrap_or_else(
+                                    |value| runtime_error!(self; NOT_A_LITERAL_VALUE; value),
+                                )
+                            })
                             .collect(),
                     )));
                 }
@@ -110,13 +120,18 @@ impl InstructionTrait for Interpreter {
                     self.environment.set(parameter.0.clone(), argument.clone());
                 }
 
-                let mut interpreter = Interpreter::new_with(body.0, self.stack.clone(), Environment::new_with_parent(self.environment.clone()));
+                let mut interpreter = Interpreter::new_with(
+                    body.0,
+                    self.stack.clone(),
+                    Environment::new_with_parent(self.environment.clone()),
+                );
                 interpreter.run();
 
                 if let Some(Value::Return(value)) = interpreter.stack.pop_option() {
                     self.stack.push(*value);
                 } else {
-                    self.stack.push(Value::LiteralValue(LiteralValue::Boolean(true)));
+                    self.stack
+                        .push(Value::LiteralValue(LiteralValue::Boolean(true)));
                 }
             }
             _ => runtime_error!(self; NOT_A_FUNCTION; function),
@@ -151,7 +166,11 @@ impl InstructionTrait for Interpreter {
             }
         }
 
-        let mut interpreter = Interpreter::new_with(ins, Stack::new(), Environment::new_with_parent(self.environment.clone()));
+        let mut interpreter = Interpreter::new_with(
+            ins,
+            Stack::new(),
+            Environment::new_with_parent(self.environment.clone()),
+        );
         interpreter.run();
 
         let value = interpreter.stack.pop();
@@ -256,7 +275,11 @@ impl InterpreterBase for Interpreter {
         }
     }
 
-    fn new_with(instructions: Vec<Instruction>, stack: Stack, environment: Environment) -> Interpreter {
+    fn new_with(
+        instructions: Vec<Instruction>,
+        stack: Stack,
+        environment: Environment,
+    ) -> Interpreter {
         Interpreter {
             stack,
             instructions,

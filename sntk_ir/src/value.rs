@@ -26,7 +26,10 @@ pub enum LiteralValue {
     Boolean(bool),
     String(String),
     Array(Vec<Value>),
-    Function { parameters: Vec<(String, DataType)>, body: Block },
+    Function {
+        parameters: Vec<(String, DataType)>,
+        body: Block,
+    },
 }
 
 impl std::fmt::Display for LiteralValue {

@@ -18,7 +18,13 @@ pub struct Print;
 
 impl BuiltIn for Print {
     fn call(arguments: Vec<LiteralValue>) -> LiteralValue {
-        println!("{}", arguments.iter().map(|x| format!("{} ", x)).collect::<String>());
+        println!(
+            "{}",
+            arguments
+                .iter()
+                .map(|x| format!("{} ", x))
+                .collect::<String>()
+        );
 
         LiteralValue::Boolean(true)
     }
