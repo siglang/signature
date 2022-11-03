@@ -111,7 +111,7 @@ impl InstructionTrait for Interpreter {
                     )));
                 }
             }
-            Value::LiteralValue(LiteralValue::Function { parameters, body }) => {
+            Value::LiteralValue(LiteralValue::Function(parameters, body, _)) => {
                 if parameters.len() != argc {
                     runtime_error!(self; INVAILD_ARGUMENTS; format!("expected {} arguments, got {}", parameters.len(), argc));
                 }

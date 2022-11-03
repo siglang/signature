@@ -5,10 +5,14 @@ use sntk_ir::interpreter::InterpreterBase;
 fn main() {
     let parsed = Parser::from(
         r#"
-let x: void = fn(x: number) -> number -> x * 10;
+let x: fn(number, string) -> boolean[] =
+    fn(a: number, b: string) -> boolean[]
+{
+    return [true, false];
+};
 
-print(x(10));
-    "#
+print(x(1, "hello"));
+"#
         .to_string(),
     )
     .parse_program();

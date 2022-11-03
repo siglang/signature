@@ -26,10 +26,7 @@ pub enum LiteralValue {
     Boolean(bool),
     String(String),
     Array(Vec<Value>),
-    Function {
-        parameters: Vec<(String, DataType)>,
-        body: Block,
-    },
+    Function(Vec<(String, DataType)>, Block, DataType),
 }
 
 impl std::fmt::Display for LiteralValue {
@@ -51,7 +48,7 @@ impl std::fmt::Display for LiteralValue {
                     write!(f, "[{}]", string.trim_end_matches(", "))
                 }
             }
-            LiteralValue::Function { parameters, .. } => {
+            LiteralValue::Function(parameters, ..) => {
                 let mut string = String::new();
 
                 for (parameter, data_type) in parameters {
