@@ -490,6 +490,10 @@ impl ParserTrait for Parser {
 
         let mut elements = Vec::new();
 
+        if self.current_token.token_type == Tokens::RBracket {
+            return Ok(ArrayLiteral::new(elements, position! { self }));
+        }
+
         while self.current_token.token_type != Tokens::RBrace {
             elements.push(self.parse_expression(&Priority::Lowest)?);
             self.next_token();
