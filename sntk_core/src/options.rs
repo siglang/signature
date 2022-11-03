@@ -12,9 +12,7 @@ pub struct CompilerOptions {
 
 impl Default for CompilerOptions {
     fn default() -> Self {
-        Self {
-            eee_opt_level: 2.into(),
-        }
+        Self { eee_opt_level: 2.into() }
     }
 }
 
