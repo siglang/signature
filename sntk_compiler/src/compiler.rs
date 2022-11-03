@@ -47,7 +47,7 @@ pub trait CompilerTrait {
     fn compile_let_statement(&mut self, let_statement: &LetStatement) -> CompileResult<()>;
     fn compile_return_statement(&mut self, return_statement: &ReturnStatement) -> CompileResult<()>;
     fn compile_type_statement(&mut self, type_statement: &TypeStatement) -> CompileResult<()>;
-    fn compile_expression(&mut self, expression: &Expression, data_type: Option<DataType>) -> CompileResult<()>;
+    fn compile_expression(&mut self, expression: &Expression, data_type: Option<&DataType>) -> CompileResult<()>;
 }
 
 impl CompilerTrait for Compiler {
@@ -87,7 +87,7 @@ impl CompilerTrait for Compiler {
     fn compile_let_statement(&mut self, let_statement: &LetStatement) -> CompileResult<()> {
         let LetStatement { name, value, data_type, .. } = let_statement;
 
-        self.compile_expression(value, Some(data_type.clone()))?;
+        self.compile_expression(value, Some(data_type))?;
         self.code.push_instruction(&Instruction::StoreName(name.clone().value));
 
         Ok(())
@@ -117,11 +117,11 @@ impl CompilerTrait for Compiler {
     }
 
     /// Compile an expression statement.
-    fn compile_expression(&mut self, expression: &Expression, data_type: Option<DataType>) -> CompileResult<()> {
+    fn compile_expression(&mut self, expression: &Expression, data_type: Option<&DataType>) -> CompileResult<()> {
         macro_rules! match_type {
             ($type:expr; $e:expr; $pos:expr;) => {
                 let data_type = match data_type {
-                    Some(data_type) => data_type,
+                    Some(data_type) => data_type.clone(),
                     None => Type::get_data_type_from_expression($e, &$pos)?,
                 };
 
@@ -178,14 +178,14 @@ impl CompilerTrait for Compiler {
 
             Expression::ArrayLiteral(expression) => {
                 self.code
-                    .push_instruction(&Instruction::LoadConst(type_checked_array(expression, data_type.clone())?));
+                    .push_instruction(&Instruction::LoadConst(type_checked_array(expression, data_type)?));
 
                 Ok(())
             }
 
             Expression::FunctionLiteral(expression) => {
                 self.code
-                    .push_instruction(&Instruction::LoadConst(type_checked_function(expression, data_type.clone())?));
+                    .push_instruction(&Instruction::LoadConst(type_checked_function(expression, data_type)?));
 
                 Ok(())
             }
@@ -215,8 +215,8 @@ impl CompilerTrait for Compiler {
                 let left_data_type = Type::get_data_type_from_expression(left, position)?;
                 let right_data_type = Type::get_data_type_from_expression(right, position)?;
 
-                self.compile_expression(left, Some(right_data_type.clone()))?;
-                self.compile_expression(right, Some(left_data_type.clone()))?;
+                self.compile_expression(left, Some(&right_data_type))?;
+                self.compile_expression(right, Some(&left_data_type))?;
 
                 if let Some(data_type) = data_type {
                     if !Type(data_type.clone()).eq_from_type(&Type(left_data_type.clone())) {

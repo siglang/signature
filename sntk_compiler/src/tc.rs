@@ -1,7 +1,3 @@
-#![allow(unused_imports)] // TODO: remove this
-
-use core::panic;
-
 use crate::{
     compiler::CompileResult,
     error::{CompileError, TypeError, EXPECTED_DATA_TYPE, UNKNOWN_ARRAY_TYPE},
@@ -11,7 +7,6 @@ use crate::{
 use sntk_core::parser::ast::{DataType, Expression, FunctionType, Position};
 use sntk_ir::{
     code::{BinaryOp, Block, Instruction, UnaryOp},
-    interpreter::{Interpreter, InterpreterBase},
     value::{LiteralValue, Value},
 };
 
@@ -36,42 +31,13 @@ impl TypeTrait for Type {
                 LiteralValue::Number(_) => Ok(Type(DataType::Number)),
                 LiteralValue::Boolean(_) => Ok(Type(DataType::Boolean)),
                 LiteralValue::String(_) => Ok(Type(DataType::String)),
-                LiteralValue::Array(elements) => {
-                    let mut data_type = DataType::Array(Box::new(DataType::Unknown));
-
-                    if elements.is_empty() {
-                        return Err(type_error!(UNKNOWN_ARRAY_TYPE; data_type; position.clone();));
-                    }
-
-                    data_type = Type::get_data_type(&elements[0], position)?;
-
-                    for element in elements {
-                        if !Type::eq_from_value(&Type(data_type.clone()), element, position)? {
-                            return Err(type_error!(EXPECTED_DATA_TYPE; data_type, Type::get_data_type(element, position)?; position.clone();));
-                        }
-                    }
-
-                    Ok(Type(DataType::Array(Box::new(data_type))))
-                }
-                #[allow(unused_variables)]
+                LiteralValue::Array(elements) => expand_array_type(elements, position, None),
                 LiteralValue::Function { parameters, body } => {
-                    unimplemented!();
-
-                    // let return_type = match body[body.len() - 1] {
-                    //     Instruction::Return => {
-                    //         match &body[body.len() - 2] {
-                    //             Instruction::LoadConst(value) => Type::get_data_type(value, position)?,
-                    //             _ => DataType::Boolean, // TODO: Change this to Unit type
-                    //         }
-                    //     }
-                    //     _ => DataType::Boolean,
-                    // };
-
-                    // Ok(Type(DataType::Fn(FunctionType::new(
-                    //     None, // TODO: Generic type
-                    //     parameters.iter().map(|parameter| parameter.1.clone()).collect(),
-                    //     return_type,
-                    // ))))
+                    Ok(Type(DataType::Fn(FunctionType::new(
+                        None, // TODO: Generic type
+                        parameters.iter().map(|parameter| parameter.1.clone()).collect(),
+                        Type::get_type_from_instruction(body.0.clone(), position)?.0,
+                    ))))
                 }
             },
             Value::Identifier(_) => unimplemented!(),
@@ -92,7 +58,7 @@ impl TypeTrait for Type {
     }
 
     fn get_type_from_instruction(instruction: Vec<Instruction>, position: &Position) -> CompileResult<Type> {
-        match instruction.last().unwrap() {
+        match instruction.last().unwrap() /* TODO: Error Handling */ {
             Instruction::LoadConst(value) => Type::get_type(value, position),
             Instruction::BinaryOp(op) => match op {
                 BinaryOp::Add => {
@@ -139,4 +105,40 @@ impl TypeTrait for Type {
     fn eq_from_type(&self, other: &Type) -> bool {
         self.0 == other.0
     }
+}
+
+pub fn expand_array_type(elements: &Vec<Value>, position: &Position, t_data_type: Option<&DataType>) -> CompileResult<Type> {
+    let data_type = match t_data_type {
+        Some(data_type) => data_type.clone(),
+        None => {
+            if elements.is_empty() {
+                return Err(type_error!(UNKNOWN_ARRAY_TYPE; DataType::Number, DataType::Boolean, DataType::String; position.clone();));
+            }
+
+            DataType::Array(Box::new(Type::get_data_type(&elements[0], position)?))
+        }
+    };
+
+    let element_type = match data_type.clone() {
+        DataType::Array(element) => *element,
+        data_type => {
+            return Err(
+                type_error! { EXPECTED_DATA_TYPE; data_type, DataType::Array(Box::new(Type::get_data_type(&elements[0], position)?)); position.clone(); },
+            )
+        }
+    };
+
+    for element in elements {
+        if !Type::get_type(element, position)?.eq_from_type(&Type(element_type.clone())) {
+            return Err(type_error!(EXPECTED_DATA_TYPE; element_type.clone(), Type::get_data_type(element, position)?; position.clone();));
+        }
+    }
+
+    if let Some(t_data_type) = t_data_type {
+        if Type(t_data_type.clone()) != Type(data_type.clone()) {
+            return Err(type_error!(EXPECTED_DATA_TYPE; t_data_type.clone(), data_type.clone(); position.clone();));
+        }
+    }
+
+    Ok(Type(data_type))
 }

@@ -1,7 +1,7 @@
 use crate::{
     compiler::{CompileResult, Compiler, CompilerTrait},
     error::{CompileError, TypeError, EXPECTED_DATA_TYPE},
-    tc::{Type, TypeTrait},
+    tc::{Type, TypeTrait, expand_array_type},
     type_error,
 };
 use sntk_core::parser::ast::{
@@ -54,57 +54,38 @@ pub fn compile_block(statements: Vec<Statement>, position: &Position) -> Compile
 }
 
 #[inline(always)]
-pub fn type_checked_array(expression: &ArrayLiteral, data_type: Option<DataType>) -> CompileResult<Value> {
-    let ArrayLiteral { elements, position } = expression;
-
+pub fn type_checked_array(expression: &ArrayLiteral, data_type: Option<&DataType>) -> CompileResult<Value> {
     let array = literal_value(Expression::ArrayLiteral(expression.clone()))?;
-    let array_type = Type::get_data_type(&array, position)?;
-
-    match &array_type {
-        DataType::Array(array_type) => {
-            for element in elements.clone() {
-                let element_type = Type::get_data_type_from_expression(&element, position)?;
-
-                if !Type(*array_type.clone()).eq_from_type(&Type(element_type.clone())) {
-                    return Err(type_error! { EXPECTED_DATA_TYPE; array_type, element_type; position.clone(); });
-                }
-            }
-        }
-        r#type => {
-            return Err(type_error! { EXPECTED_DATA_TYPE; match data_type {
-                Some(data_type) => data_type,
-                None => DataType::Array(Box::new(DataType::Unknown)),
-            }, r#type; position.clone(); })
-        }
-    }
-
-    let data_type = match data_type {
-        Some(data_type) => data_type,
-        None => Type::get_data_type_from_expression(&Expression::ArrayLiteral(expression.clone()), position)?,
+    let array_type = match literal_value(Expression::ArrayLiteral(expression.clone()))? {
+        Value::LiteralValue(LiteralValue::Array(array)) => expand_array_type(&array, &expression.position, data_type)?,
+        _ => unreachable!(),
     };
 
-    if !Type(data_type.clone()).eq_from_type(&Type(array_type.clone())) {
-        return Err(type_error! { EXPECTED_DATA_TYPE; array_type, data_type; position.clone(); });
+    let data_type = match data_type {
+        Some(data_type) => data_type.clone(),
+        None => Type::get_data_type_from_expression(&Expression::ArrayLiteral(expression.clone()), &expression.position)?,
+    };
+
+    if !Type(data_type.clone()).eq_from_type(&array_type.clone()) {
+        return Err(type_error! { EXPECTED_DATA_TYPE; array_type.0, data_type; expression.position.clone(); });
     }
 
     Ok(array)
 }
 
 #[inline(always)]
-#[allow(unused_variables)]
-pub fn type_checked_function(expression: &FunctionLiteral, data_type: Option<DataType>) -> CompileResult<Value> {
-    let FunctionLiteral {
-        generics,
-        parameters,
-        return_type,
-        body,
-        position,
-    } = expression;
-
+pub fn type_checked_function(expression: &FunctionLiteral, data_type: Option<&DataType>) -> CompileResult<Value> {
     let function = literal_value(Expression::FunctionLiteral(expression.clone()))?;
-    let function_type = Type::get_data_type(&function, position)?;
+    let function_type = Type::get_data_type(&function, &expression.position)?;
 
-    println!("function_type: {:?}", function_type);
+    let data_type = match data_type {
+        Some(data_type) => data_type.clone(),
+        None => Type::get_data_type_from_expression(&Expression::FunctionLiteral(expression.clone()), &expression.position)?,
+    };
+
+    if !Type(data_type.clone()).eq_from_type(&Type(function_type.clone())) {
+        return Err(type_error! { EXPECTED_DATA_TYPE; function_type, data_type; expression.position.clone(); });
+    }
 
     Ok(function)
 }
