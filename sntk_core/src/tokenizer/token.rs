@@ -14,7 +14,7 @@ pub enum Tokens {
 
     LT, GT, LTE, GTE, EQ, NEQ,
 
-    Let, If, Else, Return, Function, Type, Struct,
+    Let, If, Else, Return, Function, Type, Struct, Typeof,
 
     NumberType, StringType, BooleanType, /* ArrayType = type[] */ /* FnType = Function */ VoidType,
 }
@@ -32,6 +32,7 @@ where
             "fn" => Tokens::Function,
             "type" => Tokens::Type,
             "struct" => Tokens::Struct,
+            "typeof" => Tokens::Typeof,
             "true" => Tokens::Boolean(true),
             "false" => Tokens::Boolean(false),
             "number" => Tokens::NumberType,

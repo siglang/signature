@@ -51,6 +51,8 @@ pub enum Expression {
     FunctionLiteral(FunctionLiteral),
     /// `function(arguments)`: a function call expression. `arguments` is a list of expressions.
     CallExpression(CallExpression),
+    /// `typeof value`: a type expression. this expression returns the type of the value.
+    TypeofExpression(TypeofExpression),
     /// `"Hello, World!"`: a string literal. it starts and ends with double quotes (`"`).
     StringLiteral(StringLiteral),
     /// `123.45`: a number literal. allows floating point numbers.
@@ -59,8 +61,9 @@ pub enum Expression {
     ArrayLiteral(ArrayLiteral),
     /// `true` or `false`: a boolean literal. it is a keyword.
     BooleanLiteral(BooleanLiteral),
-    /// `array[index]`: an index expression. an array or hash can access it.
+    /// `array[index]`: an index expression. an array can access it.
     IndexExpression(IndexExpression),
+    /// `struct { field: value, ... }`: a struct literal.` 
     StructLiteral(StructLiteral),
 }
 
@@ -199,6 +202,7 @@ make_struct! { ExpressionStatement => expression: Expression }
 make_struct! { BlockExpression => statements: Vec<Statement> }
 make_struct! { IfExpression => condition: Box<Expression>, consequence: Box<BlockExpression>, alternative: Option<Box<BlockExpression>> }
 make_struct! { CallExpression => function: Box<Expression>, arguments: Vec<Expression> }
+make_struct! { TypeofExpression => expression: Box<Expression> }
 make_struct! { IndexExpression => left: Box<Expression>, index: Box<Expression> }
 make_struct! { PrefixExpression => operator: Tokens, right: Box<Expression> }
 make_struct! { InfixExpression => left: Box<Expression>, operator: Tokens, right: Box<Expression> }

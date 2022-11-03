@@ -1,3 +1,4 @@
+use crate::parser::ast::TypeofExpression;
 use crate::{
     ident,
     options::CompilerOptions,
@@ -378,6 +379,14 @@ impl ParserTrait for Parser {
             Tokens::Function => Some(Ok(Expression::FunctionLiteral(self.parse_function_literal()?))),
             Tokens::Struct => Some(Ok(Expression::StructLiteral(self.parse_struct_literal()?))),
             Tokens::If => Some(Ok(Expression::IfExpression(self.parse_if_expression()?))),
+            Tokens::Typeof => {
+                self.next_token();
+
+                Some(Ok(Expression::TypeofExpression(TypeofExpression::new(
+                    Box::new(self.parse_expression(&Priority::Lowest)?),
+                    position! { self },
+                ))))
+            }
             _ => None,
         };
 
