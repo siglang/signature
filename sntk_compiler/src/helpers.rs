@@ -35,6 +35,7 @@ pub fn literal_value(expression: Expression) -> CompileResult<Value> {
         Expression::FunctionLiteral(FunctionLiteral {
             parameters,
             body,
+            return_type,
             position,
             ..
         }) => {
@@ -49,13 +50,14 @@ pub fn literal_value(expression: Expression) -> CompileResult<Value> {
                 }
             }
 
-            Value::LiteralValue(LiteralValue::Function {
-                parameters: parameters
+            Value::LiteralValue(LiteralValue::Function(
+                parameters
                     .iter()
                     .map(|p| (p.clone().0.value, p.clone().1))
                     .collect(),
-                body: compile_block(statments, &position)?.0,
-            })
+                compile_block(statments, &position)?.0,
+                return_type,
+            ))
         }
         value => panic!("Unexpected value: {:?}", value),
     })
@@ -74,7 +76,9 @@ pub fn compile_block(
 
     Ok((
         block.clone(),
-        Type::get_data_type_from_instruction(block.0, position)?,
+        Type::get_data_type_from_instruction(block.0, position)
+            .transpose()?
+            .unwrap_or(DataType::Void),
     ))
 }
 
@@ -115,8 +119,14 @@ pub fn type_checked_function(
 ) -> CompileResult<Value> {
     let function = literal_value(Expression::FunctionLiteral(expression.clone()))?;
     let function_type = match literal_value(Expression::FunctionLiteral(expression.clone()))? {
-        Value::LiteralValue(LiteralValue::Function { parameters, body }) => {
-            expand_function_type(&parameters, &body, &expression.position, data_type)?
+        Value::LiteralValue(LiteralValue::Function(parameters, body, return_type)) => {
+            expand_function_type(
+                &parameters,
+                &body,
+                &return_type,
+                &expression.position,
+                data_type,
+            )?
         }
         _ => unreachable!(),
     };

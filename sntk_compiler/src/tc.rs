@@ -1,10 +1,13 @@
 use crate::{
     compiler::CompileResult,
-    error::{CompileError, TypeError, EXPECTED_DATA_TYPE, UNKNOWN_ARRAY_TYPE},
+    error::{
+        CompileError, TypeError, EXPECTED_DATA_TYPE, UNEXPECTED_PARAMETER_LENGTH,
+        UNKNOWN_ARRAY_TYPE,
+    },
     helpers::literal_value,
     type_error,
 };
-use sntk_core::parser::ast::{DataType, Expression, Position};
+use sntk_core::parser::ast::{DataType, Expression, FunctionType, Position};
 use sntk_ir::{
     code::{BinaryOp, Block, Instruction, UnaryOp},
     value::{LiteralValue, Value},
@@ -27,11 +30,11 @@ pub trait TypeTrait {
     fn get_type_from_instruction(
         instruction: Vec<Instruction>,
         position: &Position,
-    ) -> CompileResult<Type>;
+    ) -> Option<CompileResult<Type>>;
     fn get_data_type_from_instruction(
         instruction: Vec<Instruction>,
         position: &Position,
-    ) -> CompileResult<DataType>;
+    ) -> Option<CompileResult<DataType>>;
     fn eq_from_value(&self, value: &Value, position: &Position) -> CompileResult<bool>;
     fn eq_from_type(&self, other: &Type) -> bool;
 }
@@ -44,8 +47,8 @@ impl TypeTrait for Type {
                 LiteralValue::Boolean(_) => Ok(Type(DataType::Boolean)),
                 LiteralValue::String(_) => Ok(Type(DataType::String)),
                 LiteralValue::Array(elements) => expand_array_type(elements, position, None),
-                LiteralValue::Function { parameters, body } => {
-                    expand_function_type(parameters, body, position, None)
+                LiteralValue::Function(parameters, body, return_type) => {
+                    expand_function_type(parameters, body, return_type, position, None)
                 }
             },
             Value::Identifier(_) => unimplemented!(),
@@ -74,19 +77,24 @@ impl TypeTrait for Type {
     fn get_type_from_instruction(
         instruction: Vec<Instruction>,
         position: &Position,
-    ) -> CompileResult<Type> {
-        // println!("instruction: {:?}", instruction); TODO
-        match instruction.last().unwrap() /* TODO: Error Handling */ {
+    ) -> Option<CompileResult<Type>> {
+        Some(match instruction.last()? /* TODO: Error Handling */ {
             Instruction::LoadConst(value) => Type::get_type(value, position),
             Instruction::BinaryOp(op) => match op {
                 BinaryOp::Add => {
-                    let left = Type::get_type_from_instruction(Vec::from(&instruction[0..instruction.len() - 1]), position)?;
-                    let right = Type::get_type_from_instruction(Vec::from(&instruction[1..instruction.len()]), position)?;
+                    let left = match Type::get_type_from_instruction(Vec::from(&instruction[0..instruction.len() - 1]), position)? {
+                        Ok(t) => t,
+                        Err(e) => return Some(Err(e)),
+                    };
+                    let right = match Type::get_type_from_instruction(Vec::from(&instruction[1..instruction.len()]), position)? {
+                        Ok(t) => t,
+                        Err(e) => return Some(Err(e)),
+                    };
 
                     if left.eq_from_type(&right) {
                         Ok(left)
                     } else {
-                        Err(type_error!(EXPECTED_DATA_TYPE; left.0, right.0; position.clone();))
+                        Err(type_error! { EXPECTED_DATA_TYPE; left.0, right.0; position.clone(); })
                     }
                 }
                 BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod => Ok(Type(DataType::Number)),
@@ -96,17 +104,22 @@ impl TypeTrait for Type {
                 UnaryOp::Not => Ok(Type(DataType::Boolean)),
                 UnaryOp::Minus => Ok(Type(DataType::Number)),
             },
-            Instruction::Block(Block(instructions)) => Type::get_type_from_instruction(instructions.to_vec(), position),
-            Instruction::Return => Type::get_type_from_instruction(Vec::from(&instruction[instruction.len() - 2..1]), position),
+            Instruction::Block(Block(instructions)) => {
+                Type::get_type_from_instruction(instructions.clone(), position)?
+            }
+            Instruction::Return => match Type::get_type_from_instruction(Vec::from(&instruction[instruction.len() - 2..1]), position)? {
+                Ok(t) => Ok(t),
+                Err(e) => return Some(Err(e)),
+            },
             _ => panic!("Invalid instruction"),
-        }
+        })
     }
 
     fn get_data_type_from_instruction(
         instruction: Vec<Instruction>,
         position: &Position,
-    ) -> CompileResult<DataType> {
-        Ok(Type::get_type_from_instruction(instruction, position)?.0)
+    ) -> Option<CompileResult<DataType>> {
+        Some(Type::get_type_from_instruction(instruction, position)?.map(|t| t.0))
     }
 
     fn eq_from_value(&self, value: &Value, position: &Position) -> CompileResult<bool> {
@@ -145,7 +158,7 @@ pub fn expand_array_type(
         None => {
             if elements.is_empty() {
                 return Err(
-                    type_error!(UNKNOWN_ARRAY_TYPE; DataType::Number, DataType::Boolean, DataType::String; position.clone();),
+                    type_error! { UNKNOWN_ARRAY_TYPE; DataType::Number, DataType::Boolean, DataType::String; position.clone(); },
                 );
             }
 
@@ -165,7 +178,7 @@ pub fn expand_array_type(
     for element in elements {
         if !Type::get_type(element, position)?.eq_from_type(&Type(element_type.clone())) {
             return Err(
-                type_error!(EXPECTED_DATA_TYPE; element_type.clone(), Type::get_data_type(element, position)?; position.clone();),
+                type_error! { EXPECTED_DATA_TYPE; element_type.clone(), Type::get_data_type(element, position)?; position.clone(); },
             );
         }
     }
@@ -173,7 +186,7 @@ pub fn expand_array_type(
     if let Some(t_data_type) = t_data_type {
         if Type(t_data_type.clone()) != Type(data_type.clone()) {
             return Err(
-                type_error!(EXPECTED_DATA_TYPE; t_data_type.clone(), data_type.clone(); position.clone();),
+                type_error! { EXPECTED_DATA_TYPE; t_data_type.clone(), data_type.clone(); position.clone(); },
             );
         }
     }
@@ -182,12 +195,95 @@ pub fn expand_array_type(
 }
 
 #[inline]
-#[allow(unused_variables)]
 pub fn expand_function_type(
     parameters: &Vec<(String, DataType)>,
     body: &Block,
+    return_type: &DataType,
     position: &Position,
     t_data_type /* Comparison target */: Option<&DataType>,
 ) -> CompileResult<Type> {
-    unimplemented!()
+    let data_type = match t_data_type {
+        Some(data_type) => data_type.clone(),
+        None => {
+            if body.0.is_empty() {
+                DataType::Fn(FunctionType(
+                    None,
+                    parameters.clone().iter().map(|x| x.clone().1).collect(),
+                    Box::new(DataType::Void),
+                ))
+            } else {
+                DataType::Fn(FunctionType(
+                    None,
+                    parameters.clone().iter().map(|x| x.clone().1).collect(),
+                    Box::new(
+                        Type::get_type_from_instruction(body.0.clone(), position)
+                            .transpose()?
+                            .map(|t| t.0)
+                            .unwrap_or(DataType::Void),
+                    ),
+                ))
+            }
+        }
+    };
+
+    let function_type = match data_type.clone() {
+        DataType::Fn(function_type) => function_type,
+        data_type => {
+            return Err(type_error! {
+                EXPECTED_DATA_TYPE;
+                data_type,
+                DataType::Fn(FunctionType(
+                    None,
+                    parameters.clone().iter().map(|x| x.clone().1).collect(),
+                    Box::new(DataType::Void),
+                ));
+                position.clone();
+            });
+        }
+    };
+
+    if parameters.len() != function_type.1.len() {
+        return Err(type_error! { UNEXPECTED_PARAMETER_LENGTH; ; position.clone(); });
+    }
+
+    for (i, parameter) in parameters.iter().enumerate() {
+        if parameter.1 != function_type.1[i] {
+            return Err(
+                type_error! { EXPECTED_DATA_TYPE; function_type.1[i], parameter.1; position.clone(); },
+            );
+        }
+    }
+
+    let body_return_type = if body.0.is_empty() {
+        DataType::Void
+    } else {
+        Type::get_type_from_instruction(body.0.clone(), position)
+            .transpose()?
+            .map(|t| t.0)
+            .unwrap_or(DataType::Void)
+    };
+
+    let function_return_type = return_type;
+
+    if function_return_type != &body_return_type {
+        return Err(
+            type_error! { EXPECTED_DATA_TYPE; function_return_type, body_return_type; position.clone(); },
+        );
+    }
+
+    if let Some(t_data_type) = t_data_type {
+        let original_function_type = FunctionType(
+            None,
+            parameters.clone().iter().map(|x| x.clone().1).collect(),
+            Box::new(return_type.clone()),
+        );
+
+        if Type(t_data_type.clone()) != Type(DataType::Fn(original_function_type.clone())) {
+            return Err(
+                type_error! { EXPECTED_DATA_TYPE; t_data_type.clone(), DataType::Fn(original_function_type); position.clone(); },
+            );
+        }
+    }
+
+    Ok(Type(data_type))
 }
