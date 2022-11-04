@@ -8,10 +8,10 @@ fn main() {
     let parsed = Parser::from(
         r#"
 auto x = fn(a: number, b: string) -> 
-    fn() -> number[][] ->
-        fn() -> number[][] -> [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+    fn() -> string ->
+        fn() -> string[] -> [typeof a, typeof b];
 
-print(x(1, "hello")());
+print(x(1, "hello")(), "typeof:", typeof x);
 "#
         .to_string(),
     )

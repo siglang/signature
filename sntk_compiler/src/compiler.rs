@@ -1,7 +1,7 @@
 use crate::{
     error::{CompileError, TypeError, EXPECTED_DATA_TYPE},
-    helpers::{compile_block, literal_value, type_checked_array, type_checked_function},
-    tc::{Type, TypeTrait},
+    helpers::{compile_block, last_instruction_data_type, literal_value, type_checked_array, type_checked_function},
+    tc::{SharedTypeEnvironment, Type, TypeEnvironment, TypeTrait},
     type_error,
 };
 use sntk_core::{
@@ -17,6 +17,7 @@ use sntk_ir::{
     code::{BinaryOp, BinaryOpEq, Instruction, UnaryOp},
     interpreter::{Interpreter, InterpreterBase},
 };
+use std::{cell::RefCell, rc::Rc};
 
 #[derive(Debug, Clone)]
 pub struct Code(pub Vec<Instruction>);
@@ -35,12 +36,14 @@ impl Code {
 pub struct Compiler {
     pub program: Program,
     pub code: Code,
+    pub type_environment: SharedTypeEnvironment,
 }
 
 pub type CompileResult<T> = Result<T, CompileError>;
 
 pub trait CompilerTrait {
     fn new(program: Program) -> Self;
+    fn new_with_type_environment(program: Program, type_environment: SharedTypeEnvironment) -> Self;
     fn compile_program(&mut self) -> CompileResult<Interpreter>;
     fn compile_let_statement(&mut self, let_statement: &LetStatement) -> CompileResult<()>;
     fn compile_auto_statement(&mut self, auto_statement: &AutoStatement) -> CompileResult<()>;
@@ -51,7 +54,19 @@ pub trait CompilerTrait {
 
 impl CompilerTrait for Compiler {
     fn new(program: Program) -> Self {
-        Self { program, code: Code::new() }
+        Self {
+            program,
+            code: Code::new(),
+            type_environment: Rc::new(RefCell::new(TypeEnvironment::new())),
+        }
+    }
+
+    fn new_with_type_environment(program: Program, type_environment: SharedTypeEnvironment) -> Self {
+        Self {
+            program,
+            code: Code::new(),
+            type_environment,
+        }
     }
 
     fn compile_program(&mut self) -> CompileResult<Interpreter> {
@@ -77,6 +92,11 @@ impl CompilerTrait for Compiler {
         let LetStatement { name, value, data_type, .. } = let_statement;
 
         self.compile_expression(value, Some(data_type))?;
+
+        if let Some(data_type) = last_instruction_data_type(&self.code.0, &let_statement.position, Rc::clone(&self.type_environment))? {
+            self.type_environment.borrow_mut().set(name.value.clone(), data_type);
+        }
+
         self.code.push_instruction(&Instruction::StoreName(name.clone().value));
 
         Ok(())
@@ -86,6 +106,11 @@ impl CompilerTrait for Compiler {
         let AutoStatement { name, value, .. } = auto_statement;
 
         self.compile_expression(value, None)?;
+
+        if let Some(data_type) = last_instruction_data_type(&self.code.0, &auto_statement.position, Rc::clone(&self.type_environment))? {
+            self.type_environment.borrow_mut().set(name.value.clone(), data_type);
+        }
+
         self.code.push_instruction(&Instruction::StoreName(name.clone().value));
 
         Ok(())
@@ -109,7 +134,7 @@ impl CompilerTrait for Compiler {
             ($type:expr; $e:expr; $pos:expr;) => {
                 let data_type = match data_type {
                     Some(data_type) => data_type.clone(),
-                    None => Type::get_data_type_from_expression($e, &$pos)?,
+                    None => Type::get_data_type_from_expression($e, &$pos, Rc::clone(&self.type_environment))?,
                 };
 
                 if !Type(data_type.clone()).eq_from_type(&Type($type)) {
@@ -120,7 +145,7 @@ impl CompilerTrait for Compiler {
 
         match expression {
             Expression::BlockExpression(BlockExpression { statements, position }) => {
-                let block = compile_block(statements.clone(), position)?;
+                let block = compile_block(statements.clone(), position, Rc::clone(&self.type_environment))?;
 
                 if let Some(data_type) = data_type {
                     if !Type(block.clone().1).eq_from_type(&Type(data_type.clone())) {
@@ -142,7 +167,10 @@ impl CompilerTrait for Compiler {
             Expression::NumberLiteral(NumberLiteral { position, .. }) => {
                 match_type! { DataType::Number; expression; position.clone(); };
 
-                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())?));
+                self.code.push_instruction(&Instruction::LoadConst(literal_value(
+                    expression.clone(),
+                    Rc::clone(&self.type_environment),
+                )?));
 
                 Ok(())
             }
@@ -150,7 +178,10 @@ impl CompilerTrait for Compiler {
             Expression::StringLiteral(StringLiteral { position, .. }) => {
                 match_type! { DataType::String; expression; position.clone(); };
 
-                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())?));
+                self.code.push_instruction(&Instruction::LoadConst(literal_value(
+                    expression.clone(),
+                    Rc::clone(&self.type_environment),
+                )?));
 
                 Ok(())
             }
@@ -158,21 +189,30 @@ impl CompilerTrait for Compiler {
             Expression::BooleanLiteral(BooleanLiteral { position, .. }) => {
                 match_type! { DataType::Boolean; expression; position.clone(); };
 
-                self.code.push_instruction(&Instruction::LoadConst(literal_value(expression.clone())?));
+                self.code.push_instruction(&Instruction::LoadConst(literal_value(
+                    expression.clone(),
+                    Rc::clone(&self.type_environment),
+                )?));
 
                 Ok(())
             }
 
             Expression::ArrayLiteral(expression) => {
-                self.code
-                    .push_instruction(&Instruction::LoadConst(type_checked_array(expression, data_type)?));
+                self.code.push_instruction(&Instruction::LoadConst(type_checked_array(
+                    expression,
+                    data_type,
+                    Rc::clone(&self.type_environment),
+                )?));
 
                 Ok(())
             }
 
             Expression::FunctionLiteral(expression) => {
-                self.code
-                    .push_instruction(&Instruction::LoadConst(type_checked_function(expression, data_type)?));
+                self.code.push_instruction(&Instruction::LoadConst(type_checked_function(
+                    expression,
+                    data_type,
+                    Rc::clone(&self.type_environment),
+                )?));
 
                 Ok(())
             }
@@ -199,8 +239,8 @@ impl CompilerTrait for Compiler {
                 right,
                 position,
             }) => {
-                let left_data_type = Type::get_data_type_from_expression(left, position)?;
-                let right_data_type = Type::get_data_type_from_expression(right, position)?;
+                let left_data_type = Type::get_data_type_from_expression(left, position, Rc::clone(&self.type_environment))?;
+                let right_data_type = Type::get_data_type_from_expression(right, position, Rc::clone(&self.type_environment))?;
 
                 self.compile_expression(left, Some(&right_data_type))?;
                 self.compile_expression(right, Some(&left_data_type))?;
@@ -263,10 +303,10 @@ impl CompilerTrait for Compiler {
                 self.compile_expression(condition, None)?;
 
                 self.code.push_instruction(&Instruction::If(
-                    compile_block(consequence.statements.clone(), position)?.0,
+                    compile_block(consequence.statements.clone(), position, Rc::clone(&self.type_environment))?.0,
                     alternative
                         .clone()
-                        .map(|expression| compile_block(expression.statements.clone(), position))
+                        .map(|expression| compile_block(expression.statements.clone(), position, Rc::clone(&self.type_environment)))
                         .transpose()?
                         .map(|block| block.0),
                 ));
@@ -277,7 +317,7 @@ impl CompilerTrait for Compiler {
             Expression::TypeofExpression(TypeofExpression { expression, position }) => {
                 self.compile_expression(
                     &Expression::StringLiteral(StringLiteral {
-                        value: Type::get_data_type_from_expression(expression, position)?.to_string(),
+                        value: Type::get_data_type_from_expression(expression, position, Rc::clone(&self.type_environment))?.to_string(),
                         position: position.clone(),
                     }),
                     None,
