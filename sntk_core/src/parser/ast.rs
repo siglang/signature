@@ -18,6 +18,7 @@ impl Program {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Statement {
     LetStatement(LetStatement),
+    AutoStatement(AutoStatement),
     ReturnStatement(ReturnStatement),
     TypeStatement(TypeStatement),
     StructStatement(StructStatement),
@@ -159,8 +160,9 @@ macro_rules! make_struct {
 make_struct! { @data_type LetStatement => name: Identifier, value: Expression }
 make_struct! { @data_type TypeStatement => name: Identifier, generics: IdentifierGeneric }
 
-make_struct! { ReturnStatement => value: Expression }
+make_struct! { AutoStatement => name: Identifier, value: Expression }
 make_struct! { StructStatement => name: Identifier, generics: IdentifierGeneric, fields: Vec<(Identifier, DataType)> }
+make_struct! { ReturnStatement => value: Expression }
 make_struct! { ExpressionStatement => expression: Expression }
 
 make_struct! { BlockExpression => statements: Vec<Statement> }

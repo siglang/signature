@@ -6,9 +6,9 @@ use crate::{
 };
 use sntk_core::{
     parser::ast::{
-        BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression,
-        IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral,
-        TypeStatement, TypeofExpression,
+        AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, Identifier,
+        IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement, Statement,
+        StringLiteral, TypeStatement, TypeofExpression,
     },
     tokenizer::token::Tokens,
 };
@@ -43,6 +43,7 @@ pub trait CompilerTrait {
     fn new(program: Program) -> Self;
     fn compile_program(&mut self) -> CompileResult<Interpreter>;
     fn compile_let_statement(&mut self, let_statement: &LetStatement) -> CompileResult<()>;
+    fn compile_auto_statement(&mut self, auto_statement: &AutoStatement) -> CompileResult<()>;
     fn compile_return_statement(&mut self, return_statement: &ReturnStatement) -> CompileResult<()>;
     fn compile_type_statement(&mut self, type_statement: &TypeStatement) -> CompileResult<()>;
     fn compile_expression(&mut self, expression: &Expression, data_type: Option<&DataType>) -> CompileResult<()>;
@@ -61,6 +62,7 @@ impl CompilerTrait for Compiler {
         for statement in self.program.statements.clone() {
             match statement {
                 Statement::LetStatement(statement) => self.compile_let_statement(&statement)?,
+                Statement::AutoStatement(statement) => self.compile_auto_statement(&statement)?,
                 Statement::ReturnStatement(statement) => self.compile_return_statement(&statement)?,
                 Statement::TypeStatement(statement) => self.compile_type_statement(&statement)?,
                 Statement::StructStatement(_) => unimplemented!(),
@@ -75,6 +77,15 @@ impl CompilerTrait for Compiler {
         let LetStatement { name, value, data_type, .. } = let_statement;
 
         self.compile_expression(value, Some(data_type))?;
+        self.code.push_instruction(&Instruction::StoreName(name.clone().value));
+
+        Ok(())
+    }
+
+    fn compile_auto_statement(&mut self, auto_statement: &AutoStatement) -> CompileResult<()> {
+        let AutoStatement { name, value, .. } = auto_statement;
+
+        self.compile_expression(value, None)?;
         self.code.push_instruction(&Instruction::StoreName(name.clone().value));
 
         Ok(())

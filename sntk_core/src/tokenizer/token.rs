@@ -13,7 +13,7 @@ pub enum Tokens {
 
     LT, GT, LTE, GTE, EQ, NEQ,
 
-    Let, If, Else, Return, Function, Type, Struct, Typeof,
+    Let, Auto, If, Else, Return, Function, Type, Struct, Typeof,
 
     NumberType, StringType, BooleanType, VoidType,
 }
@@ -22,6 +22,7 @@ impl From<String> for Tokens {
     fn from(s: String) -> Self {
         match s.as_str() {
             "let" => Tokens::Let,
+            "auto" => Tokens::Auto,
             "if" => Tokens::If,
             "else" => Tokens::Else,
             "return" => Tokens::Return,

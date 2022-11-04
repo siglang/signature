@@ -10,21 +10,26 @@
 ### `LetStatement`
 
 -   `LetStatement`
-    -   `let`[^keyword] [`Identifier`](#identifier)`:` [`Type`](#types)[^type] `=` [`Expression`](#expression) `;`
+    -   `let`[^keyword] [`Identifier`](#identifier)`:` [`Type`](#types)[^type] `=` [`Expression`](#expression)`;`
+
+### `AutoStatement`
+
+-   `AutoStatement`
+    -   `auto`[^keyword] [`Identifier`](#identifier) `=` [`Expression`](#expression)`;`
 
 <br />
 
 ### `TypeStatement`
 
 -   `TypeStatement`
-    -   `type`[^keyword] [`Identifier`](#identifier) [_`Generics`_](#generics)[^optional] `=` [`Type`](#types)[^type] `;`
+    -   `type`[^keyword] [`Identifier`](#identifier) [_`Generics`_](#generics)[^optional] `=` [`Type`](#types)[^type]`;`
 
 <br />
 
 ### `ReturnStatement`
 
 -   `ReturnStatement`
-    -   `return`[^keyword] [`Expression`](#expression) `;`
+    -   `return`[^keyword] [`Expression`](#expression)`;`
 
 ---
 

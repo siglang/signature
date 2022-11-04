@@ -4,9 +4,9 @@ use crate::{
     options::CompilerOptions,
     parser::{
         ast::{
-            ArrayLiteral, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, FunctionType,
-            Generic, Identifier, IdentifierGeneric, IfExpression, InfixExpression, LetStatement, NumberLiteral, Position, PrefixExpression, Priority,
-            Program, ReturnStatement, Statement, StringLiteral, StructLiteral, StructStatement, TypeStatement,
+            ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral,
+            FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, InfixExpression, LetStatement, NumberLiteral, Position,
+            PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral, StructLiteral, StructStatement, TypeStatement,
         },
         error::{ParsingError, EXPECTED_EXPRESSION, EXPECTED_NEXT_TOKEN, UNEXPECTED_TOKEN},
     },
@@ -34,6 +34,7 @@ pub trait ParserTrait {
     fn parse_program(&mut self) -> Program;
     fn parse_statement(&mut self) -> ParseResult<Statement>;
     fn parse_let_statement(&mut self) -> ParseResult<LetStatement>;
+    fn parse_auto_statement(&mut self) -> ParseResult<AutoStatement>;
     fn parse_return_statement(&mut self) -> ParseResult<ReturnStatement>;
     fn parse_type_statement(&mut self) -> ParseResult<TypeStatement>;
     fn parse_struct_statement(&mut self) -> ParseResult<StructStatement>;
@@ -162,6 +163,7 @@ impl ParserTrait for Parser {
     fn parse_statement(&mut self) -> ParseResult<Statement> {
         Ok(match self.current_token.token_type {
             Tokens::Let => Statement::LetStatement(self.parse_let_statement()?),
+            Tokens::Auto => Statement::AutoStatement(self.parse_auto_statement()?),
             Tokens::Return => Statement::ReturnStatement(self.parse_return_statement()?),
             Tokens::Type => Statement::TypeStatement(self.parse_type_statement()?),
             Tokens::Struct => Statement::StructStatement(self.parse_struct_statement()?),
@@ -186,6 +188,27 @@ impl ParserTrait for Parser {
                 self.next_token();
 
                 Ok(LetStatement::new(data_type, ident, expression, position! { self }))
+            } else {
+                Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type })
+            };
+        }
+
+        Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type })
+    }
+
+    fn parse_auto_statement(&mut self) -> ParseResult<AutoStatement> {
+        self.next_token();
+
+        let ident = Identifier::new(ident! { self }, position! { self });
+        self.next_token();
+
+        self.expect_token(&Tokens::Assign)?;
+
+        if let Ok(expression) = self.parse_expression(&Priority::Lowest) {
+            return if self.peek_token(&Tokens::Semicolon) {
+                self.next_token();
+
+                Ok(AutoStatement::new(ident, expression, position! { self }))
             } else {
                 Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::Semicolon, self.current_token.token_type })
             };
