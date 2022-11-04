@@ -20,7 +20,7 @@ pub fn literal_value(expression: Expression) -> CompileResult<Value> {
         Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => Value::LiteralValue(LiteralValue::Array(
             elements
                 .into_iter()
-                .map(|element| literal_value(element))
+                .map(literal_value)
                 .collect::<CompileResult<Vec<Value>>>()?,
         )),
         Expression::FunctionLiteral(FunctionLiteral {
@@ -32,7 +32,7 @@ pub fn literal_value(expression: Expression) -> CompileResult<Value> {
         }) => {
             let mut statments = Vec::new();
 
-            for statment in body.statements.clone() {
+            for statment in body.statements {
                 if let Statement::ReturnStatement(_) = statment {
                     statments.push(statment);
                     break;
@@ -76,7 +76,7 @@ pub fn type_checked_array(expression: &ArrayLiteral, data_type: Option<&DataType
         None => Type::get_data_type_from_expression(&Expression::ArrayLiteral(expression.clone()), &expression.position)?,
     };
 
-    if !Type(data_type.clone()).eq_from_type(&array_type.clone()) {
+    if !Type(data_type.clone()).eq_from_type(&array_type) {
         return Err(type_error! { EXPECTED_DATA_TYPE; array_type.0, data_type; expression.position.clone(); });
     }
 
@@ -98,7 +98,7 @@ pub fn type_checked_function(expression: &FunctionLiteral, data_type: Option<&Da
         None => Type::get_data_type_from_expression(&Expression::FunctionLiteral(expression.clone()), &expression.position)?,
     };
 
-    if !Type(data_type.clone()).eq_from_type(&function_type.clone()) {
+    if !Type(data_type.clone()).eq_from_type(&function_type) {
         return Err(type_error! { EXPECTED_DATA_TYPE; function_type.0, data_type; expression.position.clone(); });
     }
 

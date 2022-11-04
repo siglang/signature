@@ -113,8 +113,8 @@ impl TypeTrait for Type {
 }
 
 #[inline]
-pub fn expand_array_type(elements: &Vec<Value>, position: &Position, t_data_type /* Comparison target */: Option<&DataType>) -> CompileResult<Type> {
-    let data_type = match t_data_type {
+pub fn expand_array_type(elements: &Vec<Value>, position: &Position, comparison_target: Option<&DataType>) -> CompileResult<Type> {
+    let comparison_target_expand = match comparison_target {
         Some(data_type) => data_type.clone(),
         None => {
             if elements.is_empty() {
@@ -125,7 +125,7 @@ pub fn expand_array_type(elements: &Vec<Value>, position: &Position, t_data_type
         }
     };
 
-    let element_type = match data_type.clone() {
+    let element_type = match comparison_target_expand.clone() {
         DataType::Array(element) => *element,
         data_type => {
             return Err(
@@ -136,17 +136,17 @@ pub fn expand_array_type(elements: &Vec<Value>, position: &Position, t_data_type
 
     for element in elements {
         if !Type::get_type(element, position)?.eq_from_type(&Type(element_type.clone())) {
-            return Err(type_error! { EXPECTED_DATA_TYPE; element_type.clone(), Type::get_data_type(element, position)?; position.clone(); });
+            return Err(type_error! { EXPECTED_DATA_TYPE; element_type, Type::get_data_type(element, position)?; position.clone(); });
         }
     }
 
-    if let Some(t_data_type) = t_data_type {
-        if Type(t_data_type.clone()) != Type(data_type.clone()) {
-            return Err(type_error! { EXPECTED_DATA_TYPE; t_data_type.clone(), data_type.clone(); position.clone(); });
+    if let Some(data_type) = comparison_target {
+        if Type(data_type.clone()) != Type(comparison_target_expand.clone()) {
+            return Err(type_error! { EXPECTED_DATA_TYPE; data_type, comparison_target_expand; position.clone(); });
         }
     }
 
-    Ok(Type(data_type))
+    Ok(Type(comparison_target_expand))
 }
 
 #[inline]
@@ -155,9 +155,9 @@ pub fn expand_function_type(
     body: &Block,
     return_type: &DataType,
     position: &Position,
-    t_data_type /* Comparison target */: Option<&DataType>,
+    comparison_target: Option<&DataType>,
 ) -> CompileResult<Type> {
-    let data_type = match t_data_type {
+    let comparison_target_expand = match comparison_target {
         Some(data_type) => data_type.clone(),
         None => {
             if body.0.is_empty() {
@@ -167,33 +167,28 @@ pub fn expand_function_type(
                     Box::new(DataType::Void),
                 ))
             } else {
-                DataType::Fn(FunctionType(
-                    None,
-                    parameters.clone().iter().map(|x| x.clone().1).collect(),
-                    Box::new(
-                        Type::get_type_from_instruction(body.0.clone(), position)
-                            .transpose()?
-                            .map(|t| t.0)
-                            .unwrap_or(DataType::Void),
-                    ),
-                ))
+                let return_type = Box::new(
+                    Type::get_type_from_instruction(body.0.clone(), position)
+                        .transpose()?
+                        .map(|t| t.0)
+                        .unwrap_or(DataType::Void),
+                );
+
+                DataType::Fn(FunctionType(None, parameters.clone().iter().map(|x| x.clone().1).collect(), return_type))
             }
         }
     };
 
-    let function_type = match data_type.clone() {
+    let function_type = match comparison_target_expand.clone() {
         DataType::Fn(function_type) => function_type,
         data_type => {
-            return Err(type_error! {
-                EXPECTED_DATA_TYPE;
-                data_type,
-                DataType::Fn(FunctionType(
-                    None,
-                    parameters.clone().iter().map(|x| x.clone().1).collect(),
-                    Box::new(DataType::Void),
-                ));
-                position.clone();
-            });
+            let function = DataType::Fn(FunctionType(
+                None,
+                parameters.clone().iter().map(|x| x.clone().1).collect(),
+                Box::new(DataType::Void),
+            ));
+
+            return Err(type_error! { EXPECTED_DATA_TYPE; data_type, function; position.clone(); });
         }
     };
 
@@ -216,23 +211,21 @@ pub fn expand_function_type(
             .unwrap_or(DataType::Void)
     };
 
-    let function_return_type = return_type;
-
-    if function_return_type != &body_return_type {
-        return Err(type_error! { EXPECTED_DATA_TYPE; function_return_type, body_return_type; position.clone(); });
+    if return_type != &body_return_type {
+        return Err(type_error! { EXPECTED_DATA_TYPE; return_type, body_return_type; position.clone(); });
     }
 
-    if let Some(t_data_type) = t_data_type {
-        let original_function_type = FunctionType(
+    if let Some(data_type) = comparison_target {
+        let function = FunctionType(
             None,
             parameters.clone().iter().map(|x| x.clone().1).collect(),
             Box::new(return_type.clone()),
         );
 
-        if Type(t_data_type.clone()) != Type(DataType::Fn(original_function_type.clone())) {
-            return Err(type_error! { EXPECTED_DATA_TYPE; t_data_type.clone(), DataType::Fn(original_function_type); position.clone(); });
+        if Type(data_type.clone()) != Type(DataType::Fn(function.clone())) {
+            return Err(type_error! { EXPECTED_DATA_TYPE; data_type.clone(), DataType::Fn(function); position.clone(); });
         }
     }
 
-    Ok(Type(data_type))
+    Ok(Type(comparison_target_expand))
 }

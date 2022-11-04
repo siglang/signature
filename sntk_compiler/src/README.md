@@ -5,5 +5,3 @@ Compiler library for the language
 -   [helpers.rs](helpers.rs) - Helper functions
 -   [macros.rs](macros.rs) - Macros
 -   [tc.rs](tc.rs) - Type checker
-
-For more details, see the documentation for the code.

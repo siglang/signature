@@ -1,4 +1,5 @@
 use sntk_core::parser::{ast::Position, error::ParsingError};
+use std::fmt::write;
 
 #[derive(Debug, Clone)]
 pub enum CompileError {
@@ -13,11 +14,17 @@ impl std::fmt::Display for CompileError {
         match self {
             CompileError::ParsingError(errors) => {
                 for ParsingError { message, position } in errors {
-                    messages.push_str(&format!("Parsing Error: {} at line {}, column {}\n", message, position.0, position.1));
+                    write(
+                        &mut messages,
+                        format_args!("Parsing Error: {} at line {}, column {}\n", message, position.0, position.1),
+                    )?;
                 }
             }
             CompileError::TypeError(TypeError { message, position }) => {
-                messages.push_str(&format!("Type Error: {} at line {}, column {}\n", message, position.0, position.1));
+                write(
+                    &mut messages,
+                    format_args!("Type Error: {} at line {}, column {}\n", message, position.0, position.1),
+                )?;
             }
         }
 
