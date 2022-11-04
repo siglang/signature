@@ -18,10 +18,7 @@ pub fn literal_value(expression: Expression) -> CompileResult<Value> {
         Expression::BooleanLiteral(BooleanLiteral { value, .. }) => Value::LiteralValue(LiteralValue::Boolean(value)),
         Expression::StringLiteral(StringLiteral { value, .. }) => Value::LiteralValue(LiteralValue::String(value)),
         Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => Value::LiteralValue(LiteralValue::Array(
-            elements
-                .into_iter()
-                .map(literal_value)
-                .collect::<CompileResult<Vec<Value>>>()?,
+            elements.into_iter().map(literal_value).collect::<CompileResult<Vec<Value>>>()?,
         )),
         Expression::FunctionLiteral(FunctionLiteral {
             parameters,
