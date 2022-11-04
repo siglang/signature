@@ -6,5 +6,3 @@ Sanetaka IR library for the language
 -   [interpreter.rs](interpreter.rs) - Sanetaka IR interpreter
 -   [stack.rs](stack.rs) - Stack Machine
 -   [value.rs](value.rs) - Value of the interpreter
-
-For more details, see the documentation for the code.

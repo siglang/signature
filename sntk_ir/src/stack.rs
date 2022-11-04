@@ -8,7 +8,6 @@ use std::collections::HashMap;
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Stack(Vec<Value>);
 
-/// **Environment of the stack.**
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Environment {
     pub values: HashMap<String, Value>,
@@ -16,7 +15,6 @@ pub struct Environment {
 }
 
 impl Environment {
-    /// Create a new environment.
     pub fn new() -> Self {
         Self {
             values: HashMap::new(),
@@ -24,7 +22,6 @@ impl Environment {
         }
     }
 
-    /// Create a new environment with a parent.
     pub fn new_with_parent(parent: Environment) -> Self {
         Self {
             values: HashMap::new(),
@@ -32,7 +29,6 @@ impl Environment {
         }
     }
 
-    /// Get a value from the environment.
     pub fn get(&self, name: &str) -> Option<Value> {
         match self.values.get(name) {
             Some(value) => Some(value.clone()),
@@ -43,13 +39,11 @@ impl Environment {
         }
     }
 
-    /// Set a value in the environment.
     pub fn set(&mut self, name: String, value: Value) {
         self.values.insert(name, value);
     }
 }
 
-/// **The trait for the stack implementation.**
 pub trait StackTrait {
     fn new() -> Self;
     fn push(&mut self, value: Value);

@@ -7,14 +7,12 @@ use crate::{
     value::{LiteralValue, Value},
 };
 
-/// Provides the basic methods of the ir interpreter.
 pub trait InterpreterBase {
     fn new(instructions: Vec<Instruction>) -> Self;
     fn new_with(instructions: Vec<Instruction>, stack: Stack, environment: Environment) -> Self;
     fn run(&mut self);
 }
 
-/// Instructions implementation trait.
 trait InstructionTrait {
     fn load_global(&mut self, name: String);
     fn load_const(&mut self, value: Value);
@@ -26,7 +24,6 @@ trait InstructionTrait {
     fn return_value(&mut self);
 }
 
-/// Binary operator instructions implementation trait.
 trait BinaryOpTrait {
     fn binary_op_add(&mut self);
     fn binary_op_sub(&mut self);
@@ -35,7 +32,6 @@ trait BinaryOpTrait {
     fn binary_op_mod(&mut self);
 }
 
-/// Binary operator equal instructions implementation trait.
 trait BinaryOpEqTrait {
     fn binary_op_eq(&mut self);
     fn binary_op_neq(&mut self);
@@ -45,13 +41,11 @@ trait BinaryOpEqTrait {
     fn binary_op_gt_eq(&mut self);
 }
 
-/// Unary operator instructions implementation trait.
 trait UnaryOpTrait {
     fn unary_op_not(&mut self);
     fn unary_op_minus(&mut self);
 }
 
-/// **Virtual machine interpreter.** it works on a stack basis.
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Interpreter {
     pub stack: Stack,
