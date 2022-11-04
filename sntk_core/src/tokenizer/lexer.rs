@@ -12,20 +12,6 @@ pub trait LexerTrait {
     fn next_token(&mut self) -> Token;
 }
 
-/// **Lexer receives the source code in the from of a string and returns tokenized data.**
-///
-/// for example:
-/// ```rust
-/// use sntk_core::tokenizer::{token::*, lexer::*};
-///
-/// let mut lexer = Lexer::new(r#"let x_32z = y != "Hello, World\n";"#);
-/// let mut token = Token::new(Tokens::ILLEGAL(String::new()), (0, 0));
-///
-/// while token.token_type != Tokens::EOF {
-///     token = lexer.next_token();
-///     println!("{}", token);
-/// }
-/// ```
 #[derive(Debug)]
 pub struct Lexer {
     pub input: String,
@@ -48,8 +34,6 @@ impl Default for Lexer {
 }
 
 impl LexerTrait for Lexer {
-    /// **Creates a new Lexer instance.**
-    /// it takes an argument of type `&str` or `String` (`Into<String>`).
     fn new(input: String) -> Self {
         let mut lexer = Lexer { input, ..Default::default() };
 
@@ -57,8 +41,6 @@ impl LexerTrait for Lexer {
         lexer
     }
 
-    /// **Reads the next character from the input string.**
-    /// if `read_position` is greater than the length of the input string, it sets `current_char` to `'\0'` (EOF).
     fn read_char(&mut self) {
         if self.read_position >= self.input.len() {
             self.current_char = '\0';
@@ -72,8 +54,6 @@ impl LexerTrait for Lexer {
         self.current_position.1 += 1;
     }
 
-    /// **Peeks the next character from the input string.**
-    /// if `read_position` is greater than the length of the input string, it returns `'\0'` (EOF).
     fn peek_char(&self) -> char {
         if self.read_position >= self.input.len() {
             '\0'
@@ -82,10 +62,6 @@ impl LexerTrait for Lexer {
         }
     }
 
-    /// **Skips the whitespaces and newlines.**
-    ///
-    /// if `current_char` is a whitespace or newline, it calls `read_char()` until it finds a non-whitespace character.
-    /// also, if current_char is a newline, it increments the `current_position.0` (line number) by 1 and sets `current_position.1` (column number) to 0.
     fn skip_whitespace(&mut self) {
         while self.current_char.is_whitespace() {
             if self.current_char == '\n' {
@@ -97,13 +73,6 @@ impl LexerTrait for Lexer {
         }
     }
 
-    /// **Read the identifier. it rules are:**
-    ///
-    /// - starts with a letter or an underscore.
-    /// - can contain letters, underscores, and numbers.
-    /// - can't be a keyword.
-    ///
-    /// this follows the `snake_case` naming convention.
     fn read_identifier(&mut self) -> String {
         let position = self.position;
         while self.current_char.is_alphanumeric() || self.current_char == '_' {
@@ -130,11 +99,6 @@ impl LexerTrait for Lexer {
         }
     }
 
-    /// **Read the number. it rules are:**
-    ///
-    /// - starts with a digit.
-    /// - can contain digits and a single dot.
-    ///     - can't contain more than one dot.
     fn read_number(&mut self) -> f64 {
         let position = self.position;
         let mut has_dot = false;
@@ -154,12 +118,6 @@ impl LexerTrait for Lexer {
         self.input[position..self.position].parse().unwrap_or(0.)
     }
 
-    /// **Read the string. it rules are:**
-    ///
-    /// - starts with a double quote (`"`).
-    ///     - ends with a double quote (`"`).
-    /// - supports escape sequences.
-    /// - supports unicode characters.
     fn read_string(&mut self) -> String {
         let position = self.position + 1;
         while self.peek_char() != '"' && self.current_char != '\0' {
@@ -170,13 +128,6 @@ impl LexerTrait for Lexer {
         self.input[position..self.position].to_string()
     }
 
-    /// **Read the comment. it rules are:**
-    ///
-    /// - starts with a slash and an asterisk (`/*`).
-    ///    - ends with an asterisk and a slash (`*/`).
-    /// - ~~starts with a double slash (`//`).~~ Not supported yet. regarding the `//` comment, there is a problem with `skip_whitespace`.
-    ///
-    /// TODO: support `//` comment.
     fn read_comment(&mut self) {
         if self.current_char == '/' && self.peek_char() == '*' {
             self.read_char();
@@ -190,12 +141,6 @@ impl LexerTrait for Lexer {
         }
     }
 
-    /// **Read the next token.**
-    ///
-    /// it calls `skip_whitespace()` and then checks the `current_char` and returns the corresponding token.
-    ///
-    /// if `current_char` is not a valid character, it returns `Tokens::ILLEGAL(...)`.
-    /// if 'current_char` is `'\0'` (EOF), it returns `Tokens::EOF`.
     fn next_token(&mut self) -> Token {
         use super::token::Tokens::*;
 

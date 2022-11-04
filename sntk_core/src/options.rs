@@ -1,10 +1,5 @@
 use std::cell::Cell;
 
-/// Depending on this options, the behavior of the compiler is different.
-///
-/// the following describes the possible options and default values for compiler options:
-///
-/// * `eee_opt_level` = `0`, `1` or `2`, default `2`
 #[derive(Debug, Clone)]
 pub struct CompilerOptions {
     pub eee_opt_level: Cell<u8>,

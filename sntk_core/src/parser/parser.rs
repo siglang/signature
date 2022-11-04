@@ -19,7 +19,6 @@ use crate::{
 
 pub type ParseResult<T> = Result<T, ParsingError>;
 
-/// Provides the basic methods of the parser.
 pub trait ParserBase {
     fn new(lexer: Lexer) -> Self;
     fn new_with_options(lexer: Lexer, options: CompilerOptions) -> Self;
@@ -31,7 +30,6 @@ pub trait ParserBase {
     fn current_priority(&self) -> Priority;
 }
 
-/// Parses statements, expressions, etc.
 pub trait ParserTrait {
     fn parse_program(&mut self) -> Program;
     fn parse_statement(&mut self) -> ParseResult<Statement>;
@@ -48,7 +46,6 @@ pub trait ParserTrait {
     fn parse_struct_literal(&mut self) -> ParseResult<StructLiteral>;
 }
 
-/// Parses type annotations, generics, etc.
 pub trait TypeParser {
     fn parse_data_type(&mut self) -> ParseResult<DataType>;
     fn parse_data_type_without_next(&mut self) -> ParseResult<DataType>;
@@ -57,9 +54,6 @@ pub trait TypeParser {
     fn parse_generic_identifier(&mut self) -> ParseResult<IdentifierGeneric>;
 }
 
-/// **Evaluating an Evaluable Expression**
-///
-/// In the parsing phase, evaluable expressions are pre-evaluated. it is providing a fast runtime.
 pub trait EEE {
     fn eval_expression(&mut self, expression: &Expression) -> Option<ParseResult<Expression>>;
     fn eval_infix_expression(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>>;
@@ -68,15 +62,6 @@ pub trait EEE {
     fn eval_prefix_expression(&mut self, prefix: &PrefixExpression) -> Option<ParseResult<Expression>>;
 }
 
-/// **Parses the input string into an AST.**
-///
-/// for example:
-/// ```rust
-/// use sntk_core::parser::parser::*;
-///
-/// let parsed = Parser::from(r#"type X<T, U> = fn(T, U[]) -> number;"#).parse_program();
-/// println!("{parsed:#?}");
-/// ```
 #[derive(Debug, Default)]
 pub struct Parser {
     pub lexer: Lexer,
@@ -94,13 +79,10 @@ impl From<String> for Parser {
 }
 
 impl ParserBase for Parser {
-    /// **Creates a new Parser instance.**
-    /// it takes an argument of type `Lexer`.
     fn new(lexer: Lexer) -> Self {
         Parser { lexer, ..Default::default() }
     }
 
-    /// **creates a new Parser instance with custom options.**
     fn new_with_options(lexer: Lexer, options: CompilerOptions) -> Self {
         Parser {
             lexer,
@@ -109,7 +91,6 @@ impl ParserBase for Parser {
         }
     }
 
-    /// **Advances the current token and the peek token.**
     fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
         self.peek_token = self.lexer.next_token();
@@ -117,7 +98,6 @@ impl ParserBase for Parser {
         self.position = Position::new(self.current_token.position.0, self.current_token.position.1);
     }
 
-    /// **Checks if the current token is of the expected type.**
     fn expect_token(&mut self, token_type: &Tokens) -> ParseResult<()> {
         if self.current_token.token_type == *token_type {
             self.next_token();
@@ -128,21 +108,10 @@ impl ParserBase for Parser {
         }
     }
 
-    /// **Checks if the peek token is of the expected type.**
     fn peek_token(&self, token_type: &Tokens) -> bool {
         self.peek_token.token_type == *token_type
     }
 
-    /// **Gets the priority from the `Tokens`.**
-    ///
-    /// * `Lowest`:       0 (`default`)
-    /// * `Equals`:       1 (`==`, ...)
-    /// * `LessGreater`:  2 (`<`, `>`, ...)
-    /// * `Sum`:          3 (`+`, `-`, ...)
-    /// * `Product`:      4 (`*`, `/`, ...)
-    /// * `Prefix`:       5 (`!expr`, `-expr`, ...)
-    /// * `Call`:         6 (`function(...)`)
-    /// * `Index`:        7 (`array[index]`)
     fn get_priority(&self, token_type: &Tokens) -> Priority {
         match token_type {
             Tokens::Dot | Tokens::Arrow => Priority::Dot,
@@ -156,19 +125,16 @@ impl ParserBase for Parser {
         }
     }
 
-    /// **Gets the priority from the peek token.**
     fn peek_priority(&mut self) -> Priority {
         self.get_priority(&self.peek_token.token_type)
     }
 
-    /// **Gets the priority from the current token.**
     fn current_priority(&self) -> Priority {
         self.get_priority(&self.current_token.token_type)
     }
 }
 
 impl ParserTrait for Parser {
-    /// **Parses the input string into an AST.**
     fn parse_program(&mut self) -> Program {
         self.next_token();
         self.next_token();
@@ -193,7 +159,6 @@ impl ParserTrait for Parser {
         program
     }
 
-    /// **Parses a statement.**
     fn parse_statement(&mut self) -> ParseResult<Statement> {
         Ok(match self.current_token.token_type {
             Tokens::Let => Statement::LetStatement(self.parse_let_statement()?),
@@ -204,9 +169,6 @@ impl ParserTrait for Parser {
         })
     }
 
-    /// **Parses a let statement.**
-    ///
-    /// `let ident: type = expr;`
     fn parse_let_statement(&mut self) -> ParseResult<LetStatement> {
         self.next_token();
 
@@ -232,9 +194,6 @@ impl ParserTrait for Parser {
         Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type })
     }
 
-    /// **Parses a return statement.**
-    ///
-    /// `return expr;`
     fn parse_return_statement(&mut self) -> ParseResult<ReturnStatement> {
         self.next_token();
 
@@ -251,9 +210,6 @@ impl ParserTrait for Parser {
         Err(parsing_error! { self; EXPECTED_EXPRESSION; self.current_token.token_type })
     }
 
-    /// **Parses a type statement.**
-    ///
-    /// `type <ident><generics?> = <type>;`
     fn parse_type_statement(&mut self) -> ParseResult<TypeStatement> {
         self.next_token();
 
@@ -283,7 +239,6 @@ impl ParserTrait for Parser {
         }
     }
 
-    /// **Parses a struct statement.**
     fn parse_struct_statement(&mut self) -> ParseResult<StructStatement> {
         self.next_token();
 
@@ -331,7 +286,6 @@ impl ParserTrait for Parser {
         ))
     }
 
-    /// **Parses an expression statement.**
     fn parse_expression_statement(&mut self) -> ParseResult<ExpressionStatement> {
         let expression = self.parse_expression(&Priority::Lowest)?;
 
@@ -344,7 +298,6 @@ impl ParserTrait for Parser {
         }
     }
 
-    /// **Parses an expression.**
     fn parse_expression(&mut self, priority: &Priority) -> ParseResult<Expression> {
         let left_expression = match self.current_token.token_type.clone() {
             Tokens::IDENT(ident) => Some(Ok(Expression::Identifier(Identifier::new(ident, position! { self })))),
@@ -479,7 +432,6 @@ impl ParserTrait for Parser {
         left_expression
     }
 
-    /// **Parses a block expression.**
     fn parse_block_expression(&mut self) -> ParseResult<BlockExpression> {
         self.next_token();
 
@@ -493,7 +445,6 @@ impl ParserTrait for Parser {
         Ok(BlockExpression::new(statements, position! { self }))
     }
 
-    /// **Parses an array literal.**
     fn parse_array_literal(&mut self) -> ParseResult<ArrayLiteral> {
         self.next_token();
 
@@ -521,7 +472,6 @@ impl ParserTrait for Parser {
         Ok(ArrayLiteral::new(elements, position! { self }))
     }
 
-    /// **Parses a struct literal.**
     fn parse_struct_literal(&mut self) -> ParseResult<StructLiteral> {
         self.next_token();
         let identifier = ident! { self };
@@ -560,7 +510,6 @@ impl ParserTrait for Parser {
         ))
     }
 
-    /// **Parses a function literal.**
     fn parse_function_literal(&mut self) -> ParseResult<FunctionLiteral> {
         self.next_token();
 
@@ -620,7 +569,6 @@ impl ParserTrait for Parser {
         Ok(FunctionLiteral::new(generics, parameters, return_type, body, position! { self }))
     }
 
-    /// **Parses a if expression.**
     fn parse_if_expression(&mut self) -> ParseResult<IfExpression> {
         self.next_token();
 
@@ -658,24 +606,12 @@ impl ParserTrait for Parser {
 }
 
 impl TypeParser for Parser {
-    /// **Parses a data type.**
-    ///
-    /// * `x: number`:   `Number`
-    /// * `x: string`:   `String`
-    /// * `x: boolean`:  `Boolean`
-    /// * `x: T`:        `Identifier("T")`
-    /// * `x: T[]`:      `Array(Identifier("T"))`
-    /// * `x: T<U, V>`:  `Generic(Identifier("T"), [Identifier("U"), Identifier("V")])`
-    /// * `x: fn(number, string) -> boolean`: `Function([Number, String], Boolean)`
     fn parse_data_type(&mut self) -> ParseResult<DataType> {
         let result = self.parse_data_type_without_next();
         self.next_token();
         result
     }
 
-    /// **Parses a data type.**
-    ///
-    /// extends `parse_data_type` by not advancing the current token.
     fn parse_data_type_without_next(&mut self) -> ParseResult<DataType> {
         let mut data_type = match self.current_token.token_type {
             Tokens::NumberType => Ok(DataType::Number),
@@ -707,9 +643,6 @@ impl TypeParser for Parser {
         data_type
     }
 
-    /// **Parses a function type.**
-    ///
-    /// * `fn(number, string) -> boolean`: `Function([Number, String], Boolean)`
     fn parse_function_type(&mut self) -> ParseResult<FunctionType> {
         self.next_token();
 
@@ -744,9 +677,6 @@ impl TypeParser for Parser {
         Ok(FunctionType::new(generics, parameters, return_type))
     }
 
-    /// **Parses a generic type.**
-    ///
-    /// `T<U[], V>`: `Generic(Identifier("T"), [Array(Identifier("U")), Identifier("V")])`
     fn parse_generic(&mut self) -> ParseResult<Generic> {
         let ident = ident! { self };
         self.next_token();
@@ -770,9 +700,6 @@ impl TypeParser for Parser {
         Ok(Generic::new(DataType::Custom(ident), generics))
     }
 
-    /// **Parses a generic type.**
-    ///
-    /// `T<U, V>`: `Generic(Identifier("T"), [Identifier("U"), Identifier("V")])`
     fn parse_generic_identifier(&mut self) -> ParseResult<IdentifierGeneric> {
         let mut generics = Vec::new();
 
@@ -796,7 +723,6 @@ impl TypeParser for Parser {
 }
 
 impl EEE for Parser {
-    /// **Evaluates expressions.**
     fn eval_expression(&mut self, expression: &Expression) -> Option<ParseResult<Expression>> {
         match expression {
             Expression::InfixExpression(infix) => self.eval_infix_expression(infix),
@@ -805,26 +731,6 @@ impl EEE for Parser {
         }
     }
 
-    /// **Evaluates operators.**
-    ///
-    /// ## Compiler Options, `eee_opt_level`: `1`
-    ///
-    /// * `10 + 20`: InfixExpression(10, Plus, 20)
-    /// * `10 - 20`: InfixExpression(10, Minus, 20)
-    /// * `10 * 20`: InfixExpression(10, Asterisk, 20)
-    /// * `10 / 20`: InfixExpression(10, Slash, 20)
-    /// * `10 % 20`: InfixExpression(10, Percent, 20)
-    ///
-    /// ## Compiler Options, `eee_opt_level`: `2` (includes `1`)
-    ///
-    /// * `expr == expr`: InfixExpression(expr, Equal, expr) -> BooleanLiteral(...)
-    /// * `10 != 20`: InfixExpression(10, NotEqual, 20) -> BooleanLiteral(true)
-    /// * `10 > 20`: InfixExpression(10, Greater, 20) -> BooleanLiteral(false)
-    /// * `10 < 20`: InfixExpression(10, Less, 20) -> BooleanLiteral(true)
-    /// * `10 >= 20`: InfixExpression(10, GreaterEqual, 20) -> BooleanLiteral(false)
-    /// * `10 <= 20`: InfixExpression(10, LessEqual, 20) -> BooleanLiteral(true)
-    ///
-    /// * `"Foo" + "Bar"`: InfixExpression(StringLiteral("Foo"), Add, StringLiteral("Bar")) -> StringLiteral("FooBar")
     fn eval_infix_expression(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>> {
         match self.options.eee_opt_level() {
             1 => self.eval_infix_expression_opt_1(infix),
@@ -833,9 +739,6 @@ impl EEE for Parser {
         }
     }
 
-    /// **Evaluates operators.**
-    ///
-    /// extends `eval_infix_expression` with `eee_opt_level`: `1`
     fn eval_infix_expression_opt_1(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>> {
         let InfixExpression { left, operator, right, .. } = infix;
 
@@ -866,9 +769,6 @@ impl EEE for Parser {
         }
     }
 
-    /// **Evaluates operators.**
-    ///
-    /// extends `eval_infix_expression` with `eee_opt_level`: `2`
     fn eval_infix_expression_opt_2(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>> {
         let InfixExpression { left, operator, right, .. } = infix;
 
@@ -900,10 +800,6 @@ impl EEE for Parser {
         }
     }
 
-    /// **Evaluates prefix operators.**
-    ///
-    /// * `-10`: PrefixExpression(Minus, 10) -> NumberLiteral(-10)
-    /// * `!true`: PrefixExpression(Bang, true) -> BooleanLiteral(false)
     fn eval_prefix_expression(&mut self, prefix: &PrefixExpression) -> Option<ParseResult<Expression>> {
         let PrefixExpression { operator, right, position } = prefix;
 

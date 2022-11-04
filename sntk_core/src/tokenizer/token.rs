@@ -1,4 +1,3 @@
-/// An enumeration of tokens, which are the basic units of that make up a language.
 #[derive(Debug, PartialEq, Clone)]
 #[rustfmt::skip]
 pub enum Tokens {
@@ -16,15 +15,12 @@ pub enum Tokens {
 
     Let, If, Else, Return, Function, Type, Struct, Typeof,
 
-    NumberType, StringType, BooleanType, /* ArrayType = type[] */ /* FnType = Function */ VoidType,
+    NumberType, StringType, BooleanType, VoidType,
 }
 
-impl<T> From<T> for Tokens
-where
-    T: Into<String>,
-{
-    fn from(s: T) -> Self {
-        match s.into().as_str() {
+impl From<String> for Tokens {
+    fn from(s: String) -> Self {
+        match s.as_str() {
             "let" => Tokens::Let,
             "if" => Tokens::If,
             "else" => Tokens::Else,
@@ -51,7 +47,6 @@ impl std::fmt::Display for Tokens {
 }
 
 impl Tokens {
-    /// Stringify the token.
     pub fn stringify(&self) -> String {
         macro_rules! to_s {
                 ($( $x:ident )*) => {
@@ -66,7 +61,6 @@ impl Tokens {
     }
 }
 
-/// A `Token` structure containing `Tokens` and position (line, column) of the token.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     pub token_type: Tokens,
@@ -86,7 +80,6 @@ impl std::fmt::Display for Token {
 }
 
 impl Token {
-    /// Creates a new `Token` from a `Tokens` and a position.
     pub fn new(token_type: Tokens, position: (usize, usize)) -> Self {
         Token { token_type, position }
     }
