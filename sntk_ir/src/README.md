@@ -1,8 +1,6 @@
 Sanetaka IR library for the language
 
--   [builtin](builtin.rs) - builtin functions
--   [code](code.rs) - Instruction commands, binary operations
--   [error.rs](error.rs) - Error messages
--   [interpreter.rs](interpreter.rs) - Sanetaka IR interpreter
--   [stack.rs](stack.rs) - Stack Machine
--   [value.rs](value.rs) - Value of the interpreter
+-   [builtin.rs](builtin.rs) - Builtin functions
+-   [environment.rs](environment.rs) - Environment
+-   [instructions.rs](instructions.rs) - Instructions
+-   [interpreter.rs](interpreter.rs) - Interpreter
