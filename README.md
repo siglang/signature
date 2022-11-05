@@ -28,8 +28,8 @@ this may not be observed. (No, most likely.) however, we strive to provide bette
 -   [x] Parser (AST) **(in progress)**
     -   [ ] EEE (Evaluating an Evaluable Expression) **(in progress)**
 -   [x] Compiler (Sanetaka IR) **(in progress)**
-    -   [ ] Type Checker
--   [ ] Interpreter (VM, Stack Machine) **(in progress)**
+    -   [ ] Type Checker **(in progress)**
+-   [ ] IR Interpreter **(in progress)**
 -   [ ] Plugin (e.g. Transcompiler)
     -   [ ] Plugin API
 
