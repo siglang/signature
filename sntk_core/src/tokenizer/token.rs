@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, PartialEq, Clone)]
 #[rustfmt::skip]
 pub enum Tokens {
@@ -41,8 +43,8 @@ impl From<String> for Tokens {
     }
 }
 
-impl std::fmt::Display for Tokens {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Tokens {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.stringify())
     }
 }
