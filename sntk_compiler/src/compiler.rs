@@ -1,7 +1,7 @@
 use crate::{error::CompileError, helpers::ast_position_to_tuple};
 use sntk_core::parser::ast::{
-    ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, Expression, Identifier, IfExpression, IndexExpression,
-    InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral,
+    ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, Expression, FunctionLiteral, Identifier, IfExpression,
+    IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral,
 };
 use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralValue};
 
@@ -94,7 +94,18 @@ impl CompilerTrait for Compiler {
                         .transpose()?,
                 ),
             ),
-            Expression::FunctionLiteral(_) => unimplemented!(),
+            Expression::FunctionLiteral(FunctionLiteral { parameters, body, .. }) => {
+                let mut instructions = Vec::new();
+
+                for statement in body.statements.iter() {
+                    instructions.push(self.compile_statement(statement)?);
+                }
+
+                IrExpression::Literal(LiteralValue::Function(
+                    parameters.clone().iter().map(|x| x.0.value.clone()).collect(),
+                    instructions,
+                ))
+            }
             Expression::CallExpression(CallExpression { function, arguments, .. }) => {
                 let mut arguments_compiled = Vec::new();
 
