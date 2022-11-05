@@ -1,6 +1,5 @@
-use std::fmt;
-
 use sntk_core::tokenizer::token::Tokens;
+use std::fmt;
 
 pub type Identifier = String;
 pub type Block = Vec<Instruction>;
@@ -46,7 +45,7 @@ pub enum IrExpression {
     Literal(LiteralValue),                                               /* literal */
     Block(Block),                                                        /* block */
     If(Box<IrExpression>, Box<IrExpression>, Box<Option<IrExpression>>), /* condition, consequence, alternative */
-    Call(Identifier, Vec<IrExpression>),                                 /* function, arguments */
+    Call(Box<IrExpression>, Vec<IrExpression>),                          /* function, arguments */
     Index(Box<IrExpression>, Box<IrExpression>),                         /* left, index */
     Prefix(Tokens, Box<IrExpression>),                                   /* operator, right */
     Infix(Box<IrExpression>, Tokens, Box<IrExpression>),                 /* left, operator, right */

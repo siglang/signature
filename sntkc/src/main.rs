@@ -1,6 +1,13 @@
 use std::time::Instant;
 
-use sntk_core::tokenizer::token::Tokens;
+use sntk_compiler::compiler::{Compiler, CompilerTrait};
+use sntk_core::{
+    parser::parser::{Parser, ParserBase, ParserTrait},
+    tokenizer::{
+        lexer::{Lexer, LexerTrait},
+        token::Tokens,
+    },
+};
 use sntk_ir::{
     instruction::{Instruction, InstructionType, IrExpression, LiteralValue},
     interpreter::{InterpreterTrait, IrInterpreter},
@@ -54,7 +61,7 @@ fn main() {
         ),
         Instruction::new(
             InstructionType::Expression(IrExpression::Call(
-                "println".to_string(),
+                Box::new(IrExpression::Identifier("println".to_string())),
                 vec![
                     IrExpression::Identifier("a".to_string()),
                     IrExpression::Prefix(
@@ -73,4 +80,25 @@ fn main() {
     ir_interpreter.run();
 
     println!("Elapsed: {}s", start.elapsed().as_secs_f64());
+
+    let source_code = r#"
+let x: number = 1;
+let a: number = if !(x != 1) {
+    let c: number = 2;
+    return c * 10;
+} else {
+    return 5;
+};
+let q: number[] = [1, 2, 3];
+println(a, -(q[2]));
+    "#;
+
+    match Compiler::new(Parser::new(Lexer::new(source_code.to_string())).parse_program()).compile_program() {
+        Ok(instructions) => {
+            let mut ir_interpreter = IrInterpreter::new(instructions);
+
+            ir_interpreter.run();
+        }
+        Err(e) => println!("{}", e),
+    }
 }

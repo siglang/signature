@@ -83,21 +83,21 @@ impl InstructionHandler for IrInterpreter {
                     unreachable!()
                 }
             }
-            IrExpression::Call(identifier, arguments) => {
+            IrExpression::Call(function, arguments) => {
                 let arguments = arguments
                     .iter()
                     .map(|argument| self.to_expression(argument))
                     .collect::<Vec<LiteralValue>>();
 
-                match self.environment.get(&identifier.clone()) {
-                    Some(LiteralValue::Function(parameters, body)) => {
+                macro_rules! function_impl {
+                    ($parameters:expr; $body:expr) => {{
                         let mut environment = IrEnvironment::new(Some(self.environment.clone()));
 
-                        for (parameter, argument) in parameters.iter().zip(arguments.iter()) {
+                        for (parameter, argument) in $parameters.iter().zip(arguments.iter()) {
                             environment.set(parameter.clone(), argument.clone());
                         }
 
-                        let mut interpreter = IrInterpreter::new_with_environment(body, environment);
+                        let mut interpreter = IrInterpreter::new_with_environment($body, environment);
 
                         interpreter.run();
 
@@ -106,12 +106,20 @@ impl InstructionHandler for IrInterpreter {
                         } else {
                             LiteralValue::Boolean(true)
                         }
-                    }
-                    Some(_) => panic!("Cannot call non-function"),
-                    None => match get_builtin_function(identifier) {
-                        Some(function) => function(arguments),
-                        None => panic!("Undefined identifier: {}", identifier),
+                    }};
+                }
+
+                match *function.clone() {
+                    IrExpression::Identifier(identifier) => match self.environment.get(&identifier.clone()) {
+                        Some(LiteralValue::Function(parameters, body)) => function_impl! { parameters; body },
+                        Some(_) => panic!("Cannot call non-function"),
+                        None => match get_builtin_function(identifier.as_str()) {
+                            Some(function) => function(arguments),
+                            None => panic!("Undefined identifier: {}", identifier),
+                        },
                     },
+                    IrExpression::Literal(LiteralValue::Function(parameters, body)) => function_impl! { parameters; body },
+                    _ => unreachable!(),
                 }
             }
             IrExpression::Index(left, index) => {
