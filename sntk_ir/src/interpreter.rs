@@ -1,3 +1,5 @@
+use sntk_core::tokenizer::token::Tokens;
+
 use crate::{
     builtin::get_builtin_function,
     environment::IrEnvironment,
@@ -112,9 +114,46 @@ impl InstructionHandler for IrInterpreter {
                     },
                 }
             }
-            IrExpression::Index(_, _) => todo!(),
-            IrExpression::Prefix(_, _) => todo!(),
-            IrExpression::Infix(_, _, _) => todo!(),
+            IrExpression::Index(left, index) => {
+                let left = self.to_expression(left);
+                let index = self.to_expression(index);
+
+                match (left, index) {
+                    (LiteralValue::Array(array), LiteralValue::Number(index)) => match array.get(index as usize) {
+                        Some(literal) => self.to_expression(literal),
+                        None => panic!("Index out of bounds"),
+                    },
+                    _ => unreachable!(),
+                }
+            }
+            IrExpression::Prefix(operator, right) => {
+                let right = self.to_expression(right);
+
+                match (operator, right) {
+                    (Tokens::Bang, LiteralValue::Boolean(right)) => LiteralValue::Boolean(!right),
+                    (Tokens::Minus, LiteralValue::Number(right)) => LiteralValue::Number(-right),
+                    (operator, right) => unreachable!("Invalid prefix operator: {} {}", operator, right),
+                }
+            }
+            IrExpression::Infix(left, operator, right) => {
+                let left = self.to_expression(left);
+                let right = self.to_expression(right);
+
+                match (left.clone(), operator, right.clone()) {
+                    (LiteralValue::Number(left), Tokens::Plus, LiteralValue::Number(right)) => LiteralValue::Number(left + right),
+                    (LiteralValue::Number(left), Tokens::Minus, LiteralValue::Number(right)) => LiteralValue::Number(left - right),
+                    (LiteralValue::Number(left), Tokens::Asterisk, LiteralValue::Number(right)) => LiteralValue::Number(left * right),
+                    (LiteralValue::Number(left), Tokens::Slash, LiteralValue::Number(right)) => LiteralValue::Number(left / right),
+                    (LiteralValue::Number(left), Tokens::Percent, LiteralValue::Number(right)) => LiteralValue::Number(left % right),
+                    (LiteralValue::Number(left), Tokens::LT, LiteralValue::Number(right)) => LiteralValue::Boolean(left < right),
+                    (LiteralValue::Number(left), Tokens::GT, LiteralValue::Number(right)) => LiteralValue::Boolean(left > right),
+                    (LiteralValue::Number(left), Tokens::LTE, LiteralValue::Number(right)) => LiteralValue::Boolean(left < right),
+                    (LiteralValue::Number(left), Tokens::GTE, LiteralValue::Number(right)) => LiteralValue::Boolean(left > right),
+                    (_, Tokens::EQ, _) => LiteralValue::Boolean(left == right),
+                    (_, Tokens::NEQ, _) => LiteralValue::Boolean(left != right),
+                    (left, operator, right) => unreachable!("Invalid infix operator: {} {} {}", left, operator, right),
+                }
+            }
         }
     }
 }
