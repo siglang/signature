@@ -224,6 +224,20 @@
 
 ---
 
+## `Comments`
+
+### `Single Line Comments`
+
+-   `//` `Comment`
+
+<br />
+
+### `Multi Line Comments`
+
+-   `/*` `Comment` `*/`
+
+---
+
 ## `Priorities`
 
 | `n` | Priority      | Operators                 |

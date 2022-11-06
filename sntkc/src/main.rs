@@ -22,8 +22,7 @@ auto p = fn(x: number, y: number) -> number -> x * y;
 println((fn(x: number) -> number -> x * 10)(p(a, -(q[2])))); */
 
 auto x = 1;
-println(typeof x);
-
+println(typeof x); // number
 {
     auto y = "hello";
     println(typeof y);
