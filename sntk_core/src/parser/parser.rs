@@ -1,4 +1,3 @@
-use crate::parser::ast::TypeofExpression;
 use crate::{
     ident,
     options::CompilerOptions,
@@ -7,6 +6,7 @@ use crate::{
             ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral,
             FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral,
             Position, PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral, StructLiteral, StructStatement, TypeStatement,
+            TypeofExpression,
         },
         error::{ParsingError, EXPECTED_EXPRESSION, EXPECTED_NEXT_TOKEN, UNEXPECTED_TOKEN},
     },
