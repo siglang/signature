@@ -1,330 +1,171 @@
 use crate::{
-    error::{CompileError, TypeError, EXPECTED_DATA_TYPE},
-    helpers::{compile_block, last_instruction_data_type, literal_value, type_checked_array, type_checked_function},
-    tc::{SharedTypeEnvironment, Type, TypeEnvironment, TypeTrait},
+    checker::{get_type_from_ir_expression, IdentifierTypes},
+    error::{CompileError, EXPECTED_DATA_TYPE},
+    helpers::ast_position_to_tuple,
     type_error,
 };
-use sntk_core::{
-    parser::ast::{
-        AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral, Identifier,
-        IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement, Statement,
-        StringLiteral, TypeStatement, TypeofExpression,
-    },
-    tokenizer::token::Tokens,
+use sntk_core::parser::ast::{
+    ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, Expression, FunctionLiteral, Identifier, IfExpression,
+    IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral,
+    TypeofExpression,
 };
-use sntk_ir::{
-    builtin::get_builtin,
-    code::{BinaryOp, BinaryOpEq, Instruction, UnaryOp},
-    interpreter::{Interpreter, InterpreterBase},
-};
-use std::{cell::RefCell, rc::Rc};
-
-#[derive(Debug, Clone)]
-pub struct Code(pub Vec<Instruction>);
-
-impl Code {
-    fn new() -> Self {
-        Self(Vec::new())
-    }
-
-    fn push_instruction(&mut self, instruction: &Instruction) {
-        self.0.push(instruction.clone());
-    }
-}
+use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralValue};
 
 #[derive(Debug)]
 pub struct Compiler {
     pub program: Program,
-    pub code: Code,
-    pub type_environment: SharedTypeEnvironment,
+    pub types: IdentifierTypes,
 }
 
 pub type CompileResult<T> = Result<T, CompileError>;
 
 pub trait CompilerTrait {
     fn new(program: Program) -> Self;
-    fn new_with_type_environment(program: Program, type_environment: SharedTypeEnvironment) -> Self;
-    fn compile_program(&mut self) -> CompileResult<Interpreter>;
-    fn compile_let_statement(&mut self, let_statement: &LetStatement) -> CompileResult<()>;
-    fn compile_auto_statement(&mut self, auto_statement: &AutoStatement) -> CompileResult<()>;
-    fn compile_return_statement(&mut self, return_statement: &ReturnStatement) -> CompileResult<()>;
-    fn compile_type_statement(&mut self, type_statement: &TypeStatement) -> CompileResult<()>;
-    fn compile_expression(&mut self, expression: &Expression, data_type: Option<&DataType>) -> CompileResult<()>;
+    fn new_with_types(program: Program, types: IdentifierTypes) -> Self;
+    fn compile_program(&mut self) -> CompileResult<Vec<Instruction>>;
+    fn compile_statement(&mut self, statement: &Statement) -> CompileResult<Instruction>;
+    fn compile_expression(&mut self, expression: &Expression) -> CompileResult<IrExpression>;
 }
 
 impl CompilerTrait for Compiler {
     fn new(program: Program) -> Self {
         Self {
             program,
-            code: Code::new(),
-            type_environment: Rc::new(RefCell::new(TypeEnvironment::new())),
+            types: IdentifierTypes::new(None),
         }
     }
 
-    fn new_with_type_environment(program: Program, type_environment: SharedTypeEnvironment) -> Self {
-        Self {
-            program,
-            code: Code::new(),
-            type_environment,
-        }
+    fn new_with_types(program: Program, types: IdentifierTypes) -> Self {
+        Self { program, types }
     }
 
-    fn compile_program(&mut self) -> CompileResult<Interpreter> {
+    fn compile_program(&mut self) -> CompileResult<Vec<Instruction>> {
+        let mut instructions = Vec::new();
+
         if !self.program.errors.is_empty() {
             return Err(CompileError::ParsingError(self.program.errors.clone()));
         }
 
-        for statement in self.program.statements.clone() {
-            match statement {
-                Statement::LetStatement(statement) => self.compile_let_statement(&statement)?,
-                Statement::AutoStatement(statement) => self.compile_auto_statement(&statement)?,
-                Statement::ReturnStatement(statement) => self.compile_return_statement(&statement)?,
-                Statement::TypeStatement(statement) => self.compile_type_statement(&statement)?,
-                Statement::StructStatement(_) => unimplemented!(),
-                Statement::ExpressionStatement(ExpressionStatement { expression, .. }) => self.compile_expression(&expression, None)?,
-            };
+        for statement in self.program.statements.clone().iter() {
+            instructions.push(self.compile_statement(statement)?);
         }
 
-        Ok(Interpreter::new(self.code.clone().0))
+        Ok(instructions)
     }
 
-    fn compile_let_statement(&mut self, let_statement: &LetStatement) -> CompileResult<()> {
-        let LetStatement { name, value, data_type, .. } = let_statement;
-
-        self.compile_expression(value, Some(data_type))?;
-
-        if let Some(data_type) = last_instruction_data_type(&self.code.0, &let_statement.position, Rc::clone(&self.type_environment))? {
-            self.type_environment.borrow_mut().set(name.value.clone(), data_type);
-        }
-
-        self.code.push_instruction(&Instruction::StoreName(name.clone().value));
-
-        Ok(())
-    }
-
-    fn compile_auto_statement(&mut self, auto_statement: &AutoStatement) -> CompileResult<()> {
-        let AutoStatement { name, value, .. } = auto_statement;
-
-        self.compile_expression(value, None)?;
-
-        if let Some(data_type) = last_instruction_data_type(&self.code.0, &auto_statement.position, Rc::clone(&self.type_environment))? {
-            self.type_environment.borrow_mut().set(name.value.clone(), data_type);
-        }
-
-        self.code.push_instruction(&Instruction::StoreName(name.clone().value));
-
-        Ok(())
-    }
-
-    fn compile_return_statement(&mut self, return_statement: &ReturnStatement) -> CompileResult<()> {
-        let ReturnStatement { value, .. } = return_statement;
-
-        self.compile_expression(value, None)?;
-        self.code.push_instruction(&Instruction::Return);
-
-        Ok(())
-    }
-
-    fn compile_type_statement(&mut self, _type_statement: &TypeStatement) -> CompileResult<()> {
-        todo!()
-    }
-
-    fn compile_expression(&mut self, expression: &Expression, data_type: Option<&DataType>) -> CompileResult<()> {
-        macro_rules! match_type {
-            ($type:expr; $e:expr; $pos:expr;) => {
-                let data_type = match data_type {
-                    Some(data_type) => data_type.clone(),
-                    None => Type::get_data_type_from_expression($e, &$pos, Rc::clone(&self.type_environment))?,
-                };
-
-                if !Type(data_type.clone()).eq_from_type(&Type($type)) {
-                    return Err(type_error! { EXPECTED_DATA_TYPE; data_type, $type; $pos; });
-                }
-            };
-        }
-
-        match expression {
-            Expression::BlockExpression(BlockExpression { statements, position }) => {
-                let block = compile_block(statements.clone(), position, Rc::clone(&self.type_environment))?;
-
-                if let Some(data_type) = data_type {
-                    if !Type(block.clone().1).eq_from_type(&Type(data_type.clone())) {
-                        return Err(type_error! { EXPECTED_DATA_TYPE; data_type, block.1; position.clone(); });
-                    }
-                }
-
-                self.code.push_instruction(&Instruction::Block(block.0));
-
-                Ok(())
-            }
-
-            Expression::Identifier(Identifier { value, .. }) => {
-                self.code.push_instruction(&Instruction::LoadName(value.clone()));
-
-                Ok(())
-            }
-
-            Expression::NumberLiteral(NumberLiteral { position, .. }) => {
-                match_type! { DataType::Number; expression; position.clone(); };
-
-                self.code.push_instruction(&Instruction::LoadConst(literal_value(
-                    expression.clone(),
-                    Rc::clone(&self.type_environment),
-                )?));
-
-                Ok(())
-            }
-
-            Expression::StringLiteral(StringLiteral { position, .. }) => {
-                match_type! { DataType::String; expression; position.clone(); };
-
-                self.code.push_instruction(&Instruction::LoadConst(literal_value(
-                    expression.clone(),
-                    Rc::clone(&self.type_environment),
-                )?));
-
-                Ok(())
-            }
-
-            Expression::BooleanLiteral(BooleanLiteral { position, .. }) => {
-                match_type! { DataType::Boolean; expression; position.clone(); };
-
-                self.code.push_instruction(&Instruction::LoadConst(literal_value(
-                    expression.clone(),
-                    Rc::clone(&self.type_environment),
-                )?));
-
-                Ok(())
-            }
-
-            Expression::ArrayLiteral(expression) => {
-                self.code.push_instruction(&Instruction::LoadConst(type_checked_array(
-                    expression,
-                    data_type,
-                    Rc::clone(&self.type_environment),
-                )?));
-
-                Ok(())
-            }
-
-            Expression::FunctionLiteral(expression) => {
-                self.code.push_instruction(&Instruction::LoadConst(type_checked_function(
-                    expression,
-                    data_type,
-                    Rc::clone(&self.type_environment),
-                )?));
-
-                Ok(())
-            }
-
-            Expression::StructLiteral(_) => {
-                todo!()
-            }
-
-            Expression::PrefixExpression(PrefixExpression { operator, right, .. }) => {
-                self.compile_expression(right, None)?;
-
-                match operator {
-                    Tokens::Minus => self.code.push_instruction(&Instruction::UnaryOp(UnaryOp::Minus)),
-                    Tokens::Bang => self.code.push_instruction(&Instruction::UnaryOp(UnaryOp::Not)),
-                    _ => panic!("Unknown operator: {}", operator),
-                }
-
-                Ok(())
-            }
-
-            Expression::InfixExpression(InfixExpression {
-                left,
-                operator,
-                right,
+    fn compile_statement(&mut self, statement: &Statement) -> CompileResult<Instruction> {
+        Ok(match statement {
+            Statement::LetStatement(LetStatement {
+                name,
+                value,
                 position,
+                data_type,
             }) => {
-                let left_data_type = Type::get_data_type_from_expression(left, position, Rc::clone(&self.type_environment))?;
-                let right_data_type = Type::get_data_type_from_expression(right, position, Rc::clone(&self.type_environment))?;
+                let value = self.compile_expression(value)?;
+                let value_type = get_type_from_ir_expression(&value, &self.types, position)?;
 
-                self.compile_expression(left, Some(&right_data_type))?;
-                self.compile_expression(right, Some(&left_data_type))?;
-
-                if let Some(data_type) = data_type {
-                    if !Type(data_type.clone()).eq_from_type(&Type(left_data_type.clone())) {
-                        return Err(type_error! { EXPECTED_DATA_TYPE; data_type, left_data_type; position.clone(); });
-                    }
+                if data_type.clone() != value_type {
+                    return Err(type_error! { EXPECTED_DATA_TYPE; data_type.clone(), value_type; position });
                 }
 
-                match operator {
-                    Tokens::Plus => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Add)),
-                    Tokens::Minus => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Sub)),
-                    Tokens::Asterisk => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Mul)),
-                    Tokens::Slash => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Div)),
-                    Tokens::Percent => self.code.push_instruction(&Instruction::BinaryOp(BinaryOp::Mod)),
-                    Tokens::EQ => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Eq)),
-                    Tokens::NEQ => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Neq)),
-                    Tokens::LT => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Lt)),
-                    Tokens::GT => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Gt)),
-                    Tokens::LTE => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Lte)),
-                    Tokens::GTE => self.code.push_instruction(&Instruction::BinaryOpEq(BinaryOpEq::Gte)),
-                    _ => panic!(),
-                }
+                self.types.set(name.value.clone(), data_type.clone());
 
-                Ok(())
+                Instruction::new(InstructionType::StoreName(name.value.clone(), value), ast_position_to_tuple(position))
             }
+            Statement::AutoStatement(AutoStatement { name, value, position }) => {
+                let value = self.compile_expression(value)?;
 
-            Expression::CallExpression(CallExpression { function, arguments, .. }) => {
-                for argument in arguments.clone() {
-                    self.compile_expression(&argument, None)?;
-                }
+                self.types
+                    .set(name.value.clone(), get_type_from_ir_expression(&value, &self.types, position)?);
 
-                match *function.clone() {
-                    Expression::Identifier(Identifier { value, .. }) => match get_builtin(value.clone()) {
-                        Some(_) => self.code.push_instruction(&Instruction::LoadGlobal(value)),
-                        None => self.code.push_instruction(&Instruction::LoadName(value)),
-                    },
-                    Expression::FunctionLiteral(FunctionLiteral { .. }) | Expression::CallExpression(CallExpression { .. }) => {
-                        self.compile_expression(function, None)?;
-                    }
-                    expression => panic!("Unknown function: {:?}", expression),
-                }
-
-                self.code.push_instruction(&Instruction::CallFunction(arguments.len()));
-
-                Ok(())
+                Instruction::new(InstructionType::StoreName(name.value.clone(), value), ast_position_to_tuple(position))
             }
-
-            Expression::IndexExpression(IndexExpression { .. }) => {
-                todo!()
+            Statement::ReturnStatement(ReturnStatement { value, position }) => {
+                Instruction::new(InstructionType::Return(self.compile_expression(value)?), ast_position_to_tuple(position))
             }
+            Statement::TypeStatement(_) | Statement::StructStatement(_) => unimplemented!(),
+            Statement::ExpressionStatement(expression) => Instruction::new(
+                InstructionType::Expression(self.compile_expression(&expression.expression)?),
+                ast_position_to_tuple(&expression.position),
+            ),
+        })
+    }
 
+    fn compile_expression(&mut self, expression: &Expression) -> CompileResult<IrExpression> {
+        Ok(match expression {
+            Expression::Identifier(Identifier { value, .. }) => IrExpression::Identifier(value.clone()),
+            Expression::BlockExpression(BlockExpression { statements, .. }) => {
+                let mut compiler = Compiler::new_with_types(Program::new(statements.clone()), IdentifierTypes::new(Some(self.types.clone())));
+
+                IrExpression::Block(compiler.compile_program()?)
+            }
+            Expression::PrefixExpression(PrefixExpression { operator, right, .. }) => {
+                IrExpression::Prefix(operator.clone(), Box::new(self.compile_expression(right)?))
+            }
+            Expression::InfixExpression(InfixExpression { operator, left, right, .. }) => IrExpression::Infix(
+                Box::new(self.compile_expression(left)?),
+                operator.clone(),
+                Box::new(self.compile_expression(right)?),
+            ),
             Expression::IfExpression(IfExpression {
                 condition,
                 consequence,
                 alternative,
-                position,
-            }) => {
-                self.compile_expression(condition, None)?;
-
-                self.code.push_instruction(&Instruction::If(
-                    compile_block(consequence.statements.clone(), position, Rc::clone(&self.type_environment))?.0,
+                ..
+            }) => IrExpression::If(
+                Box::new(self.compile_expression(condition)?),
+                Box::new(self.compile_expression(&Expression::BlockExpression(*consequence.clone()))?),
+                Box::new(
                     alternative
                         .clone()
-                        .map(|expression| compile_block(expression.statements.clone(), position, Rc::clone(&self.type_environment)))
-                        .transpose()?
-                        .map(|block| block.0),
-                ));
+                        .map(|alternative| self.compile_expression(&Expression::BlockExpression(*alternative)))
+                        .transpose()?,
+                ),
+            ),
+            Expression::FunctionLiteral(FunctionLiteral { parameters, body, .. }) => {
+                let mut instructions = Vec::new();
 
-                Ok(())
+                for statement in body.statements.iter() {
+                    instructions.push(self.compile_statement(statement)?);
+                }
+
+                IrExpression::Literal(LiteralValue::Function(
+                    parameters.clone().iter().map(|x| x.0.value.clone()).collect(),
+                    instructions,
+                ))
             }
+            Expression::CallExpression(CallExpression { function, arguments, .. }) => {
+                let mut arguments_compiled = Vec::new();
 
+                for argument in arguments.iter() {
+                    arguments_compiled.push(self.compile_expression(argument)?);
+                }
+
+                IrExpression::Call(Box::new(self.compile_expression(function)?), arguments_compiled)
+            }
             Expression::TypeofExpression(TypeofExpression { expression, position }) => {
-                self.compile_expression(
-                    &Expression::StringLiteral(StringLiteral {
-                        value: Type::get_data_type_from_expression(expression, position, Rc::clone(&self.type_environment))?.to_string(),
-                        position: position.clone(),
-                    }),
-                    None,
-                )?;
+                let expression = self.compile_expression(expression)?;
 
-                Ok(())
+                IrExpression::Literal(LiteralValue::String(
+                    get_type_from_ir_expression(&expression, &self.types, position)?.to_string(),
+                ))
             }
-        }
+            Expression::IndexExpression(IndexExpression { left, index, .. }) => {
+                IrExpression::Index(Box::new(self.compile_expression(left)?), Box::new(self.compile_expression(index)?))
+            }
+            Expression::StringLiteral(StringLiteral { value, .. }) => IrExpression::Literal(LiteralValue::String(value.clone())),
+            Expression::NumberLiteral(NumberLiteral { value, .. }) => IrExpression::Literal(LiteralValue::Number(*value)),
+            Expression::BooleanLiteral(BooleanLiteral { value, .. }) => IrExpression::Literal(LiteralValue::Boolean(*value)),
+            Expression::ArrayLiteral(ArrayLiteral { elements, .. }) => {
+                let mut elements_compiled = Vec::new();
+
+                for element in elements.iter() {
+                    elements_compiled.push(self.compile_expression(element)?);
+                }
+
+                IrExpression::Literal(LiteralValue::Array(elements_compiled))
+            }
+            Expression::StructLiteral(_) => todo!(),
+        })
     }
 }

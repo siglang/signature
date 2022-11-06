@@ -1,4 +1,5 @@
 use crate::{parser::error::ParsingError, tokenizer::token::Tokens};
+use std::fmt;
 
 #[derive(Debug, Default)]
 pub struct Program {
@@ -35,11 +36,11 @@ pub enum Expression {
     FunctionLiteral(FunctionLiteral),
     CallExpression(CallExpression),
     TypeofExpression(TypeofExpression),
+    IndexExpression(IndexExpression),
     StringLiteral(StringLiteral),
     NumberLiteral(NumberLiteral),
     ArrayLiteral(ArrayLiteral),
     BooleanLiteral(BooleanLiteral),
-    IndexExpression(IndexExpression),
     StructLiteral(StructLiteral),
 }
 
@@ -56,8 +57,8 @@ pub enum DataType {
     Unknown,
 }
 
-impl std::fmt::Display for DataType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+impl fmt::Display for DataType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             DataType::Number => write!(f, "Number"),
             DataType::String => write!(f, "String"),

@@ -1,5 +1,5 @@
 use sntk_core::parser::{ast::Position, error::ParsingError};
-use std::fmt::write;
+use std::fmt::{self, write};
 
 #[derive(Debug, Clone)]
 pub enum CompileError {
@@ -7,8 +7,8 @@ pub enum CompileError {
     TypeError(TypeError),
 }
 
-impl std::fmt::Display for CompileError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for CompileError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut messages = String::new();
 
         match self {
@@ -63,4 +63,13 @@ messages! {
     UNKNOWN_TYPE => "Unknown type: {0}";
     UNKNOWN_ARRAY_TYPE => "Unknown array type";
     UNEXPECTED_PARAMETER_LENGTH => "Unexpected parameter length";
+}
+
+#[macro_export]
+macro_rules! type_error {
+    ($msg:ident; $( $r:expr ),*; $position:expr) => {
+        $crate::error::CompileError::TypeError(
+            $crate::error::TypeError::new($msg, vec![$( format!("{}", $r) ),*], $position.clone())
+        )
+    };
 }

@@ -1,28 +1,48 @@
+use sntk_compiler::compiler::{Compiler, CompilerTrait};
+use sntk_core::{
+    parser::parser::{Parser, ParserBase, ParserTrait},
+    tokenizer::lexer::{Lexer, LexerTrait},
+};
+use sntk_ir::interpreter::{InterpreterTrait, IrInterpreter};
 use std::time::Instant;
 
-use sntk_compiler::compiler::{Compiler, CompilerTrait};
-use sntk_core::parser::parser::{Parser, ParserTrait};
-use sntk_ir::interpreter::InterpreterBase;
-
 fn main() {
-    let parsed = Parser::from(
-        r#"
-auto x = fn(a: number, b: string) -> 
-    fn() -> string ->
-        fn() -> string[] -> [typeof a, typeof b];
+    let mut start = Instant::now();
 
-print(x(1, "hello")(), "typeof:", typeof x);
-"#
-        .to_string(),
-    )
-    .parse_program();
+    let source_code = r#"
+/* auto x = 1;
+auto a = if !(x != 1) {
+    auto c = 2;
+    return c * 10;
+} else {
+    return 5;
+};
+auto q = [1, 2, 3];
+auto p = fn(x: number, y: number) -> number -> x * y;
+println((fn(x: number) -> number -> x * 10)(p(a, -(q[2])))); */
 
-    let start_time = Instant::now();
+auto x = 1;
+println(typeof x);
 
-    match &mut Compiler::new(parsed).compile_program() {
-        Ok(interpreter) => interpreter.run(),
-        Err(error) => println!("{error}"),
+{
+    auto y = "hello";
+    println(typeof y);
+};
+
+println(typeof x);
+    "#.trim_start();
+
+    match Compiler::new(Parser::new(Lexer::new(source_code.to_string())).parse_program()).compile_program() {
+        Ok(instructions) => {
+            println!("Compiling Elapsed: {}s", start.elapsed().as_secs_f64());
+            start = Instant::now();
+
+            let mut ir_interpreter = IrInterpreter::new(instructions);
+
+            ir_interpreter.run();
+        }
+        Err(e) => println!("{}", e),
     }
 
-    println!("Time: {:?}s", start_time.elapsed().as_secs_f64());
+    println!("Interpreting Elapsed: {}s", start.elapsed().as_secs_f64());
 }

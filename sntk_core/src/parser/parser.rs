@@ -5,8 +5,8 @@ use crate::{
     parser::{
         ast::{
             ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral,
-            FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, InfixExpression, LetStatement, NumberLiteral, Position,
-            PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral, StructLiteral, StructStatement, TypeStatement,
+            FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral,
+            Position, PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral, StructLiteral, StructStatement, TypeStatement,
         },
         error::{ParsingError, EXPECTED_EXPRESSION, EXPECTED_NEXT_TOKEN, UNEXPECTED_TOKEN},
     },
@@ -431,6 +431,22 @@ impl ParserTrait for Parser {
                     Ok(Expression::CallExpression(CallExpression::new(
                         Box::new(left_expression?),
                         arguments,
+                        position! { self },
+                    )))
+                }
+                Tokens::LBracket => {
+                    self.next_token();
+
+                    let index = self.parse_expression(&Priority::Lowest)?;
+                    self.next_token();
+
+                    if self.current_token.token_type != Tokens::RBracket {
+                        return Err(parsing_error! { self; EXPECTED_NEXT_TOKEN; Tokens::RBracket, self.current_token.token_type });
+                    }
+
+                    Ok(Expression::IndexExpression(IndexExpression::new(
+                        Box::new(left_expression?),
+                        Box::new(index),
                         position! { self },
                     )))
                 }
