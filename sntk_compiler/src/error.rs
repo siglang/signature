@@ -64,3 +64,12 @@ messages! {
     UNKNOWN_ARRAY_TYPE => "Unknown array type";
     UNEXPECTED_PARAMETER_LENGTH => "Unexpected parameter length";
 }
+
+#[macro_export]
+macro_rules! type_error {
+    ($msg:ident; $( $r:expr ),*; $position:expr) => {
+        $crate::error::CompileError::TypeError(
+            $crate::error::TypeError::new($msg, vec![$( format!("{}", $r) ),*], $position.clone())
+        )
+    };
+}
