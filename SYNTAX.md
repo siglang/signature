@@ -12,6 +12,8 @@
 -   `LetStatement`
     -   `let`[^keyword] [`Identifier`](#identifier)`:` [`Type`](#types)[^type] `=` [`Expression`](#expression)`;`
 
+<br />
+
 ### `AutoStatement`
 
 -   `AutoStatement`

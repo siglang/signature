@@ -7,6 +7,7 @@ pub struct ParsingError {
 }
 
 impl ParsingError {
+    #[inline]
     pub fn new(message: &str, args: Vec<String>, position: Position) -> Self {
         let mut message = message.to_string();
 

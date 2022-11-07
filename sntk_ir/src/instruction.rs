@@ -11,6 +11,7 @@ pub struct Instruction {
 }
 
 impl Instruction {
+    #[inline]
     pub fn new(instruction: InstructionType, position: (usize, usize)) -> Self {
         Self { instruction, position }
     }

@@ -35,6 +35,7 @@ impl Default for Lexer {
 }
 
 impl LexerTrait for Lexer {
+    #[inline]
     fn new(input: String) -> Self {
         let mut lexer = Lexer { input, ..Default::default() };
 

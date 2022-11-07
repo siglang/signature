@@ -8,6 +8,7 @@ pub struct IrEnvironment {
 }
 
 impl IrEnvironment {
+    #[inline]
     pub fn new(parent: Option<IrEnvironment>) -> Self {
         Self {
             store: HashMap::new(),

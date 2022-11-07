@@ -9,6 +9,7 @@ pub fn get_builtin_function(name: &str) -> Option<impl FnOnce(Vec<LiteralValue>)
 
 pub trait BuiltIn {
     fn call(arguments: Vec<LiteralValue>) -> LiteralValue;
+    #[inline]
     fn call_function() -> Box<dyn FnOnce(Vec<LiteralValue>) -> LiteralValue> {
         Box::new(|arguments| Self::call(arguments))
     }

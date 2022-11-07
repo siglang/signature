@@ -8,6 +8,7 @@ pub struct Program {
 }
 
 impl Program {
+    #[inline]
     pub fn new(statements: Vec<Statement>) -> Self {
         Self {
             statements,
@@ -79,6 +80,7 @@ pub type IdentifierGeneric = Vec<Identifier>;
 pub struct FunctionType(pub Option<IdentifierGeneric>, pub Vec<DataType>, pub Box<DataType>);
 
 impl FunctionType {
+    #[inline]
     pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<DataType>, return_type: DataType) -> Self {
         FunctionType(generics, parameters, Box::new(return_type))
     }
@@ -86,9 +88,15 @@ impl FunctionType {
 
 impl std::fmt::Display for FunctionType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        // TODO: generics
         let parameters = self.1.iter().map(|parameter| parameter.to_string()).collect::<Vec<String>>().join(", ");
-        write!(f, "fn({}) -> {}", parameters, self.2)
+        let generics = match &self.0 {
+            Some(generics) => {
+                let generics = generics.iter().map(|generic| generic.value.clone()).collect::<Vec<String>>().join(", ");
+                format!("<{}>", generics)
+            }
+            None => String::new(),
+        };
+        write!(f, "fn{}({}) -> {}", generics, parameters, self.2)
     }
 }
 
@@ -96,6 +104,7 @@ impl std::fmt::Display for FunctionType {
 pub struct Generic(pub Box<DataType>, pub Vec<DataType>);
 
 impl Generic {
+    #[inline]
     pub fn new(data_type: DataType, generic_types: Vec<DataType>) -> Self {
         Generic(Box::new(data_type), generic_types)
     }
@@ -117,6 +126,7 @@ impl std::fmt::Display for Generic {
 pub struct Position(pub usize, pub usize);
 
 impl Position {
+    #[inline]
     pub fn new(line: usize, column: usize) -> Self {
         Position(line, column)
     }
@@ -137,6 +147,7 @@ macro_rules! make_struct {
         }
 
         impl $name {
+            #[inline]
             pub fn new($( $field: $type, )* position: Position) -> Self {
                 $name { $($field,)* position }
             }
@@ -151,6 +162,7 @@ macro_rules! make_struct {
         }
 
         impl $name {
+            #[inline]
             pub fn new(data_type: DataType, $( $field: $type, )* position: Position) -> Self {
                 $name { $($field,)* data_type, position }
             }

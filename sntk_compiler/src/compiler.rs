@@ -28,6 +28,7 @@ pub trait CompilerTrait {
 }
 
 impl CompilerTrait for Compiler {
+    #[inline]
     fn new(program: Program) -> Self {
         Self {
             program,
@@ -35,6 +36,7 @@ impl CompilerTrait for Compiler {
         }
     }
 
+    #[inline]
     fn new_with_types(program: Program, types: IdentifierTypes) -> Self {
         Self { program, types }
     }

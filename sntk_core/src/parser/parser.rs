@@ -80,10 +80,12 @@ impl From<String> for Parser {
 }
 
 impl ParserBase for Parser {
+    #[inline]
     fn new(lexer: Lexer) -> Self {
         Parser { lexer, ..Default::default() }
     }
 
+    #[inline]
     fn new_with_options(lexer: Lexer, options: CompilerOptions) -> Self {
         Parser {
             lexer,

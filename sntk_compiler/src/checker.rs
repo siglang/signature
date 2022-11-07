@@ -10,6 +10,7 @@ pub struct IdentifierTypes {
 }
 
 impl IdentifierTypes {
+    #[inline]
     pub fn new(parent: Option<IdentifierTypes>) -> Self {
         Self {
             types: HashMap::new(),

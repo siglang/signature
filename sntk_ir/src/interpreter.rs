@@ -24,6 +24,7 @@ pub trait InstructionHandler {
 }
 
 impl InterpreterTrait for IrInterpreter {
+    #[inline]
     fn new(instructions: Vec<Instruction>) -> Self {
         Self {
             instructions,
@@ -31,6 +32,7 @@ impl InterpreterTrait for IrInterpreter {
         }
     }
 
+    #[inline]
     fn new_with_environment(instructions: Vec<Instruction>, environment: IrEnvironment) -> Self {
         Self { instructions, environment }
     }
