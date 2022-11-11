@@ -64,7 +64,7 @@ impl CompilerTrait for Compiler {
                 data_type,
             }) => {
                 let value = self.compile_expression(value)?;
-                let value_type = get_type_from_ir_expression(&value, &self.types, position)?;
+                let value_type = get_type_from_ir_expression(&value, &self.types, Some(data_type), position)?;
 
                 if data_type.clone() != value_type {
                     return Err(type_error! { EXPECTED_DATA_TYPE; data_type.clone(), value_type; position });
@@ -78,7 +78,7 @@ impl CompilerTrait for Compiler {
                 let value = self.compile_expression(value)?;
 
                 self.types
-                    .set(name.value.clone(), get_type_from_ir_expression(&value, &self.types, position)?);
+                    .set(name.value.clone(), get_type_from_ir_expression(&value, &self.types, None, position)?);
 
                 Instruction::new(InstructionType::StoreName(name.value.clone(), value), ast_position_to_tuple(position))
             }
@@ -149,7 +149,7 @@ impl CompilerTrait for Compiler {
                 let expression = self.compile_expression(expression)?;
 
                 IrExpression::Literal(LiteralValue::String(
-                    get_type_from_ir_expression(&expression, &self.types, position)?.to_string(),
+                    get_type_from_ir_expression(&expression, &self.types, None, position)?.to_string(),
                 ))
             }
             Expression::IndexExpression(IndexExpression { left, index, .. }) => {

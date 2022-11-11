@@ -10,21 +10,10 @@ fn main() {
     let mut start = Instant::now();
 
     let source_code = r#"
-/* auto x = 1;
-auto a = if !(x != 1) {
-    auto c = 2;
-    return c * 10;
-} else {
-    return 5;
-};
-auto q = [1, 2, 3];
-auto p = fn(x: number, y: number) -> number -> x * y;
-println((fn(x: number) -> number -> x * 10)(p(a, -(q[2])))); */
-
 auto x = 1;
 println(typeof x); // number
 {
-    auto y = "hello";
+    auto y = [];
     println(typeof y);
 };
 

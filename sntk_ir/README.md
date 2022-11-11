@@ -1,1 +1,1 @@
-## Sanetaka Language ByteCode
+## Sanetaka Language IR
