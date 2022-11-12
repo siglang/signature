@@ -12,12 +12,14 @@ fn main() {
     let source_code = r#"
 auto x = 1;
 println(typeof x); // number
-{
-    auto y = [];
-    println(typeof y);
+auto z = {
+    auto y = [1, 2, 3, 4, 5];
+    println(typeof y, typeof x);
+
+    return "hello";
 };
 
-println(typeof x);
+println(typeof z, z);
     "#
     .trim_start();
 

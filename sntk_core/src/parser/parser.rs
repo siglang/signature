@@ -658,7 +658,6 @@ impl TypeParser for Parser {
             Tokens::NumberType => Ok(DataType::Number),
             Tokens::StringType => Ok(DataType::String),
             Tokens::BooleanType => Ok(DataType::Boolean),
-            Tokens::VoidType => Ok(DataType::Void),
             Tokens::Function => Ok(DataType::Fn(self.parse_function_type()?)),
             Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
             _ => Err(parsing_error! { self; UNEXPECTED_TOKEN; self.current_token.token_type }),
