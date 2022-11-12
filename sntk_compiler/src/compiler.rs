@@ -1,8 +1,7 @@
 use crate::{
     checker::{get_type_from_ir_expression, IdentifierTypes},
-    error::{CompileError, EXPECTED_DATA_TYPE},
     helpers::ast_position_to_tuple,
-    type_error,
+    type_error, CompileError, EXPECTED_DATA_TYPE,
 };
 use sntk_core::parser::ast::{
     ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, Expression, FunctionLiteral, Identifier, IfExpression,
