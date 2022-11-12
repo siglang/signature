@@ -26,7 +26,7 @@ impl IrEnvironment {
         }
     }
 
-    pub fn set(&mut self, name: Identifier, value: LiteralValue) {
-        self.store.insert(name, value);
+    pub fn set(&mut self, name: &Identifier, value: &LiteralValue) {
+        self.store.insert(name.clone(), value.clone());
     }
 }

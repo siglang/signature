@@ -18,7 +18,8 @@ println(typeof x); // number
 };
 
 println(typeof x);
-    "#.trim_start();
+    "#
+    .trim_start();
 
     match Compiler::new(Parser::new(Lexer::new(source_code.to_string())).parse_program()).compile_program() {
         Ok(instructions) => {
