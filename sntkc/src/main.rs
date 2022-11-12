@@ -30,10 +30,11 @@ println(typeof z, z);
 
             let mut ir_interpreter = IrInterpreter::new(instructions);
 
-            ir_interpreter.run();
+            match ir_interpreter.run() {
+                Ok(_) => println!("Interpreting Elapsed: {}s", start.elapsed().as_secs_f64()),
+                Err(error) => println!("{:?}", error),
+            }
         }
         Err(e) => println!("{}", e),
     }
-
-    println!("Interpreting Elapsed: {}s", start.elapsed().as_secs_f64());
 }

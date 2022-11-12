@@ -1,9 +1,11 @@
-use sntk_core::tokenizer::token::Tokens;
+use sntk_core::{parser::ast::Position, tokenizer::token::Tokens};
+use sntk_proc::with_position;
 
 use crate::{
     builtin::get_builtin_function,
     environment::IrEnvironment,
     instruction::{Block, Identifier, Instruction, InstructionType, IrExpression, LiteralValue},
+    runtime_error, RuntimeError, CANNOT_CALL_NON_FUNCTION, INDEX_OUT_OF_BOUNDS, UNDEFINED_IDENTIFIER,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -12,15 +14,17 @@ pub struct IrInterpreter {
     pub environment: IrEnvironment,
 }
 
+pub type IrInterpreterResult<T> = Result<T, RuntimeError>;
+
 pub trait InterpreterTrait {
     fn new(instructions: Vec<Instruction>) -> Self;
     fn new_with_environment(instructions: Vec<Instruction>, environment: IrEnvironment) -> Self;
-    fn run(&mut self);
+    fn run(&mut self) -> IrInterpreterResult<()>;
 }
 
 pub trait InstructionHandler {
-    fn interpret_store_name(&mut self, identifier: &Identifier, literal: &IrExpression);
-    fn to_expression(&mut self, expression: &IrExpression) -> LiteralValue;
+    fn interpret_store_name(&mut self, identifier: &Identifier, literal: &IrExpression, position: &Position) -> IrInterpreterResult<()>;
+    fn to_expression(&mut self, expression: &IrExpression, position: &Position) -> IrInterpreterResult<LiteralValue>;
 }
 
 impl InterpreterTrait for IrInterpreter {
@@ -37,78 +41,100 @@ impl InterpreterTrait for IrInterpreter {
         Self { instructions, environment }
     }
 
-    fn run(&mut self) {
-        for instruction in self.clone().instructions.iter() {
-            match &instruction.instruction {
-                InstructionType::StoreName(identifier, literal) => self.interpret_store_name(identifier, literal),
-                InstructionType::Expression(expression) => _ = self.to_expression(expression),
+    fn run(&mut self) -> IrInterpreterResult<()> {
+        for Instruction {
+            instruction,
+            position: (line, column),
+        } in self.clone().instructions.iter()
+        {
+            let position = &Position::new(*line, *column);
+
+            match instruction {
+                InstructionType::StoreName(identifier, literal) => self.interpret_store_name(identifier, literal, position)?,
+                InstructionType::Expression(expression) => _ = self.to_expression(expression, position)?,
                 InstructionType::Return(_) => {}
             }
         }
+
+        Ok(())
     }
 }
 
 impl InstructionHandler for IrInterpreter {
-    fn interpret_store_name(&mut self, identifier: &Identifier, literal: &IrExpression) {
-        let literal = self.to_expression(literal);
+    #[with_position]
+    fn interpret_store_name(&mut self, identifier: &Identifier, literal: &IrExpression) -> IrInterpreterResult<()> {
+        let literal = self.to_expression(literal, position)?;
         self.environment.set(identifier, &literal);
+
+        Ok(())
     }
 
-    fn to_expression(&mut self, expression: &IrExpression) -> LiteralValue {
+    #[with_position]
+    fn to_expression(&mut self, expression: &IrExpression) -> IrInterpreterResult<LiteralValue> {
         match expression {
-            IrExpression::Identifier(identifier) => self.ir_expression_identifier(identifier),
-            IrExpression::Block(block) => self.ir_expression_block(block),
-            IrExpression::If(condition, consequence, alternative) => self.ir_expression_if(condition, consequence, alternative),
-            IrExpression::Call(function, arguments) => self.ir_expression_call(function, arguments),
-            IrExpression::Index(left, index) => self.ir_expression_index(left, index),
-            IrExpression::Prefix(operator, right) => self.ir_expression_prefix(operator, right),
-            IrExpression::Infix(left, operator, right) => self.ir_expression_infix(left, operator, right),
-            IrExpression::Literal(literal) => literal.clone(),
+            IrExpression::Identifier(identifier) => self.ir_expression_identifier(identifier, position),
+            IrExpression::Block(block) => self.ir_expression_block(block, position),
+            IrExpression::If(condition, consequence, alternative) => self.ir_expression_if(condition, consequence, alternative, position),
+            IrExpression::Call(function, arguments) => self.ir_expression_call(function, arguments, position),
+            IrExpression::Index(left, index) => self.ir_expression_index(left, index, position),
+            IrExpression::Prefix(operator, right) => self.ir_expression_prefix(operator, right, position),
+            IrExpression::Infix(left, operator, right) => self.ir_expression_infix(left, operator, right, position),
+            IrExpression::Literal(literal) => Ok(literal.clone()),
         }
     }
 }
 
 impl IrInterpreter {
-    fn ir_expression_identifier(&mut self, identifier: &String) -> LiteralValue {
+    #[with_position]
+    fn ir_expression_identifier(&mut self, identifier: &String) -> IrInterpreterResult<LiteralValue> {
         match self.environment.get(&identifier.clone()) {
-            Some(literal) => literal,
-            None => panic!("Undefined identifier: {}", identifier),
+            Some(literal) => Ok(literal),
+            None => return Err(runtime_error! { UNDEFINED_IDENTIFIER; identifier; &position }),
         }
     }
 
-    fn ir_expression_block(&mut self, block: &Block) -> LiteralValue {
+    #[with_position]
+    fn ir_expression_block(&mut self, block: &Block) -> IrInterpreterResult<LiteralValue> {
         let mut interpreter = IrInterpreter::new_with_environment(block.clone(), IrEnvironment::new(Some(self.environment.clone())));
 
-        interpreter.run();
+        interpreter.run()?;
 
-        if let InstructionType::Return(literal) = interpreter.instructions.last().unwrap().instruction.clone() {
-            interpreter.to_expression(&literal)
+        let last = match interpreter.instructions.last() {
+            Some(instruction) => instruction,
+            None => return Ok(LiteralValue::Boolean(true)),
+        };
+
+        if let InstructionType::Return(literal) = last.instruction.clone() {
+            interpreter.to_expression(&literal, position)
         } else {
-            LiteralValue::Boolean(true)
+            Ok(LiteralValue::Boolean(true))
         }
     }
 
-    fn ir_expression_if(
-        &mut self,
-        condition: &Box<IrExpression>,
-        consequence: &Box<IrExpression>,
-        alternative: &Box<Option<IrExpression>>,
-    ) -> LiteralValue {
-        let condition = self.to_expression(condition);
+    #[with_position]
+    #[rustfmt::skip]
+    fn ir_expression_if(&mut self, condition: &Box<IrExpression>, consequence: &Box<IrExpression>, alternative: &Box<Option<IrExpression>>) -> IrInterpreterResult<LiteralValue> {
+        let condition = self.to_expression(condition, position)?;
 
         if let LiteralValue::Boolean(condition) = condition {
             if condition {
-                self.to_expression(consequence)
+                self.to_expression(consequence, position)
+            } else if let Some(ref alternative) = **alternative {
+                self.to_expression(alternative, position)
             } else {
-                self.to_expression(&alternative.clone().unwrap())
+                Ok(LiteralValue::Boolean(true))
             }
         } else {
             unreachable!()
         }
     }
 
-    fn ir_expression_call(&mut self, function: &Box<IrExpression>, arguments: &Vec<IrExpression>) -> LiteralValue {
-        let arguments = arguments.iter().map(|argument| self.to_expression(argument)).collect::<Vec<_>>();
+    #[with_position]
+    fn ir_expression_call(&mut self, function: &Box<IrExpression>, arguments: &Vec<IrExpression>) -> IrInterpreterResult<LiteralValue> {
+        let arguments = arguments
+            .iter()
+            .map(|argument| self.to_expression(argument, position))
+            .collect::<IrInterpreterResult<Vec<LiteralValue>>>()?;
 
         macro_rules! function_impl {
             ($parameters:expr; $body:expr) => {{
@@ -120,12 +146,17 @@ impl IrInterpreter {
 
                 let mut interpreter = IrInterpreter::new_with_environment($body, environment);
 
-                interpreter.run();
+                interpreter.run()?;
 
-                if let InstructionType::Return(literal) = interpreter.instructions.last().unwrap().instruction.clone() {
-                    interpreter.to_expression(&literal)
+                let last = match interpreter.instructions.last() {
+                    Some(instruction) => instruction,
+                    None => return Ok(LiteralValue::Boolean(true)),
+                };
+
+                if let InstructionType::Return(literal) = last.instruction.clone() {
+                    interpreter.to_expression(&literal, position)
                 } else {
-                    LiteralValue::Boolean(true)
+                    Ok(LiteralValue::Boolean(true))
                 }
             }};
         }
@@ -133,10 +164,10 @@ impl IrInterpreter {
         match *function.clone() {
             IrExpression::Identifier(identifier) => match self.environment.get(&identifier.clone()) {
                 Some(LiteralValue::Function(parameters, body)) => function_impl! { parameters; body },
-                Some(_) => panic!("Cannot call non-function"),
+                Some(_) => return Err(runtime_error! { CANNOT_CALL_NON_FUNCTION; identifier; &position }),
                 None => match get_builtin_function(identifier.as_str()) {
-                    Some(function) => function(arguments.iter().map(|argument| argument).collect()),
-                    None => panic!("Undefined identifier: {}", identifier),
+                    Some(function) => Ok(function(arguments.iter().map(|argument| argument).collect())),
+                    None => return Err(runtime_error! { UNDEFINED_IDENTIFIER; identifier; &position }),
                 },
             },
             IrExpression::Literal(LiteralValue::Function(parameters, body)) => function_impl! { parameters; body },
@@ -144,34 +175,37 @@ impl IrInterpreter {
         }
     }
 
-    fn ir_expression_index(&mut self, left: &Box<IrExpression>, index: &Box<IrExpression>) -> LiteralValue {
-        let left = self.to_expression(left);
-        let index = self.to_expression(index);
+    #[with_position]
+    fn ir_expression_index(&mut self, left: &Box<IrExpression>, index: &Box<IrExpression>) -> IrInterpreterResult<LiteralValue> {
+        let left = self.to_expression(left, position)?;
+        let index = self.to_expression(index, position)?;
 
         match (left, index) {
             (LiteralValue::Array(array), LiteralValue::Number(index)) => match array.get(index as usize) {
-                Some(literal) => self.to_expression(literal),
-                None => panic!("Index out of bounds"),
+                Some(literal) => self.to_expression(literal, position),
+                None => return Err(runtime_error! { INDEX_OUT_OF_BOUNDS; index; &position }),
             },
             _ => unreachable!(),
         }
     }
 
-    fn ir_expression_prefix(&mut self, operator: &Tokens, right: &Box<IrExpression>) -> LiteralValue {
-        let right = self.to_expression(right);
+    #[with_position]
+    fn ir_expression_prefix(&mut self, operator: &Tokens, right: &Box<IrExpression>) -> IrInterpreterResult<LiteralValue> {
+        let right = self.to_expression(right, position)?;
 
-        match (operator, right) {
+        Ok(match (operator, right) {
             (Tokens::Bang, LiteralValue::Boolean(right)) => LiteralValue::Boolean(!right),
             (Tokens::Minus, LiteralValue::Number(right)) => LiteralValue::Number(-right),
             (operator, right) => unreachable!("Invalid prefix operator: {} {}", operator, right),
-        }
+        })
     }
 
-    fn ir_expression_infix(&mut self, left: &Box<IrExpression>, operator: &Tokens, right: &Box<IrExpression>) -> LiteralValue {
-        let left = self.to_expression(left);
-        let right = self.to_expression(right);
+    #[with_position]
+    fn ir_expression_infix(&mut self, left: &Box<IrExpression>, operator: &Tokens, right: &Box<IrExpression>) -> IrInterpreterResult<LiteralValue> {
+        let left = self.to_expression(left, position)?;
+        let right = self.to_expression(right, position)?;
 
-        match (left.clone(), operator, right.clone()) {
+        Ok(match (left.clone(), operator, right.clone()) {
             (LiteralValue::Number(left), Tokens::Plus, LiteralValue::Number(right)) => LiteralValue::Number(left + right),
             (LiteralValue::Number(left), Tokens::Minus, LiteralValue::Number(right)) => LiteralValue::Number(left - right),
             (LiteralValue::Number(left), Tokens::Asterisk, LiteralValue::Number(right)) => LiteralValue::Number(left * right),
@@ -184,6 +218,6 @@ impl IrInterpreter {
             (_, Tokens::EQ, _) => LiteralValue::Boolean(left == right),
             (_, Tokens::NEQ, _) => LiteralValue::Boolean(left != right),
             (left, operator, right) => unreachable!("Invalid infix operator: {} {} {}", left, operator, right),
-        }
+        })
     }
 }
