@@ -1,6 +1,6 @@
 use crate::{
     compiler::CompileResult,
-    error::{EXPECTED_DATA_TYPE, UNKNOWN_ARRAY_TYPE, UNKNOWN_TYPE},
+    error::{EXPECTED_DATA_TYPE, UNDEFINED_IDENTIFIER, UNKNOWN_ARRAY_TYPE},
     type_error,
 };
 use sntk_core::parser::ast::{DataType, Position};
@@ -43,10 +43,21 @@ pub fn get_type_from_ir_expression(expression: &IrExpression, types: &Identifier
     match expression.clone() {
         IrExpression::Identifier(identifier) => match types.get(&identifier) {
             Some(data_type) => Ok(data_type),
-            None => Err(type_error! { UNKNOWN_TYPE; identifier; &position }),
+            None => Err(type_error! { UNDEFINED_IDENTIFIER; identifier; &position }),
         },
         IrExpression::Literal(literal) => get_type_from_literal_value(&literal, types, data_type, &position),
-        IrExpression::Block(_) => todo!(),
+        IrExpression::Block(block) => get_type_from_ir_expression(
+            match block.last() {
+                Some(instruction) => match instruction.instruction {
+                    InstructionType::Return(ref expression) | InstructionType::StoreName(_, ref expression) => expression,
+                    _ => return Ok(DataType::Boolean),
+                },
+                None => return Ok(DataType::Boolean),
+            },
+            types,
+            data_type,
+            &position,
+        ),
         IrExpression::If(_, _, _) => todo!(),
         IrExpression::Call(_, _) => todo!(),
         IrExpression::Index(_, _) => todo!(),

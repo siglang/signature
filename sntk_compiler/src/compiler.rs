@@ -97,9 +97,17 @@ impl CompilerTrait for Compiler {
         Ok(match expression {
             Expression::Identifier(Identifier { value, .. }) => IrExpression::Identifier(value.clone()),
             Expression::BlockExpression(BlockExpression { statements, .. }) => {
-                let mut compiler = Compiler::new_with_types(Program::new(statements.clone()), IdentifierTypes::new(Some(&self.types.clone())));
+                let mut instructions = Vec::new();
 
-                IrExpression::Block(compiler.compile_program()?)
+                for statement in statements.iter() {
+                    instructions.push(self.compile_statement(statement)?);
+
+                    if let Statement::ReturnStatement(_) = statement {
+                        break;
+                    }
+                }
+
+                IrExpression::Block(instructions)
             }
             Expression::PrefixExpression(PrefixExpression { operator, right, .. }) => {
                 IrExpression::Prefix(operator.clone(), Box::new(self.compile_expression(right)?))
