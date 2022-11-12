@@ -18,6 +18,6 @@ macro_rules! position {
 #[macro_export]
 macro_rules! parsing_error {
     ($self:ident; $msg:ident; $( $r:expr ),*) => {
-        crate::parser::error::ParsingError::new($msg, vec![$( format!("{}", $r) ),*], &position! { $self })
+        crate::parser::ParsingError::new($msg, vec![$( format!("{}", $r) ),*], &position! { $self })
     };
 }
