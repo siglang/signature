@@ -67,10 +67,10 @@ impl CompilerTrait for Compiler {
                 let value_type = get_type_from_ir_expression(&value, &self.types, Some(data_type), position)?;
 
                 if data_type.clone() != value_type {
-                    return Err(type_error! { EXPECTED_DATA_TYPE; data_type.clone(), value_type; position });
+                    return Err(type_error! { EXPECTED_DATA_TYPE; data_type.clone(), value_type; &position });
                 }
 
-                self.types.set(name.value.clone(), data_type.clone());
+                self.types.set(&name.value, &data_type);
 
                 Instruction::new(InstructionType::StoreName(name.value.clone(), value), ast_position_to_tuple(position))
             }
@@ -78,7 +78,7 @@ impl CompilerTrait for Compiler {
                 let value = self.compile_expression(value)?;
 
                 self.types
-                    .set(name.value.clone(), get_type_from_ir_expression(&value, &self.types, None, position)?);
+                    .set(&name.value, &get_type_from_ir_expression(&value, &self.types, None, position)?);
 
                 Instruction::new(InstructionType::StoreName(name.value.clone(), value), ast_position_to_tuple(position))
             }
@@ -97,7 +97,7 @@ impl CompilerTrait for Compiler {
         Ok(match expression {
             Expression::Identifier(Identifier { value, .. }) => IrExpression::Identifier(value.clone()),
             Expression::BlockExpression(BlockExpression { statements, .. }) => {
-                let mut compiler = Compiler::new_with_types(Program::new(statements.clone()), IdentifierTypes::new(Some(self.types.clone())));
+                let mut compiler = Compiler::new_with_types(Program::new(statements.clone()), IdentifierTypes::new(Some(&self.types.clone())));
 
                 IrExpression::Block(compiler.compile_program()?)
             }

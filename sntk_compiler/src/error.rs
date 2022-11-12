@@ -1,4 +1,5 @@
 use sntk_core::parser::{ast::Position, error::ParsingError};
+use sntk_proc::ErrorFormat;
 use std::fmt::{self, write};
 
 #[derive(Debug, Clone)]
@@ -32,23 +33,10 @@ impl fmt::Display for CompileError {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, ErrorFormat)]
 pub struct TypeError {
     pub message: String,
     pub position: Position,
-}
-
-impl TypeError {
-    #[inline]
-    pub fn new(message: &str, args: Vec<String>, position: Position) -> Self {
-        let mut message = message.to_string();
-
-        args.iter().enumerate().for_each(|(i, arg)| {
-            message = message.replace(&format!("{{{i}}}"), arg);
-        });
-
-        Self { message, position }
-    }
 }
 
 macro_rules! messages {
