@@ -1,22 +1,11 @@
+use sntk_proc::ErrorFormat;
+
 use super::ast::Position;
 
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, Clone, ErrorFormat)]
 pub struct ParsingError {
     pub message: String,
     pub position: Position,
-}
-
-impl ParsingError {
-    #[inline]
-    pub fn new(message: &str, args: Vec<String>, position: Position) -> Self {
-        let mut message = message.to_string();
-
-        args.iter().enumerate().for_each(|(i, arg)| {
-            message = message.replace(&format!("{{{i}}}"), arg);
-        });
-
-        Self { message, position }
-    }
 }
 
 macro_rules! messages {
