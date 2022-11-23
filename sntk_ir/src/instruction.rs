@@ -1,4 +1,4 @@
-use sntk_core::tokenizer::token::Tokens;
+use sntk_core::{parser::ast::DataType, tokenizer::token::Tokens};
 use std::fmt;
 
 pub type Identifier = String;
@@ -60,11 +60,11 @@ impl fmt::Display for IrExpression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
-    Number(f64),                      /* number */
-    String(String),                   /* string */
-    Boolean(bool),                    /* boolean */
-    Array(Vec<IrExpression>),         /* array */
-    Function(Vec<Identifier>, Block), /* parameters, block */
+    Number(f64),                                            /* number */
+    String(String),                                         /* string */
+    Boolean(bool),                                          /* boolean */
+    Array(Vec<IrExpression>),                               /* array */
+    Function(Vec<(Identifier, DataType)>, Block, DataType), /* (parameters, datatype), block, return type */
 }
 
 impl fmt::Display for LiteralValue {
@@ -74,8 +74,16 @@ impl fmt::Display for LiteralValue {
             LiteralValue::String(string) => write!(f, "{}", string),
             LiteralValue::Boolean(boolean) => write!(f, "{}", boolean),
             LiteralValue::Array(array) => write!(f, "[{}]", array.iter().map(|element| format!("{}", element)).collect::<String>()),
-            LiteralValue::Function(parameters, _) => {
-                write!(f, "fn({})", parameters.iter().map(|parameter| parameter.to_string()).collect::<String>())
+            LiteralValue::Function(parameters, _, data_type) => {
+                write!(
+                    f,
+                    "fn({}) -> {}",
+                    parameters
+                        .iter()
+                        .map(|parameter| format!("{}: {}", parameter.0, parameter.1))
+                        .collect::<String>(),
+                    data_type
+                )
             }
         }
     }

@@ -141,7 +141,7 @@ impl IrInterpreter {
                 let mut environment = IrEnvironment::new(Some(self.environment.clone()));
 
                 for (parameter, argument) in $parameters.iter().zip(arguments.iter()) {
-                    environment.set(parameter, &argument);
+                    environment.set(&parameter.0, &argument);
                 }
 
                 let mut interpreter = IrInterpreter::new_with_environment($body, environment);
@@ -163,14 +163,14 @@ impl IrInterpreter {
 
         match *function.clone() {
             IrExpression::Identifier(identifier) => match self.environment.get(&identifier.clone()) {
-                Some(LiteralValue::Function(parameters, body)) => function_impl! { parameters; body },
+                Some(LiteralValue::Function(parameters, body, _)) => function_impl! { parameters; body },
                 Some(_) => return Err(runtime_error! { CANNOT_CALL_NON_FUNCTION; identifier; &position }),
                 None => match get_builtin_function(identifier.as_str()) {
                     Some(function) => Ok(function(arguments.iter().map(|argument| argument).collect())),
                     None => return Err(runtime_error! { UNDEFINED_IDENTIFIER; identifier; &position }),
                 },
             },
-            IrExpression::Literal(LiteralValue::Function(parameters, body)) => function_impl! { parameters; body },
+            IrExpression::Literal(LiteralValue::Function(parameters, body, _)) => function_impl! { parameters; body },
             _ => unreachable!(),
         }
     }

@@ -10,16 +10,9 @@ fn main() {
     let mut start = Instant::now();
 
     let source_code = r#"
-auto x = 1;
-println(typeof x); // number
-auto z = {
-    auto y = [1, 2, 3, 4, 5];
-    println(typeof y, typeof x);
+auto foo = fn(x: number, y: string) -> number -> x;
 
-    return "hello";
-};
-
-println(typeof z, z);
+println(typeof foo, foo(1, "hello"));
     "#
     .trim_start();
 
