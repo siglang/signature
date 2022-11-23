@@ -100,7 +100,13 @@ pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTyp
         }
 
         LiteralValue::Function(parameters, body, return_type) => {
-            let block_return_type = Box::new(get_type_from_ir_expression(&IrExpression::Block(body.clone()), types, data_type, position)?.clone());
+            let mut types = IdentifierTypes::new(Some(types));
+
+            for (name, data_type) in parameters {
+                types.set(name, data_type);
+            }
+
+            let block_return_type = Box::new(get_type_from_ir_expression(&IrExpression::Block(body.clone()), &types, data_type, position)?.clone());
 
             let function_type = Ok(DataType::Fn(FunctionType(
                 None,

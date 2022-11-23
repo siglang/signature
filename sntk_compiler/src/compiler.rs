@@ -132,19 +132,12 @@ impl CompilerTrait for Compiler {
                 ),
             ),
             Expression::FunctionLiteral(FunctionLiteral { parameters, body, return_type, .. }) => {
-                let mut instructions = Vec::new();
-
-                for statement in body.statements.iter() {
-                    instructions.push(self.compile_statement(statement)?);
-                }
-
-                for (name, data_type) in parameters.iter() {
-                    self.types.set(&name.value, data_type);
-                }
-
                 IrExpression::Literal(LiteralValue::Function(
-                    parameters.iter().map(|p| (p.0.value.clone(), p.1.clone())).collect::<Vec<_>>(),
-                    instructions,
+                    parameters.iter().map(|parameter| (parameter.0.value.clone(), parameter.1.clone())).collect(),
+                    match self.compile_expression(&Expression::BlockExpression(body.clone()))? {
+                        IrExpression::Block(instructions) => instructions,
+                        _ => unreachable!(),
+                    },
                     return_type.clone(),
                 ))
             }

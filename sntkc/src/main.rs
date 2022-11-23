@@ -10,7 +10,8 @@ fn main() {
     let mut start = Instant::now();
 
     let source_code = r#"
-auto foo = fn(x: number, y: string) -> number -> x;
+auto a = 1;
+auto foo = fn(x: number, y: string) -> number[] -> [x, x, x];
 
 println(typeof foo, foo(1, "hello"));
     "#
