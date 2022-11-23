@@ -1,5 +1,5 @@
 use crate::{compiler::CompileResult, type_error, EXPECTED_DATA_TYPE, UNDEFINED_IDENTIFIER, UNKNOWN_ARRAY_TYPE};
-use sntk_core::parser::ast::{DataType, Position};
+use sntk_core::parser::ast::{DataType, FunctionType, Position};
 use sntk_ir::instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue};
 use sntk_proc::with_position;
 use std::collections::HashMap;
@@ -98,7 +98,28 @@ pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTyp
 
             Ok(DataType::Array(Box::new(element_type)))
         }
-        LiteralValue::Function(..) => unimplemented!(),
+
+        LiteralValue::Function(parameters, body, return_type) => {
+            let block_return_type = Box::new(get_type_from_ir_expression(&IrExpression::Block(body.clone()), types, data_type, position)?.clone());
+
+            let function_type = Ok(DataType::Fn(FunctionType(
+                None,
+                parameters.iter().map(|parameter| parameter.1.clone()).collect(),
+                block_return_type.clone(),
+            )))?;
+
+            if return_type.clone() != *block_return_type {
+                return Err(type_error! { EXPECTED_DATA_TYPE; return_type, block_return_type; &position });
+            }
+
+            if let Some(data_type) = data_type {
+                if *data_type != function_type {
+                    return Err(type_error! { EXPECTED_DATA_TYPE; data_type, function_type; &position });
+                }
+            }
+
+            Ok(function_type)
+        }
     }
 }
 

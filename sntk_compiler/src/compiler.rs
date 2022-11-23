@@ -131,16 +131,21 @@ impl CompilerTrait for Compiler {
                         .transpose()?,
                 ),
             ),
-            Expression::FunctionLiteral(FunctionLiteral { parameters, body, .. }) => {
+            Expression::FunctionLiteral(FunctionLiteral { parameters, body, return_type, .. }) => {
                 let mut instructions = Vec::new();
 
                 for statement in body.statements.iter() {
                     instructions.push(self.compile_statement(statement)?);
                 }
 
+                for (name, data_type) in parameters.iter() {
+                    self.types.set(&name.value, data_type);
+                }
+
                 IrExpression::Literal(LiteralValue::Function(
-                    parameters.clone().iter().map(|x| x.0.value.clone()).collect(),
+                    parameters.iter().map(|p| (p.0.value.clone(), p.1.clone())).collect::<Vec<_>>(),
                     instructions,
+                    return_type.clone(),
                 ))
             }
             Expression::CallExpression(CallExpression { function, arguments, .. }) => {
