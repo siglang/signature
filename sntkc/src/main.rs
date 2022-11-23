@@ -13,7 +13,7 @@ fn main() {
 auto a = 1;
 auto foo = fn(x: number, y: string) -> number[] -> [x, x, x];
 
-println(typeof foo, foo(1, "hello"));
+println(typeof foo, foo(1, "hello"), ["hello", "world"]);
     "#
     .trim_start();
 

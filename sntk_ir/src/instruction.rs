@@ -54,7 +54,19 @@ pub enum IrExpression {
 
 impl fmt::Display for IrExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "expression")
+        match self {
+            Self::Identifier(identifier) => write!(f, "{}", identifier),
+            Self::Literal(literal) => write!(f, "{}", match literal {
+                LiteralValue::String(string) => format!("\"{}\"", string),
+                _ => format!("{}", literal),
+            }),
+            Self::Block(block) => write!(f, "block({})", block.iter().map(|instruction| format!("{}", instruction)).collect::<Vec<String>>().join(", ")),
+            Self::If(condition, consequence, alternative) => write!(f, "if({}, {}, {})", condition, consequence, alternative.clone().map(|alternative| format!("{}", alternative)).unwrap_or_else(|| "None".to_string())),
+            Self::Call(function, arguments) => write!(f, "call({}, {})", function, arguments.iter().map(|argument| format!("{}", argument)).collect::<Vec<String>>().join(", ")),
+            Self::Index(left, index) => write!(f, "index({}, {})", left, index),
+            Self::Prefix(operator, right) => write!(f, "prefix({}, {})", operator, right),
+            Self::Infix(left, operator, right) => write!(f, "infix({}, {}, {})", left, operator, right),
+        }
     }
 }
 
@@ -73,7 +85,7 @@ impl fmt::Display for LiteralValue {
             LiteralValue::Number(number) => write!(f, "{}", number),
             LiteralValue::String(string) => write!(f, "{}", string),
             LiteralValue::Boolean(boolean) => write!(f, "{}", boolean),
-            LiteralValue::Array(array) => write!(f, "[{}]", array.iter().map(|element| format!("{}", element)).collect::<String>()),
+            LiteralValue::Array(array) => write!(f, "[{}]", array.iter().map(|expression| format!("{}", expression)).collect::<Vec<String>>().join(", ")),
             LiteralValue::Function(parameters, _, data_type) => {
                 write!(
                     f,
