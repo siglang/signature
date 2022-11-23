@@ -105,6 +105,15 @@
 -   `IndexExpression`
     -   [`Expression`](#expression) `[` [`Expression`](#expression) `]`
 
+<br />
+
+### `TypeofExpression`
+
+-   `TypeofExpression`
+    -   `typeof`[^keyword] [`Expression`](#expression)
+
+<br />
+
 ### `Literal`
 
 -   `Literal`
