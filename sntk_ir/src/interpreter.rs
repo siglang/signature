@@ -75,11 +75,22 @@ impl InstructionHandler for IrInterpreter {
             IrExpression::Identifier(identifier) => self.ir_expression_identifier(identifier, position),
             IrExpression::Block(block) => self.ir_expression_block(block, position),
             IrExpression::If(condition, consequence, alternative) => self.ir_expression_if(condition, consequence, alternative, position),
-            IrExpression::Call(function, arguments) => self.ir_expression_call(function, arguments, position),
+            IrExpression::Call(function, arguments) => self.ir_expression_call(function, arguments.clone(), position),
             IrExpression::Index(left, index) => self.ir_expression_index(left, index, position),
             IrExpression::Prefix(operator, right) => self.ir_expression_prefix(operator, right, position),
             IrExpression::Infix(left, operator, right) => self.ir_expression_infix(left, operator, right, position),
-            IrExpression::Literal(literal) => Ok(literal.clone()),
+            IrExpression::Literal(literal) => Ok(match literal {
+                LiteralValue::Array(array) => LiteralValue::Array(
+                    array
+                        .iter()
+                        .map(|expression| self.to_expression(expression, position))
+                        .collect::<IrInterpreterResult<Vec<LiteralValue>>>()?
+                        .iter()
+                        .map(|literal| IrExpression::Literal(literal.clone()))
+                        .collect(),
+                ),
+                _ => literal.clone(),
+            }),
         }
     }
 }
@@ -89,7 +100,7 @@ impl IrInterpreter {
     fn ir_expression_identifier(&mut self, identifier: &String) -> IrInterpreterResult<LiteralValue> {
         match self.environment.get(&identifier.clone()) {
             Some(literal) => Ok(literal),
-            None => return Err(runtime_error! { UNDEFINED_IDENTIFIER; identifier; &position }),
+            None => Err(runtime_error! { UNDEFINED_IDENTIFIER; identifier; &position }),
         }
     }
 
@@ -113,13 +124,13 @@ impl IrInterpreter {
 
     #[with_position]
     #[rustfmt::skip]
-    fn ir_expression_if(&mut self, condition: &Box<IrExpression>, consequence: &Box<IrExpression>, alternative: &Box<Option<IrExpression>>) -> IrInterpreterResult<LiteralValue> {
+    fn ir_expression_if(&mut self, condition: &IrExpression, consequence: &IrExpression, alternative: &Option<IrExpression>) -> IrInterpreterResult<LiteralValue> {
         let condition = self.to_expression(condition, position)?;
 
         if let LiteralValue::Boolean(condition) = condition {
             if condition {
                 self.to_expression(consequence, position)
-            } else if let Some(ref alternative) = **alternative {
+            } else if let Some(ref alternative) = *alternative {
                 self.to_expression(alternative, position)
             } else {
                 Ok(LiteralValue::Boolean(true))
@@ -130,7 +141,7 @@ impl IrInterpreter {
     }
 
     #[with_position]
-    fn ir_expression_call(&mut self, function: &Box<IrExpression>, arguments: &Vec<IrExpression>) -> IrInterpreterResult<LiteralValue> {
+    fn ir_expression_call(&mut self, function: &IrExpression, arguments: Vec<IrExpression>) -> IrInterpreterResult<LiteralValue> {
         let arguments = arguments
             .iter()
             .map(|argument| self.to_expression(argument, position))
@@ -161,13 +172,13 @@ impl IrInterpreter {
             }};
         }
 
-        match *function.clone() {
-            IrExpression::Identifier(identifier) => match self.environment.get(&identifier.clone()) {
+        match function.clone() {
+            IrExpression::Identifier(identifier) => match self.environment.get(&identifier) {
                 Some(LiteralValue::Function(parameters, body, _)) => function_impl! { parameters; body },
-                Some(_) => return Err(runtime_error! { CANNOT_CALL_NON_FUNCTION; identifier; &position }),
+                Some(_) => Err(runtime_error! { CANNOT_CALL_NON_FUNCTION; identifier; &position }),
                 None => match get_builtin_function(identifier.as_str()) {
-                    Some(function) => Ok(function(arguments.iter().map(|argument| argument).collect())),
-                    None => return Err(runtime_error! { UNDEFINED_IDENTIFIER; identifier; &position }),
+                    Some(function) => Ok(function(arguments.iter().collect())),
+                    None => Err(runtime_error! { UNDEFINED_IDENTIFIER; identifier; &position }),
                 },
             },
             IrExpression::Literal(LiteralValue::Function(parameters, body, _)) => function_impl! { parameters; body },
@@ -176,21 +187,21 @@ impl IrInterpreter {
     }
 
     #[with_position]
-    fn ir_expression_index(&mut self, left: &Box<IrExpression>, index: &Box<IrExpression>) -> IrInterpreterResult<LiteralValue> {
+    fn ir_expression_index(&mut self, left: &IrExpression, index: &IrExpression) -> IrInterpreterResult<LiteralValue> {
         let left = self.to_expression(left, position)?;
         let index = self.to_expression(index, position)?;
 
         match (left, index) {
             (LiteralValue::Array(array), LiteralValue::Number(index)) => match array.get(index as usize) {
                 Some(literal) => self.to_expression(literal, position),
-                None => return Err(runtime_error! { INDEX_OUT_OF_BOUNDS; index; &position }),
+                None => Err(runtime_error! { INDEX_OUT_OF_BOUNDS; index; &position }),
             },
             _ => unreachable!(),
         }
     }
 
     #[with_position]
-    fn ir_expression_prefix(&mut self, operator: &Tokens, right: &Box<IrExpression>) -> IrInterpreterResult<LiteralValue> {
+    fn ir_expression_prefix(&mut self, operator: &Tokens, right: &IrExpression) -> IrInterpreterResult<LiteralValue> {
         let right = self.to_expression(right, position)?;
 
         Ok(match (operator, right) {
@@ -201,23 +212,33 @@ impl IrInterpreter {
     }
 
     #[with_position]
-    fn ir_expression_infix(&mut self, left: &Box<IrExpression>, operator: &Tokens, right: &Box<IrExpression>) -> IrInterpreterResult<LiteralValue> {
+    fn ir_expression_infix(&mut self, left: &IrExpression, operator: &Tokens, right: &IrExpression) -> IrInterpreterResult<LiteralValue> {
         let left = self.to_expression(left, position)?;
         let right = self.to_expression(right, position)?;
 
-        Ok(match (left.clone(), operator, right.clone()) {
-            (LiteralValue::Number(left), Tokens::Plus, LiteralValue::Number(right)) => LiteralValue::Number(left + right),
-            (LiteralValue::Number(left), Tokens::Minus, LiteralValue::Number(right)) => LiteralValue::Number(left - right),
-            (LiteralValue::Number(left), Tokens::Asterisk, LiteralValue::Number(right)) => LiteralValue::Number(left * right),
-            (LiteralValue::Number(left), Tokens::Slash, LiteralValue::Number(right)) => LiteralValue::Number(left / right),
-            (LiteralValue::Number(left), Tokens::Percent, LiteralValue::Number(right)) => LiteralValue::Number(left % right),
-            (LiteralValue::Number(left), Tokens::LT, LiteralValue::Number(right)) => LiteralValue::Boolean(left < right),
-            (LiteralValue::Number(left), Tokens::GT, LiteralValue::Number(right)) => LiteralValue::Boolean(left > right),
-            (LiteralValue::Number(left), Tokens::LTE, LiteralValue::Number(right)) => LiteralValue::Boolean(left < right),
-            (LiteralValue::Number(left), Tokens::GTE, LiteralValue::Number(right)) => LiteralValue::Boolean(left > right),
-            (_, Tokens::EQ, _) => LiteralValue::Boolean(left == right),
-            (_, Tokens::NEQ, _) => LiteralValue::Boolean(left != right),
-            (left, operator, right) => unreachable!("Invalid infix operator: {} {} {}", left, operator, right),
+        macro_rules! match_infix {
+            ($($t:ident, $op:tt, $ty:ident);*) => {
+                match (left.clone(), operator, right.clone()) {
+                    $(
+                        (LiteralValue::Number(left), Tokens::$t, LiteralValue::Number(right)) => LiteralValue::$ty(left $op right),
+                    )*
+                    (_, Tokens::EQ, _) => LiteralValue::Boolean(left == right),
+                    (_, Tokens::NEQ, _) => LiteralValue::Boolean(left != right),
+                    (left, operator, right) => unreachable!("Invalid infix operator: {} {} {}", left, operator, right),
+                }
+            }
+        }
+
+        Ok(match_infix! {
+            Plus, +, Number;
+            Minus, -, Number;
+            Asterisk, *, Number;
+            Slash, /, Number;
+            Percent, %, Number;
+            LT, <, Boolean;
+            LTE, <=, Boolean;
+            GT, >, Boolean;
+            GTE, >=, Boolean
         })
     }
 }
