@@ -69,7 +69,7 @@ impl CompilerTrait for Compiler {
                     return Err(type_error! { EXPECTED_DATA_TYPE; data_type.clone(), value_type; &position });
                 }
 
-                self.types.set(&name.value, &data_type);
+                self.types.set(&name.value, data_type);
 
                 Instruction::new(InstructionType::StoreName(name.value.clone(), value), ast_position_to_tuple(position))
             }

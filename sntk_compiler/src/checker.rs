@@ -41,7 +41,7 @@ pub fn get_type_from_ir_expression(expression: &IrExpression, types: &Identifier
             Some(data_type) => Ok(data_type),
             None => Err(type_error! { UNDEFINED_IDENTIFIER; identifier; &position }),
         },
-        IrExpression::Literal(literal) => get_type_from_literal_value(&literal, types, data_type, &position),
+        IrExpression::Literal(literal) => get_type_from_literal_value(&literal, types, data_type, position),
         IrExpression::Block(block) => get_type_from_ir_expression(
             match block.last() {
                 Some(instruction) => match instruction.instruction {
@@ -52,12 +52,12 @@ pub fn get_type_from_ir_expression(expression: &IrExpression, types: &Identifier
             },
             types,
             data_type,
-            &position,
+            position,
         ),
         IrExpression::If(_, _, _) => todo!(),
         IrExpression::Call(_, _) => todo!(),
         IrExpression::Index(_, _) => todo!(),
-        IrExpression::Prefix(_, _) => todo!(),
+        IrExpression::Prefix(_, expression) => get_type_from_ir_expression(&expression, types, data_type, position),
         IrExpression::Infix(_, _, _) => todo!(),
     }
 }
@@ -72,7 +72,7 @@ pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTyp
             let mut element_type = DataType::Unknown;
 
             for element in elements {
-                let data_type = get_type_from_ir_expression(&element, types, data_type, position)?;
+                let data_type = get_type_from_ir_expression(element, types, data_type, position)?;
 
                 if element_type == DataType::Unknown {
                     element_type = data_type;
@@ -81,24 +81,28 @@ pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTyp
                 }
             }
 
-            if let Some(data_type) = data_type {
-                if element_type == DataType::Unknown {
-                    element_type = match data_type {
-                        DataType::Array(data_type) => *data_type.clone(),
-                        _ => unreachable!(),
-                    };
-                }
+            match data_type {
+                Some(data_type) => {
+                    if element_type == DataType::Unknown {
+                        element_type = match data_type {
+                            DataType::Array(data_type) => *data_type.clone(),
+                            _ => unreachable!(),
+                        };
+                    }
 
-                if *data_type != DataType::Array(Box::new(element_type.clone())) {
-                    return Err(type_error! { EXPECTED_DATA_TYPE; data_type, DataType::Array(Box::new(element_type.clone())); &position });
+                    if *data_type != DataType::Array(Box::new(element_type.clone())) {
+                        return Err(type_error! { EXPECTED_DATA_TYPE; data_type, DataType::Array(Box::new(element_type)); &position });
+                    }
                 }
-            } else if element_type == DataType::Unknown {
-                return Err(type_error! { UNKNOWN_ARRAY_TYPE; ; &position });
+                None => {
+                    if element_type == DataType::Unknown {
+                        return Err(type_error! { UNKNOWN_ARRAY_TYPE; ; &position });
+                    }
+                }
             }
 
             Ok(DataType::Array(Box::new(element_type)))
         }
-
         LiteralValue::Function(parameters, body, return_type) => {
             let mut types = IdentifierTypes::new(Some(types));
 
@@ -106,7 +110,12 @@ pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTyp
                 types.set(name, data_type);
             }
 
-            let block_return_type = Box::new(get_type_from_ir_expression(&IrExpression::Block(body.clone()), &types, data_type, position)?.clone());
+            let block_return_type = Box::new(get_type_from_ir_expression(
+                &IrExpression::Block(body.clone()),
+                &types,
+                data_type,
+                position,
+            )?);
 
             let function_type = Ok(DataType::Fn(FunctionType(
                 None,
