@@ -1,26 +1,24 @@
-## The Sanetaka (sntk) programming language project
+# The Sanetaka (sntk) programming language project
+
+[Syntax Documentation](SYNTAX.md) | [Contributing Guide](CONTRIBUTING.md)
 
 > **Warning**
 >
-> It is still under development and is not available yet.
+> It is still under development and is **not available yet.**
 
----
+# What features does it have?
 
 We will provide the following features:
 
 -   **Easy and simple, and even beginners can learn it quickly and easily.**
-    -   it also has a C-like syntax, which makes it easy for other programmers to use the C-like syntax to learn.
--   **Using Sanetaka IR**, it provides a fast interpreter.
--   **Supports functional programming.**
--   **Supports macro**. it is similar to Rust's Macros, and will provide a powerful macro system.
--   **Supports type system.** (static type system)
+    -   it also has a **C-like** syntax, which makes it easy for other programmers to use the C-like syntax to learn.
+-   Supports **functional programming**, **macro** (*it is similar to Rust's Macros, and will provide a powerful macro system*) and **static type system**.
 -   **By providing an interpreter plugin**, it can transcompile to other languages. (e.g. JavaScript)
 -   **`null` does not exist.** it is in the form of Rust's `Option<T>`, a monadic type will be decalred in the standard library.
--   **In the parsing phase, evaluable expressions are pre-evaluated.** it is providing a fast runtime.
 
-... and more.
+**... and more.**
 
-this may not be observed. (No, most likely.) however, we strive to provide better features.
+this may not be observed. (most likely.) however, we strive to provide better features.
 
 # Progress
 
@@ -34,18 +32,17 @@ this may not be observed. (No, most likely.) however, we strive to provide bette
     -   [ ] Plugin API
 
 -   [ ] Macro
--   [ ] Functional Programming
 -   [ ] Type System **(in progress)**
 
 -   [ ] Standard Library
 -   [ ] Package Manager
--   [ ] Documentation
+-   [ ] Documentation (Click [**here**](./SYNTAX.md) to see **syntax documentation**)
 
 > **Note**
 >
 > This plan is also subject to change during development.
 
----
+# How does it work?
 
 ```mermaid
 graph LR
@@ -59,6 +56,7 @@ graph LR
     Transcompile --> TResult[JavaScript, etc..]
 ```
 
----
-
-[Syntax Documentation](SYNTAX.md) (TODO)
+<details>
+    <summary>If <b>mermaid</b> doesn't render, click here. (image)</summary>
+    <img src="./resource/mermaid.png" />
+</details>
