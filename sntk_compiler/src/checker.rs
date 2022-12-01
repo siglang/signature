@@ -1,6 +1,9 @@
-use crate::{compiler::CompileResult, type_error, EXPECTED_DATA_TYPE, UNDEFINED_IDENTIFIER, UNKNOWN_ARRAY_TYPE};
+use crate::{
+    compiler::CompileResult,
+    instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue},
+    type_error, EXPECTED_DATA_TYPE, UNDEFINED_IDENTIFIER, UNKNOWN_ARRAY_TYPE,
+};
 use sntk_core::parser::ast::{DataType, FunctionType, Position};
-use sntk_ir::instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue};
 use sntk_proc::with_position;
 use std::collections::HashMap;
 
@@ -58,7 +61,16 @@ pub fn get_type_from_ir_expression(expression: &IrExpression, types: &Identifier
         IrExpression::Call(_, _) => todo!(),
         IrExpression::Index(_, _) => todo!(),
         IrExpression::Prefix(_, expression) => get_type_from_ir_expression(&expression, types, data_type, position),
-        IrExpression::Infix(_, _, _) => todo!(),
+        IrExpression::Infix(left, _, right) => {
+            let left_type = get_type_from_ir_expression(&left, types, data_type, position)?;
+            let right_type = get_type_from_ir_expression(&right, types, data_type, position)?;
+
+            if left_type == right_type {
+                Ok(left_type)
+            } else {
+                Err(type_error! { EXPECTED_DATA_TYPE; left_type, right_type; &position })
+            }
+        }
     }
 }
 

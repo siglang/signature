@@ -1,6 +1,7 @@
 use crate::{
     checker::{get_type_from_ir_expression, IdentifierTypes},
     helpers::ast_position_to_tuple,
+    instruction::{Instruction, InstructionType, IrExpression, LiteralValue},
     type_error, CompileError, EXPECTED_DATA_TYPE,
 };
 use sntk_core::parser::ast::{
@@ -8,7 +9,6 @@ use sntk_core::parser::ast::{
     IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral,
     TypeofExpression,
 };
-use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralValue};
 
 #[derive(Debug)]
 pub struct Compiler {
@@ -131,16 +131,22 @@ impl CompilerTrait for Compiler {
                         .transpose()?,
                 ),
             ),
-            Expression::FunctionLiteral(FunctionLiteral { parameters, body, return_type, .. }) => {
-                IrExpression::Literal(LiteralValue::Function(
-                    parameters.iter().map(|parameter| (parameter.0.value.clone(), parameter.1.clone())).collect(),
-                    match self.compile_expression(&Expression::BlockExpression(body.clone()))? {
-                        IrExpression::Block(instructions) => instructions,
-                        _ => unreachable!(),
-                    },
-                    return_type.clone(),
-                ))
-            }
+            Expression::FunctionLiteral(FunctionLiteral {
+                parameters,
+                body,
+                return_type,
+                ..
+            }) => IrExpression::Literal(LiteralValue::Function(
+                parameters
+                    .iter()
+                    .map(|parameter| (parameter.0.value.clone(), parameter.1.clone()))
+                    .collect(),
+                match self.compile_expression(&Expression::BlockExpression(body.clone()))? {
+                    IrExpression::Block(instructions) => instructions,
+                    _ => unreachable!(),
+                },
+                return_type.clone(),
+            )),
             Expression::CallExpression(CallExpression { function, arguments, .. }) => {
                 let mut arguments_compiled = Vec::new();
 
