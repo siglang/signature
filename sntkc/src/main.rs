@@ -3,10 +3,11 @@ use sntk_core::{
     parser::parser::{Parser, ParserBase, ParserTrait},
     tokenizer::lexer::{Lexer, LexerTrait},
 };
-// use std::time::Instant;
+use sntk_ir::interpreter::{IrInterpreter, IrInterpreterBase};
+use std::time::Instant;
 
 fn main() {
-    // let mut start = Instant::now();
+    let mut start = Instant::now();
 
     let source_code = r#"
 auto a = 2;
@@ -23,16 +24,15 @@ println(foo(-1, "Hello, World!")(10));
 
     match Compiler::new(Parser::new(Lexer::new(source_code.to_string())).parse_program()).compile_program() {
         Ok(instructions) => {
-            // println!("Compiling Elapsed: {}s", start.elapsed().as_secs_f64());
-            println!("{:#?}", instructions);
-            // start = Instant::now();
+            println!("Compiling Elapsed: {}s", start.elapsed().as_secs_f64());
+            start = Instant::now();
 
-            // let mut ir_interpreter = IrInterpreter::new(instructions);
+            let mut ir_interpreter = IrInterpreter::new(instructions);
 
-            // match ir_interpreter.run() {
-            //     Ok(_) => println!("Interpreting Elapsed: {}s", start.elapsed().as_secs_f64()),
-            //     Err(error) => println!("{:?}", error),
-            // }
+            match ir_interpreter.eval() {
+                Ok(_) => println!("Interpreting Elapsed: {}s", start.elapsed().as_secs_f64()),
+                Err(error) => println!("{:?}", error),
+            }
         }
         Err(e) => println!("{}", e),
     }
