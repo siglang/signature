@@ -1,9 +1,6 @@
-use crate::{
-    compiler::CompileResult,
-    instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue},
-    type_error, EXPECTED_DATA_TYPE, UNDEFINED_IDENTIFIER, UNKNOWN_ARRAY_TYPE,
-};
+use crate::{compiler::CompileResult, type_error, EXPECTED_DATA_TYPE, UNDEFINED_IDENTIFIER, UNKNOWN_ARRAY_TYPE};
 use sntk_core::parser::ast::{DataType, FunctionType, Position};
+use sntk_ir::instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue};
 use sntk_proc::with_position;
 use std::collections::HashMap;
 

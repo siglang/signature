@@ -1,7 +1,6 @@
 pub mod checker;
 pub mod compiler;
 pub mod helpers;
-pub mod instruction;
 
 use sntk_core::parser::{ast::Position, ParsingError};
 use sntk_proc::ErrorFormat;

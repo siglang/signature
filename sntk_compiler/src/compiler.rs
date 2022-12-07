@@ -1,7 +1,6 @@
 use crate::{
     checker::{get_type_from_ir_expression, IdentifierTypes},
     helpers::ast_position_to_tuple,
-    instruction::{Instruction, InstructionType, IrExpression, LiteralValue},
     type_error, CompileError, EXPECTED_DATA_TYPE,
 };
 use sntk_core::parser::ast::{
@@ -9,6 +8,7 @@ use sntk_core::parser::ast::{
     IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral,
     TypeofExpression,
 };
+use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralValue};
 
 #[derive(Debug)]
 pub struct Compiler {
