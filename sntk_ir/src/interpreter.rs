@@ -2,6 +2,7 @@ use sntk_core::{parser::ast::Position, tokenizer::token::Tokens};
 use sntk_proc::with_position;
 
 use crate::{
+    builtin::get_builtin_function,
     instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue},
     runtime_error, INVALID_OPERANDS, INVALID_OPERATOR, NOT_A_FUNCTION, UNDEFINED_VARIABLE,
 };
@@ -99,7 +100,7 @@ impl IrInterpreterTrait for IrInterpreter {
     fn eval_instruction(&mut self, instruction: &Instruction) -> RuntimeError<()> {
         let position = Position(instruction.position.0, instruction.position.1);
 
-        Ok(match instruction.instruction.clone() {
+        match instruction.instruction.clone() {
             InstructionType::StoreName(name, expression) => {
                 let expression = self.eval_expression(&expression, &position)?;
 
@@ -110,12 +111,12 @@ impl IrInterpreterTrait for IrInterpreter {
             }
             #[allow(unused_variables)]
             InstructionType::Return(expression) => {
-                println!("{:?}", self.eval_expression(&expression, &position)?);
+                // println!("{:?}", self.eval_expression(&expression, &position)?);
                 // ^ for debugging. TODO: remove this.
-
-                ()
             }
-        })
+        }
+
+        Ok(())
     }
 
     /**
@@ -141,29 +142,42 @@ impl IrInterpreterTrait for IrInterpreter {
                 Ok(interpreter.last()?)
             }
             IrExpression::If(condition, consequence, alternative) => {
-                let condition = self.eval_expression(condition, &position)?;
+                let condition = self.eval_expression(condition, position)?;
 
                 match condition {
-                    LiteralValue::Boolean(true) => self.eval_expression(consequence, &position),
+                    LiteralValue::Boolean(true) => self.eval_expression(consequence, position),
                     LiteralValue::Boolean(false) => match *alternative.clone() {
-                        Some(alternative) => self.eval_expression(&alternative, &position),
+                        Some(alternative) => self.eval_expression(&alternative, position),
                         None => Ok(LiteralValue::Boolean(false)),
                     },
                     _ => todo!(),
                 }
             }
             IrExpression::Call(function, arguments) => {
-                let (parameters, body) = match self.eval_expression(function, &position)? {
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| self.eval_expression(argument, position))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                let function = match *function.clone() {
+                    IrExpression::Identifier(name) => match self.environment.get(&name) {
+                        Some(value) => value,
+                        None => {
+                            return match get_builtin_function(&name) {
+                                Some(function) => Ok(function(arguments.iter().collect())),
+                                None => Err(runtime_error! { UNDEFINED_VARIABLE; name; &position }),
+                            }
+                        }
+                    },
+                    _ => self.eval_expression(function, position)?,
+                };
+
+                let (parameters, body) = match function {
                     LiteralValue::Function(parameters, block, _) => {
                         (parameters.iter().map(|parameter| parameter.0.clone()).collect::<Vec<_>>(), block)
                     }
                     value => return Err(runtime_error! { NOT_A_FUNCTION; value; &position }),
                 };
-
-                let arguments = arguments
-                    .iter()
-                    .map(|argument| self.eval_expression(argument, &position))
-                    .collect::<Result<Vec<_>, _>>()?;
 
                 let mut environment = IrEnvironment::new(Some(&self.environment));
 
@@ -171,7 +185,7 @@ impl IrInterpreterTrait for IrInterpreter {
                     environment.set(parameter, argument);
                 }
 
-                let mut interpreter = IrInterpreter::new_with_environment(body.clone(), &environment);
+                let mut interpreter = IrInterpreter::new_with_environment(body, &environment);
                 interpreter.eval()?;
 
                 Ok(interpreter.last()?)
@@ -179,7 +193,7 @@ impl IrInterpreterTrait for IrInterpreter {
             IrExpression::Index(..) => unimplemented!(),
             IrExpression::Prefix(..) => unimplemented!(),
             IrExpression::Infix(left, operator, right) => {
-                let (left, right) = (self.eval_expression(left, &position)?, self.eval_expression(right, &position)?);
+                let (left, right) = (self.eval_expression(left, position)?, self.eval_expression(right, position)?);
 
                 match (left, right) {
                     (LiteralValue::Number(left), LiteralValue::Number(right)) => match operator {

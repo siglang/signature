@@ -30,9 +30,8 @@ auto x = if result < 3 {
 } else {
     return 20;
 };
-return "";
-return result;
-return x;
+auto println = 1;
+println(result, x);
     "#
     .trim_start();
 

@@ -2,6 +2,7 @@ use sntk_core::parser::ast::Position;
 use sntk_proc::ErrorFormat;
 use std::fmt;
 
+pub mod builtin;
 pub mod instruction;
 pub mod interpreter;
 
@@ -30,10 +31,10 @@ macro_rules! messages {
 }
 
 messages! {
-    UNDEFINED_VARIABLE => "Undefined variable `{}`";
-    NOT_A_FUNCTION => "`{}` is not a function";
-    INVALID_OPERATOR => "Invalid operator `{}`";
-    INVALID_OPERANDS => "Invalid operands `{}` and `{}` for operator `{}`";
+    UNDEFINED_VARIABLE => "Undefined variable `{0}`";
+    NOT_A_FUNCTION => "`{0}` is not a function";
+    INVALID_OPERATOR => "Invalid operator `{0}`";
+    INVALID_OPERANDS => "Invalid operands `{0}` and `{1}` for operator `{2}`";
 }
 
 #[macro_export]

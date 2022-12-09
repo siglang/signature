@@ -17,7 +17,7 @@ pub enum Tokens {
 
     Let, Auto, If, Else, Return, Function, Type, Struct, Typeof,
 
-    NumberType, StringType, BooleanType, VoidType,
+    NumberType, StringType, BooleanType,
 }
 
 impl From<String> for Tokens {
@@ -37,7 +37,6 @@ impl From<String> for Tokens {
             "number" => Tokens::NumberType,
             "string" => Tokens::StringType,
             "boolean" => Tokens::BooleanType,
-            "void" => Tokens::VoidType,
             s => Tokens::IDENT(s.to_string()),
         }
     }
