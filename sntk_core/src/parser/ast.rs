@@ -75,7 +75,7 @@ impl fmt::Display for DataType {
 pub type IdentifierGeneric = Vec<Identifier>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct FunctionType(pub Option<IdentifierGeneric>, pub Vec<DataType>, pub Box<DataType>);
+pub struct FunctionType(pub Option<IdentifierGeneric>, pub Vec<DataType>, pub Box<DataType>); // generics, parameters, return_type
 
 impl FunctionType {
     #[inline]

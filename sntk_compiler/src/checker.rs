@@ -1,5 +1,8 @@
-use crate::{compiler::CompileResult, type_error, EXPECTED_DATA_TYPE, UNDEFINED_IDENTIFIER, UNKNOWN_ARRAY_TYPE};
-use sntk_core::parser::ast::{DataType, FunctionType, Position};
+use crate::{compiler::CompileResult, type_error, EXPECTED_ARGUMENTS, EXPECTED_DATA_TYPE, NOT_A_FUNCTION, UNDEFINED_IDENTIFIER, UNKNOWN_ARRAY_TYPE};
+use sntk_core::{
+    parser::ast::{DataType, FunctionType, Position},
+    tokenizer::token::Tokens,
+};
 use sntk_ir::instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue};
 use sntk_proc::with_position;
 use std::collections::HashMap;
@@ -54,18 +57,68 @@ pub fn get_type_from_ir_expression(expression: &IrExpression, types: &Identifier
             data_type,
             position,
         ),
-        IrExpression::If(_, _, _) => todo!(),
-        IrExpression::Call(_, _) => todo!(),
+        IrExpression::If(condition, consequence, alternative) => {
+            let condition_type = get_type_from_ir_expression(&condition, types, data_type, position)?;
+            let consequence_type = get_type_from_ir_expression(&consequence, types, data_type, position)?;
+            let alternative_type = match *alternative.clone() {
+                Some(alternative) => get_type_from_ir_expression(&alternative, types, data_type, position)?,
+                None => DataType::Boolean,
+            };
+
+            if condition_type == DataType::Boolean {
+                if consequence_type == alternative_type {
+                    Ok(consequence_type)
+                } else {
+                    Err(type_error! { EXPECTED_DATA_TYPE; consequence_type, alternative_type; &position })
+                }
+            } else {
+                Err(type_error! { EXPECTED_DATA_TYPE; DataType::Boolean, condition_type; &position })
+            }
+        }
+        IrExpression::Call(function, arguments) => {
+            let function_type = get_type_from_ir_expression(&function, types, data_type, position)?;
+
+            match function_type {
+                DataType::Fn(FunctionType(_, parameters, return_type)) => {
+                    if parameters.len() == arguments.len() {
+                        for (parameter, argument) in parameters.iter().zip(arguments.iter()) {
+                            let argument_type = get_type_from_ir_expression(argument, types, data_type, position)?;
+
+                            if parameter != &argument_type {
+                                return Err(type_error! { EXPECTED_DATA_TYPE; parameter, argument_type; &position });
+                            }
+                        }
+
+                        Ok(*return_type)
+                    } else {
+                        Err(type_error! { EXPECTED_ARGUMENTS; parameters.len(), arguments.len(); &position })
+                    }
+                }
+                _ => Err(type_error! { NOT_A_FUNCTION; "Function"; &position }),
+            }
+        }
         IrExpression::Index(_, _) => todo!(),
         IrExpression::Prefix(_, expression) => get_type_from_ir_expression(&expression, types, data_type, position),
-        IrExpression::Infix(left, _, right) => {
+        IrExpression::Infix(left, operator, right) => {
             let left_type = get_type_from_ir_expression(&left, types, data_type, position)?;
             let right_type = get_type_from_ir_expression(&right, types, data_type, position)?;
 
-            if left_type == right_type {
-                Ok(left_type)
-            } else {
-                Err(type_error! { EXPECTED_DATA_TYPE; left_type, right_type; &position })
+            match operator {
+                Tokens::Plus | Tokens::Minus | Tokens::Asterisk | Tokens::Slash | Tokens::Percent => {
+                    if left_type == DataType::Number && right_type == DataType::Number {
+                        Ok(DataType::Number)
+                    } else {
+                        Err(type_error! { EXPECTED_DATA_TYPE; DataType::Number, left_type, right_type; &position })
+                    }
+                }
+                Tokens::EQ | Tokens::NEQ | Tokens::LT | Tokens::GT | Tokens::LTE | Tokens::GTE => {
+                    if left_type == right_type {
+                        Ok(DataType::Boolean)
+                    } else {
+                        Err(type_error! { EXPECTED_DATA_TYPE; left_type, right_type; &position })
+                    }
+                }
+                _ => unreachable!(),
             }
         }
     }

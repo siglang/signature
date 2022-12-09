@@ -140,7 +140,18 @@ impl IrInterpreterTrait for IrInterpreter {
                 interpreter.eval()?;
                 Ok(interpreter.last()?)
             }
-            IrExpression::If(..) => unimplemented!(),
+            IrExpression::If(condition, consequence, alternative) => {
+                let condition = self.eval_expression(condition, &position)?;
+
+                match condition {
+                    LiteralValue::Boolean(true) => self.eval_expression(consequence, &position),
+                    LiteralValue::Boolean(false) => match *alternative.clone() {
+                        Some(alternative) => self.eval_expression(&alternative, &position),
+                        None => Ok(LiteralValue::Boolean(false)),
+                    },
+                    _ => todo!(),
+                }
+            }
             IrExpression::Call(function, arguments) => {
                 let (parameters, body) = match self.eval_expression(function, &position)? {
                     LiteralValue::Function(parameters, block, _) => {

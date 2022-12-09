@@ -53,10 +53,12 @@ macro_rules! messages {
 
 messages! {
     EXPECTED_DATA_TYPE => "Expected {0} type, got {1} instead";
+    EXPECTED_ARGUMENTS => "Expected {0} arguments, got {1} instead";
     UNDEFINED_IDENTIFIER => "Undefined identifier: {0}";
     UNKNOWN_TYPE => "Unknown type: {0}";
     UNKNOWN_ARRAY_TYPE => "Unknown array type";
     UNEXPECTED_PARAMETER_LENGTH => "Unexpected parameter length";
+    NOT_A_FUNCTION => "{0} is not a function";
 }
 
 #[macro_export]

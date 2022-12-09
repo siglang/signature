@@ -24,8 +24,15 @@ fn main() {
     let source_code = r#"
 auto x = fn(x: number, y: number) -> number -> x + y;
 
-auto y = typeof x;
-return x(1, 2);
+auto result = x(1, 2);
+auto x = if result < 3 {
+    return 10;
+} else {
+    return 20;
+};
+return "";
+return result;
+return x;
     "#
     .trim_start();
 
