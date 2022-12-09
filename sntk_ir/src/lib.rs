@@ -1,6 +1,6 @@
-use std::fmt;
 use sntk_core::parser::ast::Position;
 use sntk_proc::ErrorFormat;
+use std::fmt;
 
 pub mod instruction;
 pub mod interpreter;
@@ -13,7 +13,11 @@ pub struct RuntimeError {
 
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "RuntimeError: {} at line {}, column {}", self.message, self.position.0, self.position.1)
+        write!(
+            f,
+            "RuntimeError: {} at line {}, column {}",
+            self.message, self.position.0, self.position.1
+        )
     }
 }
 
@@ -26,15 +30,15 @@ macro_rules! messages {
 }
 
 messages! {
-    ;
+    UNDEFINED_VARIABLE => "Undefined variable `{}`";
+    NOT_A_FUNCTION => "`{}` is not a function";
+    INVALID_OPERATOR => "Invalid operator `{}`";
+    INVALID_OPERANDS => "Invalid operands `{}` and `{}` for operator `{}`";
 }
 
 #[macro_export]
 macro_rules! runtime_error {
     ($msg:ident; $( $r:expr ),*; $position:expr) => {
-        $crate::RuntimeError::TypeError(
-            $crate::TypeError::new($msg, vec![$( format!("{}", $r) ),*], $position.clone())
-        )
+        $crate::RuntimeError::new($msg, vec![$( format!("{}", $r) ),*], &$position)
     };
 }
-

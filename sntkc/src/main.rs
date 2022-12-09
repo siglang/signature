@@ -6,10 +6,7 @@ use sntk_core::{
 use sntk_ir::interpreter::{IrInterpreter, IrInterpreterBase};
 use std::time::Instant;
 
-fn main() {
-    let mut start = Instant::now();
-
-    let source_code = r#"
+/*
 auto a = 2;
 auto foo = fn(x: number, y: string) ->
     fn(number) -> number[]
@@ -19,6 +16,16 @@ auto foo = fn(x: number, y: string) ->
 };
 
 println(foo(-1, "Hello, World!")(10));
+*/
+
+fn main() {
+    let mut start = Instant::now();
+
+    let source_code = r#"
+auto x = fn(x: number, y: number) -> number -> x + y;
+
+auto y = typeof x;
+return x(1, 2);
     "#
     .trim_start();
 
