@@ -3,8 +3,10 @@ pub mod compiler;
 pub mod helpers;
 
 use sntk_core::parser::{ast::Position, ParsingError};
-use sntk_proc::ErrorFormat;
-use std::fmt::{self, write};
+use std::{
+    borrow::Cow,
+    fmt::{self, write},
+};
 
 #[derive(Debug, Clone)]
 pub enum CompileError {
@@ -37,10 +39,25 @@ impl fmt::Display for CompileError {
     }
 }
 
-#[derive(Debug, Clone, ErrorFormat)]
+#[derive(Debug, Clone)]
 pub struct TypeError {
     pub message: String,
     pub position: Position,
+}
+
+impl TypeError {
+    pub fn new(message: &str, args: Vec<&str>, position: &Position) -> Self {
+        let mut message = message.to_string();
+
+        args.iter().enumerate().for_each(|(i, arg)| {
+            message = message.replace(&format!("{{{}}}", i), arg);
+        });
+
+        Self {
+            message,
+            position: position.to_owned(),
+        }
+    }
 }
 
 macro_rules! messages {
@@ -61,11 +78,9 @@ messages! {
     NOT_A_FUNCTION => "{0} is not a function";
 }
 
-#[macro_export]
-macro_rules! type_error {
-    ($msg:ident; $( $r:expr ),*; $position:expr) => {
-        $crate::CompileError::TypeError(
-            $crate::TypeError::new($msg, vec![$( format!("{}", $r) ),*], $position.clone())
-        )
-    };
+pub fn type_error<T>(message: T, replacements: Cow<[&str]>, position: &Position) -> CompileError
+where
+    T: Into<String>,
+{
+    CompileError::TypeError(TypeError::new(&message.into(), replacements.into_owned(), position))
 }
