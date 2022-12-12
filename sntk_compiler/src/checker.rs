@@ -4,18 +4,17 @@ use sntk_core::{
     tokenizer::token::Tokens,
 };
 use sntk_ir::instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue};
-use sntk_proc::with_position;
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct IdentifierTypes {
+pub struct TypeEnvironment {
     pub types: HashMap<Identifier, DataType>,
-    pub parent: Option<Box<IdentifierTypes>>,
+    pub parent: Option<Box<TypeEnvironment>>,
 }
 
-impl IdentifierTypes {
+impl TypeEnvironment {
     #[inline]
-    pub fn new(parent: Option<&IdentifierTypes>) -> Self {
+    pub fn new(parent: Option<&TypeEnvironment>) -> Self {
         Self {
             types: HashMap::new(),
             parent: parent.map(|parent| Box::new(parent.clone())),
@@ -32,17 +31,22 @@ impl IdentifierTypes {
         }
     }
 
+    #[inline]
     pub fn set(&mut self, name: &Identifier, value: &DataType) {
         self.types.insert(name.to_string(), value.clone());
     }
 }
 
-#[with_position]
-pub fn get_type_from_ir_expression(expression: &IrExpression, types: &IdentifierTypes, data_type: Option<&DataType>) -> CompileResult<DataType> {
+pub fn get_type_from_ir_expression(
+    expression: &IrExpression,
+    types: &TypeEnvironment,
+    data_type: Option<&DataType>,
+    position: &Position,
+) -> CompileResult<DataType> {
     match expression.clone() {
         IrExpression::Identifier(identifier) => match types.get(&identifier) {
             Some(data_type) => Ok(data_type),
-            None => Err(type_error! { UNDEFINED_IDENTIFIER; identifier; &position }),
+            None => Err(type_error(UNDEFINED_IDENTIFIER, Cow::Borrowed(&[&identifier]), position)),
         },
         IrExpression::Literal(literal) => get_type_from_literal_value(&literal, types, data_type, position),
         IrExpression::Block(block) => get_type_from_ir_expression(
@@ -60,7 +64,7 @@ pub fn get_type_from_ir_expression(expression: &IrExpression, types: &Identifier
         IrExpression::If(condition, consequence, alternative) => {
             let condition_type = get_type_from_ir_expression(&condition, types, data_type, position)?;
             let consequence_type = get_type_from_ir_expression(&consequence, types, data_type, position)?;
-            let alternative_type = match *alternative.clone() {
+            let alternative_type = match *alternative {
                 Some(alternative) => get_type_from_ir_expression(&alternative, types, data_type, position)?,
                 None => DataType::Boolean,
             };
@@ -69,10 +73,18 @@ pub fn get_type_from_ir_expression(expression: &IrExpression, types: &Identifier
                 if consequence_type == alternative_type {
                     Ok(consequence_type)
                 } else {
-                    Err(type_error! { EXPECTED_DATA_TYPE; consequence_type, alternative_type; &position })
+                    Err(type_error(
+                        EXPECTED_DATA_TYPE,
+                        Cow::Borrowed(&[&consequence_type.to_string(), &alternative_type.to_string()]),
+                        position,
+                    ))
                 }
             } else {
-                Err(type_error! { EXPECTED_DATA_TYPE; DataType::Boolean, condition_type; &position })
+                Err(type_error(
+                    EXPECTED_DATA_TYPE,
+                    Cow::Borrowed(&[&DataType::Boolean.to_string(), &condition_type.to_string()]),
+                    position,
+                ))
             }
         }
         IrExpression::Call(function, arguments) => {
@@ -85,19 +97,49 @@ pub fn get_type_from_ir_expression(expression: &IrExpression, types: &Identifier
                             let argument_type = get_type_from_ir_expression(argument, types, data_type, position)?;
 
                             if parameter != &argument_type {
-                                return Err(type_error! { EXPECTED_DATA_TYPE; parameter, argument_type; &position });
+                                return Err(type_error(
+                                    EXPECTED_DATA_TYPE,
+                                    Cow::Borrowed(&[&parameter.to_string(), &argument_type.to_string()]),
+                                    position,
+                                ));
                             }
                         }
 
                         Ok(*return_type)
                     } else {
-                        Err(type_error! { EXPECTED_ARGUMENTS; parameters.len(), arguments.len(); &position })
+                        Err(type_error(
+                            EXPECTED_ARGUMENTS,
+                            Cow::Borrowed(&[&parameters.len().to_string(), &arguments.len().to_string()]),
+                            position,
+                        ))
                     }
                 }
-                _ => Err(type_error! { NOT_A_FUNCTION; "Function"; &position }),
+                _ => Err(type_error(NOT_A_FUNCTION, Cow::Borrowed(&["Function"]), position)),
             }
         }
-        IrExpression::Index(_, _) => todo!(),
+        IrExpression::Index(left, index) => {
+            let left_type = get_type_from_ir_expression(&left, types, data_type, position)?;
+            let index_type = get_type_from_ir_expression(&index, types, data_type, position)?;
+
+            match left_type {
+                DataType::Array(data_type) => {
+                    if index_type == DataType::Number {
+                        Ok(*data_type)
+                    } else {
+                        Err(type_error(
+                            EXPECTED_DATA_TYPE,
+                            Cow::Borrowed(&[&DataType::Number.to_string(), &index_type.to_string()]),
+                            position,
+                        ))
+                    }
+                }
+                _ => Err(type_error(
+                    EXPECTED_DATA_TYPE,
+                    Cow::Borrowed(&["Array", &left_type.to_string()]),
+                    position,
+                )),
+            }
+        }
         IrExpression::Prefix(_, expression) => get_type_from_ir_expression(&expression, types, data_type, position),
         IrExpression::Infix(left, operator, right) => {
             let left_type = get_type_from_ir_expression(&left, types, data_type, position)?;
@@ -108,14 +150,22 @@ pub fn get_type_from_ir_expression(expression: &IrExpression, types: &Identifier
                     if left_type == DataType::Number && right_type == DataType::Number {
                         Ok(DataType::Number)
                     } else {
-                        Err(type_error! { EXPECTED_DATA_TYPE; DataType::Number, left_type, right_type; &position })
+                        Err(type_error(
+                            EXPECTED_DATA_TYPE,
+                            Cow::Borrowed(&["Number", &left_type.to_string(), &right_type.to_string()]),
+                            position,
+                        ))
                     }
                 }
                 Tokens::EQ | Tokens::NEQ | Tokens::LT | Tokens::GT | Tokens::LTE | Tokens::GTE => {
                     if left_type == right_type {
                         Ok(DataType::Boolean)
                     } else {
-                        Err(type_error! { EXPECTED_DATA_TYPE; left_type, right_type; &position })
+                        Err(type_error(
+                            EXPECTED_DATA_TYPE,
+                            Cow::Borrowed(&[&left_type.to_string(), &right_type.to_string()]),
+                            position,
+                        ))
                     }
                 }
                 _ => unreachable!(),
@@ -124,8 +174,12 @@ pub fn get_type_from_ir_expression(expression: &IrExpression, types: &Identifier
     }
 }
 
-#[with_position]
-pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTypes, data_type: Option<&DataType>) -> CompileResult<DataType> {
+pub fn get_type_from_literal_value(
+    literal: &LiteralValue,
+    types: &TypeEnvironment,
+    data_type: Option<&DataType>,
+    position: &Position,
+) -> CompileResult<DataType> {
     match literal {
         LiteralValue::Number(_) => Ok(DataType::Number),
         LiteralValue::String(_) => Ok(DataType::String),
@@ -139,7 +193,11 @@ pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTyp
                 if element_type == DataType::Unknown {
                     element_type = data_type;
                 } else if element_type != data_type {
-                    return Err(type_error! { EXPECTED_DATA_TYPE; element_type, data_type; &position });
+                    return Err(type_error(
+                        EXPECTED_DATA_TYPE,
+                        Cow::Borrowed(&[&element_type.to_string(), &data_type.to_string()]),
+                        position,
+                    ));
                 }
             }
 
@@ -153,12 +211,16 @@ pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTyp
                     }
 
                     if *data_type != DataType::Array(Box::new(element_type.clone())) {
-                        return Err(type_error! { EXPECTED_DATA_TYPE; data_type, DataType::Array(Box::new(element_type)); &position });
+                        return Err(type_error(
+                            EXPECTED_DATA_TYPE,
+                            Cow::Borrowed(&[&data_type.to_string(), &DataType::Array(Box::new(element_type)).to_string()]),
+                            position,
+                        ));
                     }
                 }
                 None => {
                     if element_type == DataType::Unknown {
-                        return Err(type_error! { UNKNOWN_ARRAY_TYPE; ; &position });
+                        return Err(type_error(UNKNOWN_ARRAY_TYPE, Cow::Borrowed(&[]), position));
                     }
                 }
             }
@@ -166,7 +228,7 @@ pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTyp
             Ok(DataType::Array(Box::new(element_type)))
         }
         LiteralValue::Function(parameters, body, return_type) => {
-            let mut types = IdentifierTypes::new(Some(types));
+            let mut types = TypeEnvironment::new(Some(types));
 
             for (name, data_type) in parameters {
                 types.set(name, data_type);
@@ -186,12 +248,20 @@ pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTyp
             )))?;
 
             if return_type.clone() != *block_return_type {
-                return Err(type_error! { EXPECTED_DATA_TYPE; return_type, block_return_type; &position });
+                return Err(type_error(
+                    EXPECTED_DATA_TYPE,
+                    Cow::Borrowed(&[&return_type.to_string(), &block_return_type.to_string()]),
+                    position,
+                ));
             }
 
             if let Some(data_type) = data_type {
                 if *data_type != function_type {
-                    return Err(type_error! { EXPECTED_DATA_TYPE; data_type, function_type; &position });
+                    return Err(type_error(
+                        EXPECTED_DATA_TYPE,
+                        Cow::Borrowed(&[&data_type.to_string(), &function_type.to_string()]),
+                        position,
+                    ));
                 }
             }
 
@@ -200,8 +270,12 @@ pub fn get_type_from_literal_value(literal: &LiteralValue, types: &IdentifierTyp
     }
 }
 
-#[with_position]
-pub fn get_type_from_instruction(instruction: &Instruction, types: &IdentifierTypes, data_type: Option<&DataType>) -> CompileResult<DataType> {
+pub fn get_type_from_instruction(
+    instruction: &Instruction,
+    types: &TypeEnvironment,
+    data_type: Option<&DataType>,
+    position: &Position,
+) -> CompileResult<DataType> {
     Ok(match instruction.instruction.clone() {
         InstructionType::StoreName(_, expression) | InstructionType::Return(expression) | InstructionType::Expression(expression) => {
             get_type_from_ir_expression(&expression, types, data_type, position)?

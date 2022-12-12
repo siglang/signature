@@ -1,5 +1,7 @@
+use std::borrow::Cow;
+
 use crate::{
-    checker::{get_type_from_ir_expression, IdentifierTypes},
+    checker::{get_type_from_ir_expression, TypeEnvironment},
     helpers::ast_position_to_tuple,
     type_error, CompileError, EXPECTED_DATA_TYPE,
 };
@@ -13,14 +15,14 @@ use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralVa
 #[derive(Debug)]
 pub struct Compiler {
     pub program: Program,
-    pub types: IdentifierTypes,
+    pub types: TypeEnvironment,
 }
 
 pub type CompileResult<T> = Result<T, CompileError>;
 
 pub trait CompilerTrait {
     fn new(program: Program) -> Self;
-    fn new_with_types(program: Program, types: IdentifierTypes) -> Self;
+    fn new_with_types(program: Program, types: TypeEnvironment) -> Self;
     fn compile_program(&mut self) -> CompileResult<Vec<Instruction>>;
     fn compile_statement(&mut self, statement: &Statement) -> CompileResult<Instruction>;
     fn compile_expression(&mut self, expression: &Expression) -> CompileResult<IrExpression>;
@@ -31,12 +33,12 @@ impl CompilerTrait for Compiler {
     fn new(program: Program) -> Self {
         Self {
             program,
-            types: IdentifierTypes::new(None),
+            types: TypeEnvironment::new(None),
         }
     }
 
     #[inline]
-    fn new_with_types(program: Program, types: IdentifierTypes) -> Self {
+    fn new_with_types(program: Program, types: TypeEnvironment) -> Self {
         Self { program, types }
     }
 
@@ -66,7 +68,11 @@ impl CompilerTrait for Compiler {
                 let value_type = get_type_from_ir_expression(&value, &self.types, Some(data_type), position)?;
 
                 if data_type.clone() != value_type {
-                    return Err(type_error! { EXPECTED_DATA_TYPE; data_type.clone(), value_type; &position });
+                    return Err(type_error(
+                        EXPECTED_DATA_TYPE,
+                        Cow::Borrowed(&[&data_type.to_string(), &value_type.to_string()]),
+                        position,
+                    ));
                 }
 
                 self.types.set(&name.value, data_type);
