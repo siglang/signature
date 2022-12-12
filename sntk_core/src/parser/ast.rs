@@ -120,7 +120,7 @@ impl std::fmt::Display for Generic {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Position(pub usize, pub usize);
 
 impl Position {
@@ -147,7 +147,7 @@ macro_rules! make_struct {
         impl $name {
             #[inline]
             pub fn new($( $field: $type, )* position: Position) -> Self {
-                $name { $($field,)* position }
+                $name { $($field,)* position: position.clone() }
             }
         }
     };
@@ -162,7 +162,7 @@ macro_rules! make_struct {
         impl $name {
             #[inline]
             pub fn new(data_type: DataType, $( $field: $type, )* position: Position) -> Self {
-                $name { $($field,)* data_type, position }
+                $name { $($field,)* data_type, position: position.clone() }
             }
         }
     }

@@ -8,4 +8,3 @@ license = "MIT"
 repository = "https://github.com/ky0422/sanetaka"
 
 [dependencies]
-sntk_proc = { path = "../sntk_proc" }
