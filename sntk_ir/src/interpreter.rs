@@ -1,12 +1,10 @@
-use sntk_core::{parser::ast::Position, tokenizer::token::Tokens};
-use sntk_proc::with_position;
-
 use crate::{
     builtin::get_builtin_function,
     instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue},
-    runtime_error, INVALID_OPERANDS, INVALID_OPERATOR, NOT_A_FUNCTION, UNDEFINED_VARIABLE,
+    runtime_error, INDEX_OUT_OF_BOUNDS, INVALID_OPERANDS, INVALID_OPERATOR, NOT_A_ARRAY, NOT_A_FUNCTION, UNDEFINED_VARIABLE,
 };
-use std::collections::HashMap;
+use sntk_core::{parser::ast::Position, tokenizer::token::Tokens};
+use std::{borrow::Cow, collections::HashMap};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IrEnvironment {
@@ -111,7 +109,7 @@ impl IrInterpreterTrait for IrInterpreter {
             }
             #[allow(unused_variables)]
             InstructionType::Return(expression) => {
-                // println!("{:?}", self.eval_expression(&expression, &position)?);
+                // println!("{:?}", self.eval_expression(&expression, position)?);
                 // ^ for debugging. TODO: remove this.
             }
         }
@@ -128,12 +126,11 @@ impl IrInterpreterTrait for IrInterpreter {
         Prefix(Tokens, Box<IrExpression>),                                   /* operator, right */
         Infix(Box<IrExpression>, Tokens, Box<IrExpression>),                 /* left, operator, right */
     */
-    #[with_position]
-    fn eval_expression(&mut self, expression: &IrExpression) -> RuntimeError<LiteralValue> {
+    fn eval_expression(&mut self, expression: &IrExpression, position: &Position) -> RuntimeError<LiteralValue> {
         match expression {
             IrExpression::Identifier(name) => match self.environment.get(name) {
                 Some(value) => Ok(value),
-                None => Err(runtime_error! { UNDEFINED_VARIABLE; name; &position }),
+                None => Err(runtime_error(UNDEFINED_VARIABLE, Cow::Borrowed(&[name]), position)),
             },
             IrExpression::Literal(value) => Ok(value.clone()),
             IrExpression::Block(block) => {
@@ -150,7 +147,7 @@ impl IrInterpreterTrait for IrInterpreter {
                         Some(alternative) => self.eval_expression(&alternative, position),
                         None => Ok(LiteralValue::Boolean(false)),
                     },
-                    _ => todo!(),
+                    _ => unreachable!(),
                 }
             }
             IrExpression::Call(function, arguments) => {
@@ -165,8 +162,8 @@ impl IrInterpreterTrait for IrInterpreter {
                         None => {
                             return match get_builtin_function(&name) {
                                 Some(function) => Ok(function(arguments.iter().collect())),
-                                None => Err(runtime_error! { UNDEFINED_VARIABLE; name; &position }),
-                            }
+                                None => Err(runtime_error(UNDEFINED_VARIABLE, Cow::Borrowed(&[&name]), position)),
+                            };
                         }
                     },
                     _ => self.eval_expression(function, position)?,
@@ -176,7 +173,7 @@ impl IrInterpreterTrait for IrInterpreter {
                     LiteralValue::Function(parameters, block, _) => {
                         (parameters.iter().map(|parameter| parameter.0.clone()).collect::<Vec<_>>(), block)
                     }
-                    value => return Err(runtime_error! { NOT_A_FUNCTION; value; &position }),
+                    value => return Err(runtime_error(NOT_A_FUNCTION, Cow::Borrowed(&[&value.to_string()]), position)),
                 };
 
                 let mut environment = IrEnvironment::new(Some(&self.environment));
@@ -190,8 +187,30 @@ impl IrInterpreterTrait for IrInterpreter {
 
                 Ok(interpreter.last()?)
             }
-            IrExpression::Index(..) => unimplemented!(),
-            IrExpression::Prefix(..) => unimplemented!(),
+            IrExpression::Index(left, index) => {
+                let (left, index) = (self.eval_expression(left, position)?, self.eval_expression(index, position)?);
+
+                match (left, index) {
+                    (LiteralValue::Array(array), LiteralValue::Number(index)) => {
+                        let index = index as usize;
+
+                        match array.get(index) {
+                            Some(value) => self.eval_expression(value, position),
+                            None => Err(runtime_error(INDEX_OUT_OF_BOUNDS, Cow::Borrowed(&[&index.to_string()]), position)),
+                        }
+                    }
+                    (left, _) => Err(runtime_error(NOT_A_ARRAY, Cow::Borrowed(&[&left.to_string()]), position)),
+                }
+            }
+            IrExpression::Prefix(operator, right) => {
+                let right = self.eval_expression(right, position)?;
+
+                match (operator, right) {
+                    (Tokens::Minus, LiteralValue::Number(right)) => Ok(LiteralValue::Number(-right)),
+                    (Tokens::Bang, LiteralValue::Boolean(right)) => Ok(LiteralValue::Boolean(!right)),
+                    (operator, _) => Err(runtime_error(INVALID_OPERATOR, Cow::Borrowed(&[&operator.to_string()]), position)),
+                }
+            }
             IrExpression::Infix(left, operator, right) => {
                 let (left, right) = (self.eval_expression(left, position)?, self.eval_expression(right, position)?);
 
@@ -207,7 +226,7 @@ impl IrInterpreterTrait for IrInterpreter {
                         Tokens::LTE => Ok(LiteralValue::Boolean(left <= right)),
                         Tokens::GT => Ok(LiteralValue::Boolean(left > right)),
                         Tokens::GTE => Ok(LiteralValue::Boolean(left >= right)),
-                        _ => Err(runtime_error! { INVALID_OPERATOR; operator; &position }),
+                        _ => Err(runtime_error(INVALID_OPERATOR, Cow::Borrowed(&[&operator.to_string()]), position)),
                     },
                     (LiteralValue::String(left), LiteralValue::String(right)) => match operator {
                         Tokens::Plus => Ok(LiteralValue::String(format!("{}{}", left, right))),
@@ -217,14 +236,18 @@ impl IrInterpreterTrait for IrInterpreter {
                         Tokens::LTE => Ok(LiteralValue::Boolean(left <= right)),
                         Tokens::GT => Ok(LiteralValue::Boolean(left > right)),
                         Tokens::GTE => Ok(LiteralValue::Boolean(left >= right)),
-                        _ => Err(runtime_error! { INVALID_OPERATOR; operator; &position }),
+                        _ => Err(runtime_error(INVALID_OPERATOR, Cow::Borrowed(&[&operator.to_string()]), position)),
                     },
                     (LiteralValue::Boolean(left), LiteralValue::Boolean(right)) => match operator {
                         Tokens::EQ => Ok(LiteralValue::Boolean(left == right)),
                         Tokens::NEQ => Ok(LiteralValue::Boolean(left != right)),
-                        _ => Err(runtime_error! { INVALID_OPERATOR; operator; &position }),
+                        _ => Err(runtime_error(INVALID_OPERATOR, Cow::Borrowed(&[&operator.to_string()]), position)),
                     },
-                    (left, right) => Err(runtime_error! { INVALID_OPERANDS; left, right, operator; &position }),
+                    (left, right) => Err(runtime_error(
+                        INVALID_OPERANDS,
+                        Cow::Borrowed(&[&left.to_string(), &right.to_string(), &operator.to_string()]),
+                        position,
+                    )),
                 }
             }
         }

@@ -1,15 +1,29 @@
 use sntk_core::parser::ast::Position;
-use sntk_proc::ErrorFormat;
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 pub mod builtin;
 pub mod instruction;
 pub mod interpreter;
 
-#[derive(Debug, Clone, ErrorFormat)]
+#[derive(Debug, Clone)]
 pub struct RuntimeError {
     pub message: String,
     pub position: Position,
+}
+
+impl RuntimeError {
+    pub fn new(message: &str, args: Vec<&str>, position: &Position) -> Self {
+        let mut message = message.to_string();
+
+        args.iter().enumerate().for_each(|(i, arg)| {
+            message = message.replace(&format!("{{{}}}", i), arg);
+        });
+
+        Self {
+            message,
+            position: position.to_owned(),
+        }
+    }
 }
 
 impl fmt::Display for RuntimeError {
@@ -33,13 +47,15 @@ macro_rules! messages {
 messages! {
     UNDEFINED_VARIABLE => "Undefined variable `{0}`";
     NOT_A_FUNCTION => "`{0}` is not a function";
+    NOT_A_ARRAY => "`{0}` is not a array";
     INVALID_OPERATOR => "Invalid operator `{0}`";
     INVALID_OPERANDS => "Invalid operands `{0}` and `{1}` for operator `{2}`";
+    INDEX_OUT_OF_BOUNDS => "Index out of bounds `{0}`";
 }
 
-#[macro_export]
-macro_rules! runtime_error {
-    ($msg:ident; $( $r:expr ),*; $position:expr) => {
-        $crate::RuntimeError::new($msg, vec![$( format!("{}", $r) ),*], &$position)
-    };
+pub fn runtime_error<T>(message: T, replacements: Cow<[&str]>, position: &Position) -> RuntimeError
+where
+    T: Into<String>,
+{
+    RuntimeError::new(&message.into(), replacements.into_owned(), position)
 }

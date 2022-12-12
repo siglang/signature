@@ -9,4 +9,3 @@ repository = "https://github.com/ky0422/sanetaka"
 
 [dependencies]
 sntk_core = { path = "../sntk_core" }
-sntk_proc = { path = "../sntk_proc" }
