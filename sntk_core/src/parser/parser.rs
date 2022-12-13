@@ -1,16 +1,13 @@
-use std::borrow::Cow;
-
 use crate::{
-    helpers::parsing_error,
     identifier,
     parser::{
         ast::{
-            ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, Expression, ExpressionStatement, FunctionLiteral,
-            FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral,
-            Position, PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral, StructLiteral, StructStatement, TypeStatement,
-            TypeofExpression,
+            ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DefTypeStatement, Expression,
+            ExpressionStatement, FunctionLiteral, FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, IndexExpression,
+            InfixExpression, LetStatement, NumberLiteral, Position, PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral,
+            StructLiteral, StructStatement, TypeStatement, TypeofExpression,
         },
-        ParsingError, EXPECTED_EXPRESSION, EXPECTED_NEXT_TOKEN, UNEXPECTED_TOKEN,
+        ParsingError, ParsingErrorKind,
     },
     tokenizer::{
         lexer::{Lexer, LexerTrait},
@@ -37,6 +34,7 @@ pub trait ParserTrait {
     fn parse_auto_statement(&mut self) -> ParseResult<AutoStatement>;
     fn parse_return_statement(&mut self) -> ParseResult<ReturnStatement>;
     fn parse_type_statement(&mut self) -> ParseResult<TypeStatement>;
+    fn parse_deftype_statement(&mut self) -> ParseResult<DefTypeStatement>;
     fn parse_struct_statement(&mut self) -> ParseResult<StructStatement>;
     fn parse_expression_statement(&mut self) -> ParseResult<ExpressionStatement>;
     fn parse_expression(&mut self, precedence: &Priority) -> ParseResult<Expression>;
@@ -97,10 +95,9 @@ impl ParserBase for Parser {
 
             Ok(())
         } else {
-            Err(parsing_error(
-                EXPECTED_EXPRESSION,
-                Cow::Borrowed(&[&self.current_token.token_type.to_string()]),
-                &self.position,
+            Err(ParsingError::new(
+                ParsingErrorKind::ExpectedExpression(self.current_token.token_type.to_string()),
+                self.position,
             ))
         }
     }
@@ -163,6 +160,7 @@ impl ParserTrait for Parser {
             Tokens::Auto => Statement::AutoStatement(self.parse_auto_statement()?),
             Tokens::Return => Statement::ReturnStatement(self.parse_return_statement()?),
             Tokens::Type => Statement::TypeStatement(self.parse_type_statement()?),
+            Tokens::DefType => Statement::DefTypeStatement(self.parse_deftype_statement()?),
             Tokens::Struct => Statement::StructStatement(self.parse_struct_statement()?),
             _ => Statement::ExpressionStatement(self.parse_expression_statement()?),
         })
@@ -186,18 +184,16 @@ impl ParserTrait for Parser {
 
                 Ok(LetStatement::new(data_type, ident, expression, self.position))
             } else {
-                Err(parsing_error(
-                    EXPECTED_NEXT_TOKEN,
-                    Cow::Borrowed(&["Semicolon", &self.current_token.token_type.to_string()]),
-                    &self.position,
+                Err(ParsingError::new(
+                    ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                    self.position,
                 ))
             };
         }
 
-        Err(parsing_error(
-            UNEXPECTED_TOKEN,
-            Cow::Borrowed(&[&self.current_token.token_type.to_string()]),
-            &self.position,
+        Err(ParsingError::new(
+            ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+            self.position,
         ))
     }
 
@@ -215,18 +211,16 @@ impl ParserTrait for Parser {
 
                 Ok(AutoStatement::new(ident, expression, self.position))
             } else {
-                Err(parsing_error(
-                    EXPECTED_NEXT_TOKEN,
-                    Cow::Borrowed(&[&Tokens::Semicolon.to_string(), &self.current_token.token_type.to_string()]),
-                    &self.position,
+                Err(ParsingError::new(
+                    ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                    self.position,
                 ))
             };
         }
 
-        Err(parsing_error(
-            UNEXPECTED_TOKEN,
-            Cow::Borrowed(&[&self.current_token.token_type.to_string()]),
-            &self.position,
+        Err(ParsingError::new(
+            ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+            self.position,
         ))
     }
 
@@ -239,18 +233,16 @@ impl ParserTrait for Parser {
 
                 Ok(ReturnStatement::new(expression, self.position))
             } else {
-                Err(parsing_error(
-                    EXPECTED_NEXT_TOKEN,
-                    Cow::Borrowed(&["Semicolon", &self.current_token.token_type.to_string()]),
-                    &self.position,
+                Err(ParsingError::new(
+                    ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                    self.position,
                 ))
             };
         }
 
-        Err(parsing_error(
-            EXPECTED_EXPRESSION,
-            Cow::Borrowed(&[&self.current_token.token_type.to_string()]),
-            &self.position,
+        Err(ParsingError::new(
+            ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+            self.position,
         ))
     }
 
@@ -279,10 +271,29 @@ impl ParserTrait for Parser {
                 self.position,
             ))
         } else {
-            Err(parsing_error(
-                EXPECTED_NEXT_TOKEN,
-                Cow::Borrowed(&["Semicolon", &self.current_token.token_type.to_string()]),
-                &self.position,
+            Err(ParsingError::new(
+                ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                self.position,
+            ))
+        }
+    }
+
+    fn parse_deftype_statement(&mut self) -> ParseResult<DefTypeStatement> {
+        self.next_token();
+
+        let ident = identifier! { self };
+        self.next_token();
+
+        self.expect_token(&Tokens::Assign)?;
+
+        let data_type = self.parse_data_type()?;
+
+        if self.current_token.token_type == Tokens::Semicolon {
+            Ok(DefTypeStatement::new(data_type, Identifier::new(ident, self.position), self.position))
+        } else {
+            Err(ParsingError::new(
+                ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                self.position,
             ))
         }
     }
@@ -342,10 +353,9 @@ impl ParserTrait for Parser {
 
             Ok(ExpressionStatement::new(expression, self.position))
         } else {
-            Err(parsing_error(
-                EXPECTED_NEXT_TOKEN,
-                Cow::Borrowed(&["Semicolon", &self.current_token.token_type.to_string()]),
-                &self.position,
+            Err(ParsingError::new(
+                ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                self.position,
             ))
         }
     }
@@ -374,10 +384,9 @@ impl ParserTrait for Parser {
                 self.next_token();
 
                 if self.current_token.token_type != Tokens::RParen {
-                    return Err(parsing_error(
-                        EXPECTED_NEXT_TOKEN,
-                        Cow::Borrowed(&["RParen", &self.current_token.token_type.to_string()]),
-                        &self.position,
+                    return Err(ParsingError::new(
+                        ParsingErrorKind::ExpectedNextToken(Tokens::RParen.to_string(), self.current_token.token_type.to_string()),
+                        self.position,
                     ));
                 }
 
@@ -400,18 +409,16 @@ impl ParserTrait for Parser {
         };
 
         if left_expression.is_none() && self.current_token.token_type != Tokens::Semicolon {
-            return Err(parsing_error(
-                UNEXPECTED_TOKEN,
-                Cow::Borrowed(&[&self.current_token.token_type.to_string()]),
-                &self.position,
+            return Err(ParsingError::new(
+                ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+                self.position,
             ));
         }
 
         let mut left_expression = left_expression.ok_or_else(|| {
-            parsing_error(
-                UNEXPECTED_TOKEN,
-                Cow::Borrowed(&[&self.current_token.token_type.to_string()]),
-                &self.position,
+            ParsingError::new(
+                ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+                self.position,
             )
         })?;
 
@@ -466,10 +473,12 @@ impl ParserTrait for Parser {
 
                         if self.current_token.token_type != Tokens::RParen {
                             return Err(
-                                parsing_error(
-                                    EXPECTED_NEXT_TOKEN,
-                                    Cow::Borrowed(&["RParen", &self.current_token.token_type.to_string()]),
-                                    &self.position,
+                                ParsingError::new(
+                                    ParsingErrorKind::ExpectedNextToken(
+                                        Tokens::RParen.to_string(),
+                                        self.current_token.token_type.to_string(),
+                                    ),
+                                    self.position,
                                 )
                             );
                         }
@@ -488,11 +497,15 @@ impl ParserTrait for Parser {
                     self.next_token();
 
                     if self.current_token.token_type != Tokens::RBracket {
-                        return Err(parsing_error(
-                            EXPECTED_NEXT_TOKEN,
-                            Cow::Borrowed(&["RBracket", &self.current_token.token_type.to_string()]),
-                            &self.position,
-                        ));
+                        return Err(
+                            ParsingError::new(
+                                ParsingErrorKind::ExpectedNextToken(
+                                    Tokens::RBracket.to_string(),
+                                    self.current_token.token_type.to_string(),
+                                ),
+                                self.position,
+                            )
+                        );
                     }
 
                     Ok(Expression::IndexExpression(IndexExpression::new(
@@ -501,10 +514,9 @@ impl ParserTrait for Parser {
                         self.position,
                     )))
                 }
-                _ => Err(parsing_error(
-                    UNEXPECTED_TOKEN,
-                    Cow::Borrowed(&[&self.current_token.token_type.to_string()]),
-                    &self.position,
+                _ => Err(ParsingError::new(
+                    ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+                    self.position,
                 )),
             };
         }
@@ -560,10 +572,9 @@ impl ParserTrait for Parser {
         }
 
         if self.current_token.token_type != Tokens::RBracket {
-            return Err(parsing_error(
-                EXPECTED_NEXT_TOKEN,
-                Cow::Borrowed(&["RBracket", &self.current_token.token_type.to_string()]),
-                &self.position,
+            return Err(ParsingError::new(
+                ParsingErrorKind::ExpectedNextToken(Tokens::RBracket.to_string(), self.current_token.token_type.to_string()),
+                self.position,
             ));
         }
 
@@ -598,10 +609,9 @@ impl ParserTrait for Parser {
         }
 
         if self.current_token.token_type != Tokens::RBrace {
-            return Err(parsing_error(
-                EXPECTED_NEXT_TOKEN,
-                Cow::Borrowed(&["RBrace", &self.current_token.token_type.to_string()]),
-                &self.position,
+            return Err(ParsingError::new(
+                ParsingErrorKind::ExpectedNextToken(Tokens::RBrace.to_string(), self.current_token.token_type.to_string()),
+                self.position,
             ));
         }
 
@@ -633,10 +643,9 @@ impl ParserTrait for Parser {
 
                 parameters.push((Identifier::new(identifier.clone(), self.position), data_type));
             } else {
-                return Err(parsing_error(
-                    UNEXPECTED_TOKEN,
-                    Cow::Borrowed(&[&self.current_token.token_type.to_string()]),
-                    &self.position,
+                return Err(ParsingError::new(
+                    ParsingErrorKind::ExpectedNextToken(Tokens::IDENT("".to_string()).to_string(), self.current_token.token_type.to_string()),
+                    self.position,
                 ));
             }
 
@@ -666,10 +675,9 @@ impl ParserTrait for Parser {
                 )
             }
             _ => {
-                return Err(parsing_error(
-                    EXPECTED_NEXT_TOKEN,
-                    Cow::Borrowed(&["LBrace", &self.current_token.token_type.to_string()]),
-                    &self.position,
+                return Err(ParsingError::new(
+                    ParsingErrorKind::ExpectedNextToken(Tokens::LBrace.to_string(), self.current_token.token_type.to_string()),
+                    self.position,
                 ))
             }
         };
@@ -722,10 +730,9 @@ impl TypeParser for Parser {
             Tokens::BooleanType => Ok(DataType::Boolean),
             Tokens::Function => Ok(DataType::Fn(self.parse_function_type()?)),
             Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
-            _ => Err(parsing_error(
-                UNEXPECTED_TOKEN,
-                Cow::Borrowed(&[&self.current_token.token_type.to_string()]),
-                &self.position,
+            _ => Err(ParsingError::new(
+                ParsingErrorKind::ExpectedNextToken(Tokens::NumberType.to_string(), self.current_token.token_type.to_string()),
+                self.position,
             )),
         };
 
@@ -740,10 +747,9 @@ impl TypeParser for Parser {
             self.next_token();
 
             if self.current_token.token_type != Tokens::RBracket {
-                return Err(parsing_error(
-                    EXPECTED_NEXT_TOKEN,
-                    Cow::Borrowed(&["RBracket", &self.current_token.token_type.to_string()]),
-                    &self.position,
+                return Err(ParsingError::new(
+                    ParsingErrorKind::ExpectedNextToken(Tokens::RBracket.to_string(), self.current_token.token_type.to_string()),
+                    self.position,
                 ));
             }
 

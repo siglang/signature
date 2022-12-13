@@ -23,6 +23,7 @@ pub enum Statement {
     AutoStatement(AutoStatement),
     ReturnStatement(ReturnStatement),
     TypeStatement(TypeStatement),
+    DefTypeStatement(DefTypeStatement),
     StructStatement(StructStatement),
     ExpressionStatement(ExpressionStatement),
 }
@@ -55,6 +56,7 @@ pub enum DataType {
     Generic(Generic),
     Custom(String),
     Unknown,
+    Any,
 }
 
 impl fmt::Display for DataType {
@@ -68,6 +70,7 @@ impl fmt::Display for DataType {
             DataType::Generic(generic) => write!(f, "{}", generic),
             DataType::Custom(name) => write!(f, "{}", name),
             DataType::Unknown => write!(f, "Unknown"),
+            DataType::Any => write!(f, "Any"),
         }
     }
 }
@@ -170,6 +173,7 @@ macro_rules! make_struct {
 
 make_struct! { @data_type LetStatement => name: Identifier, value: Expression }
 make_struct! { @data_type TypeStatement => name: Identifier, generics: IdentifierGeneric }
+make_struct! { @data_type DefTypeStatement => name: Identifier }
 
 make_struct! { AutoStatement => name: Identifier, value: Expression }
 make_struct! { StructStatement => name: Identifier, generics: IdentifierGeneric, fields: Vec<(Identifier, DataType)> }
