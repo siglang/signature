@@ -28,6 +28,13 @@
 
 <br />
 
+### `DefTypeStatement`
+
+-   `DefTypeStatement`
+    -   `deftype`[^keyword] [`Identifier`](#identifier) `=` [`Type`](#types)[^type]`;`
+
+<br />
+
 ### `ReturnStatement`
 
 -   `ReturnStatement`

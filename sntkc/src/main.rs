@@ -22,16 +22,10 @@ fn main() {
     let mut start = Instant::now();
 
     let source_code = r#"
-auto x = fn(x: number, y: number) -> number -> x + y;
+deftype println = fn(number) -> boolean;
 
-auto result = x(1, 2);
-auto x = if result < 3 {
-    return 10;
-} else {
-    return 20;
-};
-auto println = 1;
-println(result, x);
+auto x = fn(n: number) -> number -> n * 10;
+println(x(10));
     "#
     .trim_start();
 
