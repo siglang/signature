@@ -1,4 +1,7 @@
-use sntk_core::{parser::ast::DataType, tokenizer::token::Tokens};
+use sntk_core::{
+    parser::ast::{DataType, Position},
+    tokenizer::token::Tokens,
+};
 use std::fmt;
 
 pub type Identifier = String;
@@ -7,12 +10,12 @@ pub type Block = Vec<Instruction>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Instruction {
     pub instruction: InstructionType,
-    pub position: (usize, usize),
+    pub position: Position,
 }
 
 impl Instruction {
     #[inline]
-    pub fn new(instruction: InstructionType, position: (usize, usize)) -> Self {
+    pub fn new(instruction: InstructionType, position: Position) -> Self {
         Self { instruction, position }
     }
 }
@@ -28,6 +31,7 @@ pub enum InstructionType {
     StoreName(Identifier, IrExpression), /* identifier, literal */
     Return(IrExpression),                /* literal */
     Expression(IrExpression),            /* expression */
+    None,                                /* none */
 }
 
 impl fmt::Display for InstructionType {
@@ -36,6 +40,7 @@ impl fmt::Display for InstructionType {
             Self::StoreName(identifier, expression) => write!(f, "store_name({}, {})", identifier, expression),
             Self::Return(expression) => write!(f, "return({})", expression),
             Self::Expression(expression) => write!(f, "expression({})", expression),
+            Self::None => write!(f, "none"),
         }
     }
 }
