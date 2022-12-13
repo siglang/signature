@@ -1,10 +1,10 @@
-use crate::{compiler::CompileResult, type_error, EXPECTED_ARGUMENTS, EXPECTED_DATA_TYPE, NOT_A_FUNCTION, UNDEFINED_IDENTIFIER, UNKNOWN_ARRAY_TYPE};
+use crate::{compiler::CompileResult, TypeError, TypeErrorKind};
 use sntk_core::{
     parser::ast::{DataType, FunctionType, Position},
     tokenizer::token::Tokens,
 };
-use sntk_ir::instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue};
-use std::{borrow::Cow, collections::HashMap};
+use sntk_ir::instruction::{Identifier, InstructionType, IrExpression, LiteralValue};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeEnvironment {
@@ -43,10 +43,14 @@ pub fn get_type_from_ir_expression(
     data_type: Option<&DataType>,
     position: &Position,
 ) -> CompileResult<DataType> {
+    if data_type == Some(&DataType::Any) {
+        return Ok(DataType::Any);
+    }
+
     match expression.clone() {
         IrExpression::Identifier(identifier) => match types.get(&identifier) {
             Some(data_type) => Ok(data_type),
-            None => Err(type_error(UNDEFINED_IDENTIFIER, Cow::Borrowed(&[&identifier]), position)),
+            None => Err(TypeError::new(TypeErrorKind::UndefinedIdentifier(identifier.to_string()), *position)),
         },
         IrExpression::Literal(literal) => get_type_from_literal_value(&literal, types, data_type, position),
         IrExpression::Block(block) => get_type_from_ir_expression(
@@ -73,17 +77,15 @@ pub fn get_type_from_ir_expression(
                 if consequence_type == alternative_type {
                     Ok(consequence_type)
                 } else {
-                    Err(type_error(
-                        EXPECTED_DATA_TYPE,
-                        Cow::Borrowed(&[&consequence_type.to_string(), &alternative_type.to_string()]),
-                        position,
+                    Err(TypeError::new(
+                        TypeErrorKind::ExpectedDataType(consequence_type.to_string(), alternative_type.to_string()),
+                        *position,
                     ))
                 }
             } else {
-                Err(type_error(
-                    EXPECTED_DATA_TYPE,
-                    Cow::Borrowed(&[&DataType::Boolean.to_string(), &condition_type.to_string()]),
-                    position,
+                Err(TypeError::new(
+                    TypeErrorKind::ExpectedDataType(DataType::Boolean.to_string(), condition_type.to_string()),
+                    *position,
                 ))
             }
         }
@@ -97,24 +99,22 @@ pub fn get_type_from_ir_expression(
                             let argument_type = get_type_from_ir_expression(argument, types, data_type, position)?;
 
                             if parameter != &argument_type {
-                                return Err(type_error(
-                                    EXPECTED_DATA_TYPE,
-                                    Cow::Borrowed(&[&parameter.to_string(), &argument_type.to_string()]),
-                                    position,
+                                return Err(TypeError::new(
+                                    TypeErrorKind::ExpectedDataType(parameter.to_string(), argument_type.to_string()),
+                                    *position,
                                 ));
                             }
                         }
 
                         Ok(*return_type)
                     } else {
-                        Err(type_error(
-                            EXPECTED_ARGUMENTS,
-                            Cow::Borrowed(&[&parameters.len().to_string(), &arguments.len().to_string()]),
-                            position,
+                        Err(TypeError::new(
+                            TypeErrorKind::ExpectedArguments(parameters.len(), arguments.len()),
+                            *position,
                         ))
                     }
                 }
-                _ => Err(type_error(NOT_A_FUNCTION, Cow::Borrowed(&["Function"]), position)),
+                _ => Err(TypeError::new(TypeErrorKind::NotCallable(function_type.to_string()), *position)),
             }
         }
         IrExpression::Index(left, index) => {
@@ -126,18 +126,13 @@ pub fn get_type_from_ir_expression(
                     if index_type == DataType::Number {
                         Ok(*data_type)
                     } else {
-                        Err(type_error(
-                            EXPECTED_DATA_TYPE,
-                            Cow::Borrowed(&[&DataType::Number.to_string(), &index_type.to_string()]),
-                            position,
+                        Err(TypeError::new(
+                            TypeErrorKind::ExpectedDataType(DataType::Number.to_string(), index_type.to_string()),
+                            *position,
                         ))
                     }
                 }
-                _ => Err(type_error(
-                    EXPECTED_DATA_TYPE,
-                    Cow::Borrowed(&["Array", &left_type.to_string()]),
-                    position,
-                )),
+                _ => Err(TypeError::new(TypeErrorKind::NotIndexable(left_type.to_string()), *position)),
             }
         }
         IrExpression::Prefix(_, expression) => get_type_from_ir_expression(&expression, types, data_type, position),
@@ -150,10 +145,9 @@ pub fn get_type_from_ir_expression(
                     if left_type == DataType::Number && right_type == DataType::Number {
                         Ok(DataType::Number)
                     } else {
-                        Err(type_error(
-                            EXPECTED_DATA_TYPE,
-                            Cow::Borrowed(&["Number", &left_type.to_string(), &right_type.to_string()]),
-                            position,
+                        Err(TypeError::new(
+                            TypeErrorKind::ExpectedDataType(DataType::Number.to_string(), left_type.to_string()),
+                            *position,
                         ))
                     }
                 }
@@ -161,10 +155,9 @@ pub fn get_type_from_ir_expression(
                     if left_type == right_type {
                         Ok(DataType::Boolean)
                     } else {
-                        Err(type_error(
-                            EXPECTED_DATA_TYPE,
-                            Cow::Borrowed(&[&left_type.to_string(), &right_type.to_string()]),
-                            position,
+                        Err(TypeError::new(
+                            TypeErrorKind::ExpectedDataType(left_type.to_string(), right_type.to_string()),
+                            *position,
                         ))
                     }
                 }
@@ -193,10 +186,9 @@ pub fn get_type_from_literal_value(
                 if element_type == DataType::Unknown {
                     element_type = data_type;
                 } else if element_type != data_type {
-                    return Err(type_error(
-                        EXPECTED_DATA_TYPE,
-                        Cow::Borrowed(&[&element_type.to_string(), &data_type.to_string()]),
-                        position,
+                    return Err(TypeError::new(
+                        TypeErrorKind::ExpectedDataType(element_type.to_string(), data_type.to_string()),
+                        *position,
                     ));
                 }
             }
@@ -211,16 +203,15 @@ pub fn get_type_from_literal_value(
                     }
 
                     if *data_type != DataType::Array(Box::new(element_type.clone())) {
-                        return Err(type_error(
-                            EXPECTED_DATA_TYPE,
-                            Cow::Borrowed(&[&data_type.to_string(), &DataType::Array(Box::new(element_type)).to_string()]),
-                            position,
+                        return Err(TypeError::new(
+                            TypeErrorKind::ExpectedDataType(data_type.to_string(), DataType::Array(Box::new(element_type.clone())).to_string()),
+                            *position,
                         ));
                     }
                 }
                 None => {
                     if element_type == DataType::Unknown {
-                        return Err(type_error(UNKNOWN_ARRAY_TYPE, Cow::Borrowed(&[]), position));
+                        return Err(TypeError::new(TypeErrorKind::UnknownArrayType, *position));
                     }
                 }
             }
@@ -248,19 +239,17 @@ pub fn get_type_from_literal_value(
             )))?;
 
             if return_type.clone() != *block_return_type {
-                return Err(type_error(
-                    EXPECTED_DATA_TYPE,
-                    Cow::Borrowed(&[&return_type.to_string(), &block_return_type.to_string()]),
-                    position,
+                return Err(TypeError::new(
+                    TypeErrorKind::ExpectedDataType(return_type.to_string(), block_return_type.to_string()),
+                    *position,
                 ));
             }
 
             if let Some(data_type) = data_type {
                 if *data_type != function_type {
-                    return Err(type_error(
-                        EXPECTED_DATA_TYPE,
-                        Cow::Borrowed(&[&data_type.to_string(), &function_type.to_string()]),
-                        position,
+                    return Err(TypeError::new(
+                        TypeErrorKind::ExpectedDataType(data_type.to_string(), function_type.to_string()),
+                        *position,
                     ));
                 }
             }
@@ -268,17 +257,4 @@ pub fn get_type_from_literal_value(
             Ok(function_type)
         }
     }
-}
-
-pub fn get_type_from_instruction(
-    instruction: &Instruction,
-    types: &TypeEnvironment,
-    data_type: Option<&DataType>,
-    position: &Position,
-) -> CompileResult<DataType> {
-    Ok(match instruction.instruction.clone() {
-        InstructionType::StoreName(_, expression) | InstructionType::Return(expression) | InstructionType::Expression(expression) => {
-            get_type_from_ir_expression(&expression, types, data_type, position)?
-        }
-    })
 }

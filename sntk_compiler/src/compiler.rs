@@ -1,14 +1,11 @@
-use std::borrow::Cow;
-
 use crate::{
     checker::{get_type_from_ir_expression, TypeEnvironment},
-    helpers::ast_position_to_tuple,
-    type_error, CompileError, EXPECTED_DATA_TYPE,
+    CompileError, TypeError, TypeErrorKind,
 };
 use sntk_core::parser::ast::{
-    ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, Expression, FunctionLiteral, Identifier, IfExpression,
-    IndexExpression, InfixExpression, LetStatement, NumberLiteral, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral,
-    TypeofExpression,
+    ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DefTypeStatement, Expression, ExpressionStatement, FunctionLiteral,
+    Identifier, IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, Position, PrefixExpression, Program, ReturnStatement,
+    Statement, StringLiteral, TypeofExpression,
 };
 use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralValue};
 
@@ -25,7 +22,7 @@ pub trait CompilerTrait {
     fn new_with_types(program: Program, types: TypeEnvironment) -> Self;
     fn compile_program(&mut self) -> CompileResult<Vec<Instruction>>;
     fn compile_statement(&mut self, statement: &Statement) -> CompileResult<Instruction>;
-    fn compile_expression(&mut self, expression: &Expression) -> CompileResult<IrExpression>;
+    fn compile_expression(&mut self, expression: &Expression, position: &Position) -> CompileResult<IrExpression>;
 }
 
 impl CompilerTrait for Compiler {
@@ -64,42 +61,45 @@ impl CompilerTrait for Compiler {
                 position,
                 data_type,
             }) => {
-                let value = self.compile_expression(value)?;
+                let value = self.compile_expression(value, position)?;
                 let value_type = get_type_from_ir_expression(&value, &self.types, Some(data_type), position)?;
 
                 if data_type.clone() != value_type {
-                    return Err(type_error(
-                        EXPECTED_DATA_TYPE,
-                        Cow::Borrowed(&[&data_type.to_string(), &value_type.to_string()]),
-                        position,
+                    return Err(TypeError::new(
+                        TypeErrorKind::ExpectedDataType(data_type.to_string(), value_type.to_string()),
+                        position.clone(),
                     ));
                 }
 
                 self.types.set(&name.value, data_type);
 
-                Instruction::new(InstructionType::StoreName(name.value.clone(), value), ast_position_to_tuple(position))
+                Instruction::new(InstructionType::StoreName(name.value.clone(), value), *position)
             }
             Statement::AutoStatement(AutoStatement { name, value, position }) => {
-                let value = self.compile_expression(value)?;
+                let value = self.compile_expression(value, position)?;
 
                 self.types
                     .set(&name.value, &get_type_from_ir_expression(&value, &self.types, None, position)?);
 
-                Instruction::new(InstructionType::StoreName(name.value.clone(), value), ast_position_to_tuple(position))
+                Instruction::new(InstructionType::StoreName(name.value.clone(), value), *position)
             }
             Statement::ReturnStatement(ReturnStatement { value, position }) => {
-                Instruction::new(InstructionType::Return(self.compile_expression(value)?), ast_position_to_tuple(position))
+                Instruction::new(InstructionType::Return(self.compile_expression(value, position)?), *position)
             }
             Statement::TypeStatement(_) | Statement::StructStatement(_) => unimplemented!(),
-            Statement::ExpressionStatement(expression) => Instruction::new(
-                InstructionType::Expression(self.compile_expression(&expression.expression)?),
-                ast_position_to_tuple(&expression.position),
-            ),
+            Statement::DefTypeStatement(DefTypeStatement { name, data_type, position }) => {
+                self.types.set(&name.value, data_type);
+
+                Instruction::new(InstructionType::None, *position)
+            }
+            Statement::ExpressionStatement(ExpressionStatement { expression, position }) => {
+                Instruction::new(InstructionType::Expression(self.compile_expression(&expression, position)?), *position)
+            }
         })
     }
 
-    fn compile_expression(&mut self, expression: &Expression) -> CompileResult<IrExpression> {
-        Ok(match expression {
+    fn compile_expression(&mut self, expression: &Expression, position: &Position) -> CompileResult<IrExpression> {
+        let expression = match expression {
             Expression::Identifier(Identifier { value, .. }) => IrExpression::Identifier(value.clone()),
             Expression::BlockExpression(BlockExpression { statements, .. }) => {
                 let mut instructions = Vec::new();
@@ -115,25 +115,25 @@ impl CompilerTrait for Compiler {
                 IrExpression::Block(instructions)
             }
             Expression::PrefixExpression(PrefixExpression { operator, right, .. }) => {
-                IrExpression::Prefix(operator.clone(), Box::new(self.compile_expression(right)?))
+                IrExpression::Prefix(operator.clone(), Box::new(self.compile_expression(right, position)?))
             }
             Expression::InfixExpression(InfixExpression { operator, left, right, .. }) => IrExpression::Infix(
-                Box::new(self.compile_expression(left)?),
+                Box::new(self.compile_expression(left, position)?),
                 operator.clone(),
-                Box::new(self.compile_expression(right)?),
+                Box::new(self.compile_expression(right, position)?),
             ),
             Expression::IfExpression(IfExpression {
                 condition,
                 consequence,
                 alternative,
-                ..
+                position,
             }) => IrExpression::If(
-                Box::new(self.compile_expression(condition)?),
-                Box::new(self.compile_expression(&Expression::BlockExpression(*consequence.clone()))?),
+                Box::new(self.compile_expression(condition, position)?),
+                Box::new(self.compile_expression(&Expression::BlockExpression(*consequence.clone()), position)?),
                 Box::new(
                     alternative
                         .clone()
-                        .map(|alternative| self.compile_expression(&Expression::BlockExpression(*alternative)))
+                        .map(|alternative| self.compile_expression(&Expression::BlockExpression(*alternative), position))
                         .transpose()?,
                 ),
             ),
@@ -141,37 +141,46 @@ impl CompilerTrait for Compiler {
                 parameters,
                 body,
                 return_type,
+                position,
                 ..
             }) => IrExpression::Literal(LiteralValue::Function(
                 parameters
                     .iter()
-                    .map(|parameter| (parameter.0.value.clone(), parameter.1.clone()))
+                    .map(|parameter| {
+                        self.types.set(&parameter.0.value, &parameter.1);
+                        (parameter.0.value.clone(), parameter.1.clone())
+                    })
                     .collect(),
-                match self.compile_expression(&Expression::BlockExpression(body.clone()))? {
+                match self.compile_expression(&Expression::BlockExpression(body.clone()), position)? {
                     IrExpression::Block(instructions) => instructions,
                     _ => unreachable!(),
                 },
                 return_type.clone(),
             )),
-            Expression::CallExpression(CallExpression { function, arguments, .. }) => {
+            Expression::CallExpression(CallExpression {
+                function,
+                arguments,
+                position,
+            }) => {
                 let mut arguments_compiled = Vec::new();
 
                 for argument in arguments.iter() {
-                    arguments_compiled.push(self.compile_expression(argument)?);
+                    arguments_compiled.push(self.compile_expression(argument, position)?);
                 }
 
-                IrExpression::Call(Box::new(self.compile_expression(function)?), arguments_compiled)
+                IrExpression::Call(Box::new(self.compile_expression(function, position)?), arguments_compiled)
             }
             Expression::TypeofExpression(TypeofExpression { expression, position }) => {
-                let expression = self.compile_expression(expression)?;
+                let expression = self.compile_expression(expression, position)?;
 
                 IrExpression::Literal(LiteralValue::String(
                     get_type_from_ir_expression(&expression, &self.types, None, position)?.to_string(),
                 ))
             }
-            Expression::IndexExpression(IndexExpression { left, index, .. }) => {
-                IrExpression::Index(Box::new(self.compile_expression(left)?), Box::new(self.compile_expression(index)?))
-            }
+            Expression::IndexExpression(IndexExpression { left, index, position }) => IrExpression::Index(
+                Box::new(self.compile_expression(left, position)?),
+                Box::new(self.compile_expression(index, position)?),
+            ),
             Expression::StringLiteral(StringLiteral { value, .. }) => IrExpression::Literal(LiteralValue::String(value.clone())),
             Expression::NumberLiteral(NumberLiteral { value, .. }) => IrExpression::Literal(LiteralValue::Number(*value)),
             Expression::BooleanLiteral(BooleanLiteral { value, .. }) => IrExpression::Literal(LiteralValue::Boolean(*value)),
@@ -179,12 +188,16 @@ impl CompilerTrait for Compiler {
                 let mut elements_compiled = Vec::new();
 
                 for element in elements.iter() {
-                    elements_compiled.push(self.compile_expression(element)?);
+                    elements_compiled.push(self.compile_expression(element, position)?);
                 }
 
                 IrExpression::Literal(LiteralValue::Array(elements_compiled))
             }
             Expression::StructLiteral(_) => todo!(),
-        })
+        };
+
+        get_type_from_ir_expression(&expression, &self.types, None, position)?;
+
+        Ok(expression)
     }
 }

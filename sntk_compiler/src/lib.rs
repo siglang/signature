@@ -1,12 +1,9 @@
 pub mod checker;
 pub mod compiler;
-pub mod helpers;
 
 use sntk_core::parser::{ast::Position, ParsingError};
-use std::{
-    borrow::Cow,
-    fmt::{self, write},
-};
+use std::fmt::{self, write};
+use thiserror::Error;
 
 #[derive(Debug, Clone)]
 pub enum CompileError {
@@ -41,46 +38,25 @@ impl fmt::Display for CompileError {
 
 #[derive(Debug, Clone)]
 pub struct TypeError {
-    pub message: String,
+    pub message: TypeErrorKind,
     pub position: Position,
 }
 
 impl TypeError {
-    pub fn new(message: &str, args: Vec<&str>, position: &Position) -> Self {
-        let mut message = message.to_string();
-
-        args.iter().enumerate().for_each(|(i, arg)| {
-            message = message.replace(&format!("{{{}}}", i), arg);
-        });
-
-        Self {
-            message,
-            position: position.to_owned(),
-        }
+    pub fn new(message: TypeErrorKind, position: Position) -> CompileError {
+        CompileError::TypeError(Self { message, position })
     }
 }
 
-macro_rules! messages {
-    ($( $name:ident => $message:expr );*;) => {
-        $(
-            pub const $name: &str = $message;
-        )*
-    };
-}
-
-messages! {
-    EXPECTED_DATA_TYPE => "Expected {0} type, got {1} instead";
-    EXPECTED_ARGUMENTS => "Expected {0} arguments, got {1} instead";
-    UNDEFINED_IDENTIFIER => "Undefined identifier: {0}";
-    UNKNOWN_TYPE => "Unknown type: {0}";
-    UNKNOWN_ARRAY_TYPE => "Unknown array type";
-    UNEXPECTED_PARAMETER_LENGTH => "Unexpected parameter length";
-    NOT_A_FUNCTION => "{0} is not a function";
-}
-
-pub fn type_error<T>(message: T, replacements: Cow<[&str]>, position: &Position) -> CompileError
-where
-    T: Into<String>,
-{
-    CompileError::TypeError(TypeError::new(&message.into(), replacements.into_owned(), position))
+#[derive(Debug, Clone, Error)]
+#[rustfmt::skip]
+pub enum TypeErrorKind {
+    #[error("Expected {0} type, got {1} instead")] ExpectedDataType(String, String),
+    #[error("Expected {0} arguments, got {1} instead")] ExpectedArguments(usize, usize),
+    #[error("Undefined identifier: {0}")] UndefinedIdentifier(String),
+    #[error("Unknown type: {0}")] UnknownType(String),
+    #[error("Unknown array type")] UnknownArrayType,
+    #[error("Unexpected parameter length")] UnexpectedParameterLength,
+    #[error("{0} is not a callable")] NotCallable(String),
+    #[error("{0} is not a indexable")] NotIndexable(String),
 }
