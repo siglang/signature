@@ -1,4 +1,4 @@
-use crate::{parser::error::ParsingError, tokenizer::token::Tokens};
+use crate::{parser::ParsingError, tokenizer::token::Tokens};
 use std::fmt;
 
 #[derive(Debug, Default)]
@@ -8,6 +8,7 @@ pub struct Program {
 }
 
 impl Program {
+    #[inline]
     pub fn new(statements: Vec<Statement>) -> Self {
         Self {
             statements,
@@ -22,6 +23,7 @@ pub enum Statement {
     AutoStatement(AutoStatement),
     ReturnStatement(ReturnStatement),
     TypeStatement(TypeStatement),
+    DeclareStatement(DeclareStatement),
     StructStatement(StructStatement),
     ExpressionStatement(ExpressionStatement),
 }
@@ -53,7 +55,6 @@ pub enum DataType {
     Fn(FunctionType),
     Generic(Generic),
     Custom(String),
-    Void,
     Unknown,
 }
 
@@ -67,7 +68,6 @@ impl fmt::Display for DataType {
             DataType::Fn(function_type) => write!(f, "{}", function_type),
             DataType::Generic(generic) => write!(f, "{}", generic),
             DataType::Custom(name) => write!(f, "{}", name),
-            DataType::Void => write!(f, "Void"),
             DataType::Unknown => write!(f, "Unknown"),
         }
     }
@@ -76,19 +76,26 @@ impl fmt::Display for DataType {
 pub type IdentifierGeneric = Vec<Identifier>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct FunctionType(pub Option<IdentifierGeneric>, pub Vec<DataType>, pub Box<DataType>);
+pub struct FunctionType(pub Option<IdentifierGeneric>, pub Vec<(DataType, bool)>, pub Box<DataType>); // generics, (parameters, spread), return_type
 
 impl FunctionType {
-    pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<DataType>, return_type: DataType) -> Self {
+    #[inline]
+    pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<(DataType, bool)>, return_type: DataType) -> Self {
         FunctionType(generics, parameters, Box::new(return_type))
     }
 }
 
 impl std::fmt::Display for FunctionType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        // TODO: generics
-        let parameters = self.1.iter().map(|parameter| parameter.to_string()).collect::<Vec<String>>().join(", ");
-        write!(f, "fn({}) -> {}", parameters, self.2)
+        let parameters = self.1.iter().map(|parameter| parameter.0.to_string()).collect::<Vec<String>>().join(", ");
+        let generics = match &self.0 {
+            Some(generics) => {
+                let generics = generics.iter().map(|generic| generic.value.clone()).collect::<Vec<String>>().join(", ");
+                format!("<{}>", generics)
+            }
+            None => String::new(),
+        };
+        write!(f, "fn{}({}) -> {}", generics, parameters, self.2)
     }
 }
 
@@ -96,6 +103,7 @@ impl std::fmt::Display for FunctionType {
 pub struct Generic(pub Box<DataType>, pub Vec<DataType>);
 
 impl Generic {
+    #[inline]
     pub fn new(data_type: DataType, generic_types: Vec<DataType>) -> Self {
         Generic(Box::new(data_type), generic_types)
     }
@@ -113,10 +121,11 @@ impl std::fmt::Display for Generic {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Position(pub usize, pub usize);
 
 impl Position {
+    #[inline]
     pub fn new(line: usize, column: usize) -> Self {
         Position(line, column)
     }
@@ -137,8 +146,9 @@ macro_rules! make_struct {
         }
 
         impl $name {
+            #[inline]
             pub fn new($( $field: $type, )* position: Position) -> Self {
-                $name { $($field,)* position }
+                $name { $($field,)* position: position.clone() }
             }
         }
     };
@@ -151,8 +161,9 @@ macro_rules! make_struct {
         }
 
         impl $name {
+            #[inline]
             pub fn new(data_type: DataType, $( $field: $type, )* position: Position) -> Self {
-                $name { $($field,)* data_type, position }
+                $name { $($field,)* data_type, position: position.clone() }
             }
         }
     }
@@ -160,6 +171,7 @@ macro_rules! make_struct {
 
 make_struct! { @data_type LetStatement => name: Identifier, value: Expression }
 make_struct! { @data_type TypeStatement => name: Identifier, generics: IdentifierGeneric }
+make_struct! { @data_type DeclareStatement => name: Identifier }
 
 make_struct! { AutoStatement => name: Identifier, value: Expression }
 make_struct! { StructStatement => name: Identifier, generics: IdentifierGeneric, fields: Vec<(Identifier, DataType)> }
@@ -178,7 +190,7 @@ make_struct! { Identifier => value: String }
 make_struct! { NumberLiteral => value: f64 }
 make_struct! { StringLiteral => value: String }
 make_struct! { BooleanLiteral => value: bool }
-make_struct! { FunctionLiteral => generics: Option<IdentifierGeneric>, parameters: Vec<(Identifier, DataType)>, return_type: DataType, body: BlockExpression }
+make_struct! { FunctionLiteral => generics: Option<IdentifierGeneric>, parameters: Vec<Parameter>, return_type: DataType, body: BlockExpression }
 make_struct! { ArrayLiteral => elements: Vec<Expression> }
 make_struct! { StructLiteral => name: Identifier, fields: Vec<(Identifier, Expression)> }
 
@@ -193,4 +205,11 @@ pub enum Priority {
     Prefix,
     Call,
     Index,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Parameter {
+    pub name: Identifier,
+    pub data_type: DataType,
+    pub spread: bool,
 }

@@ -15,9 +15,9 @@ pub enum Tokens {
 
     LT, GT, LTE, GTE, EQ, NEQ,
 
-    Let, Auto, If, Else, Return, Function, Type, Struct, Typeof,
+    Let, Auto, If, Else, Return, Function, Type, Declare, Struct, Typeof, Spread,
 
-    NumberType, StringType, BooleanType, VoidType,
+    NumberType, StringType, BooleanType
 }
 
 impl From<String> for Tokens {
@@ -30,14 +30,15 @@ impl From<String> for Tokens {
             "return" => Tokens::Return,
             "fn" => Tokens::Function,
             "type" => Tokens::Type,
+            "declare" => Tokens::Declare,
             "struct" => Tokens::Struct,
             "typeof" => Tokens::Typeof,
+            "spread" => Tokens::Spread,
             "true" => Tokens::Boolean(true),
             "false" => Tokens::Boolean(false),
             "number" => Tokens::NumberType,
             "string" => Tokens::StringType,
             "boolean" => Tokens::BooleanType,
-            "void" => Tokens::VoidType,
             s => Tokens::IDENT(s.to_string()),
         }
     }
@@ -83,6 +84,7 @@ impl std::fmt::Display for Token {
 }
 
 impl Token {
+    #[inline]
     pub fn new(token_type: Tokens, position: (usize, usize)) -> Self {
         Token { token_type, position }
     }

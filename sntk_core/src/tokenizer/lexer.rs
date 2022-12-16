@@ -9,6 +9,7 @@ pub trait LexerTrait {
     fn read_number(&mut self) -> f64;
     fn read_string(&mut self) -> String;
     fn read_comment(&mut self);
+    fn read_inline_comment(&mut self);
     fn next_token(&mut self) -> Token;
 }
 
@@ -34,6 +35,7 @@ impl Default for Lexer {
 }
 
 impl LexerTrait for Lexer {
+    #[inline]
     fn new(input: String) -> Self {
         let mut lexer = Lexer { input, ..Default::default() };
 
@@ -141,6 +143,21 @@ impl LexerTrait for Lexer {
         }
     }
 
+    fn read_inline_comment(&mut self) {
+        if self.current_char == '/' && self.peek_char() == '/' {
+            self.read_char();
+            self.read_char();
+
+            while self.current_char != '\0' && self.current_char != '\n' {
+                self.read_char();
+            }
+
+            self.current_position.0 += 1;
+
+            self.skip_whitespace();
+        }
+    }
+
     fn next_token(&mut self) -> Token {
         use super::token::Tokens::*;
 
@@ -175,30 +192,30 @@ impl LexerTrait for Lexer {
         }
 
         let token = match_token! {
-            '+' => Plus,
-            '*' => Asterisk,
-            '%' => Percent,
-            '.' => Dot,
-            ',' => Comma,
-            ';' => Semicolon,
-            ':' => Colon,
-            '(' => LParen,
-            ')' => RParen,
-            '{' => LBrace,
-            '}' => RBrace,
-            '[' => LBracket,
-            ']' => RBracket,
-            '"' => String(self.read_string()),
+            '+' => Plus, '*' => Asterisk, '%' => Percent,
+            '.' => Dot, ',' => Comma, ';' => Semicolon, ':' => Colon,
+            '(' => LParen, ')' => RParen,
+            '{' => LBrace, '}' => RBrace,
+            '[' => LBracket, ']' => RBracket,
+
             '-' => next!('>' => Arrow; Minus),
-            '=' => next!('=' => EQ; Assign),
-            '!' => next!('=' => NEQ; Bang),
-            '<' => next!('=' => LTE; LT),
-            '>' => next!('=' => GTE; GT),
+
+            '=' => next!('=' => EQ; Assign), '!' => next!('=' => NEQ; Bang),
+            '<' => next!('=' => LTE; LT), '>' => next!('=' => GTE; GT),
+
+            '"' => String(self.read_string()),
+
             '/' => next!(@no_read '*' => {
                 self.read_comment();
                 self.next_token();
+
                 return self.next_token();
-            }; Slash),
+            }; next!(@no_read '/' => {
+                self.read_inline_comment();
+
+                return self.next_token();
+            }; Slash)),
+
             '\0' => EOF
         };
 

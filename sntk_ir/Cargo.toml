@@ -1,6 +1,6 @@
 [package]
 name = "sntk_ir"
-version = "0.0.1"
+version = "0.0.3"
 edition = "2021"
 authors = ["ky0422 (Kim Jun Young)"]
 description = "Sanetaka IR library for Sanetaka (sntk) programming language"
@@ -9,3 +9,4 @@ repository = "https://github.com/ky0422/sanetaka"
 
 [dependencies]
 sntk_core = { path = "../sntk_core" }
+thiserror = "1.0.37"

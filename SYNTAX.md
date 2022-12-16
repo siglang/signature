@@ -12,6 +12,8 @@
 -   `LetStatement`
     -   `let`[^keyword] [`Identifier`](#identifier)`:` [`Type`](#types)[^type] `=` [`Expression`](#expression)`;`
 
+<br />
+
 ### `AutoStatement`
 
 -   `AutoStatement`
@@ -23,6 +25,13 @@
 
 -   `TypeStatement`
     -   `type`[^keyword] [`Identifier`](#identifier) [_`Generics`_](#generics)[^optional] `=` [`Type`](#types)[^type]`;`
+
+<br />
+
+### `DeclareStatement`
+
+-   `DeclareStatement`
+    -   `declare`[^keyword] [`Identifier`](#identifier) `=` [`Type`](#types)[^type]`;`
 
 <br />
 
@@ -102,6 +111,15 @@
 
 -   `IndexExpression`
     -   [`Expression`](#expression) `[` [`Expression`](#expression) `]`
+
+<br />
+
+### `TypeofExpression`
+
+-   `TypeofExpression`
+    -   `typeof`[^keyword] [`Expression`](#expression)
+
+<br />
 
 ### `Literal`
 
@@ -221,6 +239,20 @@
 ### `Generics`
 
 -   `GenericName`[^ident] `<` `GenericParameters`[^ident][^repeat] `>`
+
+---
+
+## `Comments`
+
+### `Single Line Comments`
+
+-   `//` `Comment`
+
+<br />
+
+### `Multi Line Comments`
+
+-   `/*` `Comment` `*/`
 
 ---
 
