@@ -1,6 +1,6 @@
 use crate::{compiler::CompileResult, TypeError, TypeErrorKind};
 use sntk_core::{
-    parser::ast::{DataType, FunctionType, Position},
+    parser::ast::{DataType, FunctionType, Parameter, Position},
     tokenizer::token::Tokens,
 };
 use sntk_ir::instruction::{Identifier, InstructionType, IrExpression, LiteralValue};
@@ -43,10 +43,6 @@ pub fn get_type_from_ir_expression(
     data_type: Option<&DataType>,
     position: &Position,
 ) -> CompileResult<DataType> {
-    if data_type == Some(&DataType::Any) {
-        return Ok(DataType::Any);
-    }
-
     match expression.clone() {
         IrExpression::Identifier(identifier) => match types.get(&identifier) {
             Some(data_type) => Ok(data_type),
@@ -94,25 +90,40 @@ pub fn get_type_from_ir_expression(
 
             match function_type {
                 DataType::Fn(FunctionType(_, parameters, return_type)) => {
-                    if parameters.len() == arguments.len() {
-                        for (parameter, argument) in parameters.iter().zip(arguments.iter()) {
-                            let argument_type = get_type_from_ir_expression(argument, types, data_type, position)?;
+                    let mut arguments_len = arguments.len();
 
+                    for (index, ((parameter, spread), argument)) in parameters.iter().zip(arguments.iter()).enumerate() {
+                        let argument_type = get_type_from_ir_expression(argument, types, data_type, position)?;
+
+                        if *spread {
                             if parameter != &argument_type {
                                 return Err(TypeError::new(
                                     TypeErrorKind::ExpectedDataType(parameter.to_string(), argument_type.to_string()),
                                     *position,
                                 ));
                             }
+
+                            arguments_len = index + 1;
+
+                            break;
                         }
 
-                        Ok(*return_type)
-                    } else {
-                        Err(TypeError::new(
+                        if parameter != &argument_type {
+                            return Err(TypeError::new(
+                                TypeErrorKind::ExpectedDataType(parameter.to_string(), argument_type.to_string()),
+                                *position,
+                            ));
+                        }
+                    }
+
+                    if parameters.len() != arguments_len {
+                        return Err(TypeError::new(
                             TypeErrorKind::ExpectedArguments(parameters.len(), arguments.len()),
                             *position,
-                        ))
+                        ));
                     }
+
+                    Ok(*return_type)
                 }
                 _ => Err(TypeError::new(TypeErrorKind::NotCallable(function_type.to_string()), *position)),
             }
@@ -202,9 +213,9 @@ pub fn get_type_from_literal_value(
                         };
                     }
 
-                    if *data_type != DataType::Array(Box::new(element_type.clone())) {
+                    if data_type == &DataType::Array(Box::new(element_type.clone())) {
                         return Err(TypeError::new(
-                            TypeErrorKind::ExpectedDataType(data_type.to_string(), DataType::Array(Box::new(element_type.clone())).to_string()),
+                            TypeErrorKind::ExpectedDataType(data_type.to_string(), DataType::Array(Box::new(element_type)).to_string()),
                             *position,
                         ));
                     }
@@ -218,11 +229,11 @@ pub fn get_type_from_literal_value(
 
             Ok(DataType::Array(Box::new(element_type)))
         }
-        LiteralValue::Function(parameters, body, return_type) => {
+        LiteralValue::Function(parameters, body, return_type, _) => {
             let mut types = TypeEnvironment::new(Some(types));
 
-            for (name, data_type) in parameters {
-                types.set(name, data_type);
+            for Parameter { name, data_type, .. } in parameters {
+                types.set(&name.value, data_type);
             }
 
             let block_return_type = Box::new(get_type_from_ir_expression(
@@ -234,7 +245,10 @@ pub fn get_type_from_literal_value(
 
             let function_type = Ok(DataType::Fn(FunctionType(
                 None,
-                parameters.iter().map(|parameter| parameter.1.clone()).collect(),
+                parameters
+                    .iter()
+                    .map(|Parameter { data_type, spread, .. }| (data_type.clone(), *spread))
+                    .collect(),
                 block_return_type.clone(),
             )))?;
 
@@ -246,7 +260,7 @@ pub fn get_type_from_literal_value(
             }
 
             if let Some(data_type) = data_type {
-                if *data_type != function_type {
+                if data_type != &function_type {
                     return Err(TypeError::new(
                         TypeErrorKind::ExpectedDataType(data_type.to_string(), function_type.to_string()),
                         *position,

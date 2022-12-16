@@ -59,4 +59,5 @@ pub enum TypeErrorKind {
     #[error("Unexpected parameter length")] UnexpectedParameterLength,
     #[error("{0} is not a callable")] NotCallable(String),
     #[error("{0} is not a indexable")] NotIndexable(String),
+    #[error("Spread parameter must be last")] SpreadParameterMustBeLast,
 }
