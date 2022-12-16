@@ -28,10 +28,10 @@
 
 <br />
 
-### `DefTypeStatement`
+### `DeclareStatement`
 
--   `DefTypeStatement`
-    -   `deftype`[^keyword] [`Identifier`](#identifier) `=` [`Type`](#types)[^type]`;`
+-   `DeclareStatement`
+    -   `declare`[^keyword] [`Identifier`](#identifier) `=` [`Type`](#types)[^type]`;`
 
 <br />
 
