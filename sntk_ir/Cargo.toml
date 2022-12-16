@@ -1,6 +1,6 @@
 [package]
 name = "sntk_ir"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 authors = ["ky0422 (Kim Jun Young)"]
 description = "Sanetaka IR library for Sanetaka (sntk) programming language"

@@ -22,10 +22,17 @@ fn main() {
     let mut start = Instant::now();
 
     let source_code = r#"
-deftype println = fn(number) -> boolean;
+declare println = fn(number[]) -> boolean; // todo
 
-auto x = fn(n: number) -> number -> n * 10;
-println(x(10));
+auto x = fn(a: number, b: number, spread c: number) ->
+    fn(string) ->
+        fn(boolean) -> number[]
+{
+    return fn(x: string) ->
+        fn(boolean) -> number[] ->
+            fn(y: boolean) -> number[] -> c;
+};
+println(x(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)("foo")(true));
     "#
     .trim_start();
 

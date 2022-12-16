@@ -1,8 +1,10 @@
 use sntk_core::{
-    parser::ast::{DataType, Position},
+    parser::ast::{DataType, Parameter, Position},
     tokenizer::token::Tokens,
 };
 use std::fmt;
+
+use crate::interpreter::IrEnvironment;
 
 pub type Identifier = String;
 pub type Block = Vec<Instruction>;
@@ -107,11 +109,11 @@ impl fmt::Display for IrExpression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
-    Number(f64),                                            /* number */
-    String(String),                                         /* string */
-    Boolean(bool),                                          /* boolean */
-    Array(Vec<IrExpression>),                               /* array */
-    Function(Vec<(Identifier, DataType)>, Block, DataType), /* (parameters, datatype), block, return type, .. */
+    Number(f64),                                                      /* number */
+    String(String),                                                   /* string */
+    Boolean(bool),                                                    /* boolean */
+    Array(Vec<IrExpression>),                                         /* array */
+    Function(Vec<Parameter>, Block, DataType, Option<IrEnvironment>), /* parameters, block, return type, environment */
 }
 
 impl fmt::Display for LiteralValue {
@@ -129,13 +131,17 @@ impl fmt::Display for LiteralValue {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            LiteralValue::Function(parameters, _, data_type) => {
+            LiteralValue::Function(parameters, _, data_type, _) => {
                 write!(
                     f,
                     "fn({}) -> {}",
                     parameters
                         .iter()
-                        .map(|parameter| format!("{}: {}", parameter.0, parameter.1))
+                        .map(|parameter| if parameter.spread {
+                            format!("spread {}", parameter.name.value)
+                        } else {
+                            parameter.name.value.to_string()
+                        })
                         .collect::<String>(),
                     data_type
                 )

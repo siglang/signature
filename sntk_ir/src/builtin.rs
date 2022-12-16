@@ -22,7 +22,11 @@ impl BuiltIn for Print {
     fn call(arguments: Vec<&LiteralValue>) -> LiteralValue {
         println!(
             "{}",
-            arguments.iter().map(|argument| format!("{} ", argument)).collect::<String>().trim_end()
+            arguments
+                .iter()
+                .map(|argument| format!("{}", argument))
+                .collect::<Vec<String>>()
+                .join(" ")
         );
 
         LiteralValue::Boolean(true)
