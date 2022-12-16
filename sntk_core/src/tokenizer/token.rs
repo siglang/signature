@@ -15,9 +15,9 @@ pub enum Tokens {
 
     LT, GT, LTE, GTE, EQ, NEQ,
 
-    Let, Auto, If, Else, Return, Function, Type, DefType, Struct, Typeof,
+    Let, Auto, If, Else, Return, Function, Type, Declare, Struct, Typeof, Spread,
 
-    NumberType, StringType, BooleanType,
+    NumberType, StringType, BooleanType
 }
 
 impl From<String> for Tokens {
@@ -30,9 +30,10 @@ impl From<String> for Tokens {
             "return" => Tokens::Return,
             "fn" => Tokens::Function,
             "type" => Tokens::Type,
-            "deftype" => Tokens::DefType,
+            "declare" => Tokens::Declare,
             "struct" => Tokens::Struct,
             "typeof" => Tokens::Typeof,
+            "spread" => Tokens::Spread,
             "true" => Tokens::Boolean(true),
             "false" => Tokens::Boolean(false),
             "number" => Tokens::NumberType,

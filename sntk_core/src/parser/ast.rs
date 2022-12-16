@@ -23,7 +23,7 @@ pub enum Statement {
     AutoStatement(AutoStatement),
     ReturnStatement(ReturnStatement),
     TypeStatement(TypeStatement),
-    DefTypeStatement(DefTypeStatement),
+    DeclareStatement(DeclareStatement),
     StructStatement(StructStatement),
     ExpressionStatement(ExpressionStatement),
 }
@@ -56,7 +56,6 @@ pub enum DataType {
     Generic(Generic),
     Custom(String),
     Unknown,
-    Any,
 }
 
 impl fmt::Display for DataType {
@@ -70,7 +69,6 @@ impl fmt::Display for DataType {
             DataType::Generic(generic) => write!(f, "{}", generic),
             DataType::Custom(name) => write!(f, "{}", name),
             DataType::Unknown => write!(f, "Unknown"),
-            DataType::Any => write!(f, "Any"),
         }
     }
 }
@@ -78,18 +76,18 @@ impl fmt::Display for DataType {
 pub type IdentifierGeneric = Vec<Identifier>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct FunctionType(pub Option<IdentifierGeneric>, pub Vec<DataType>, pub Box<DataType>); // generics, parameters, return_type
+pub struct FunctionType(pub Option<IdentifierGeneric>, pub Vec<(DataType, bool)>, pub Box<DataType>); // generics, (parameters, spread), return_type
 
 impl FunctionType {
     #[inline]
-    pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<DataType>, return_type: DataType) -> Self {
+    pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<(DataType, bool)>, return_type: DataType) -> Self {
         FunctionType(generics, parameters, Box::new(return_type))
     }
 }
 
 impl std::fmt::Display for FunctionType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let parameters = self.1.iter().map(|parameter| parameter.to_string()).collect::<Vec<String>>().join(", ");
+        let parameters = self.1.iter().map(|parameter| parameter.0.to_string()).collect::<Vec<String>>().join(", ");
         let generics = match &self.0 {
             Some(generics) => {
                 let generics = generics.iter().map(|generic| generic.value.clone()).collect::<Vec<String>>().join(", ");
@@ -173,7 +171,7 @@ macro_rules! make_struct {
 
 make_struct! { @data_type LetStatement => name: Identifier, value: Expression }
 make_struct! { @data_type TypeStatement => name: Identifier, generics: IdentifierGeneric }
-make_struct! { @data_type DefTypeStatement => name: Identifier }
+make_struct! { @data_type DeclareStatement => name: Identifier }
 
 make_struct! { AutoStatement => name: Identifier, value: Expression }
 make_struct! { StructStatement => name: Identifier, generics: IdentifierGeneric, fields: Vec<(Identifier, DataType)> }
@@ -192,7 +190,7 @@ make_struct! { Identifier => value: String }
 make_struct! { NumberLiteral => value: f64 }
 make_struct! { StringLiteral => value: String }
 make_struct! { BooleanLiteral => value: bool }
-make_struct! { FunctionLiteral => generics: Option<IdentifierGeneric>, parameters: Vec<(Identifier, DataType)>, return_type: DataType, body: BlockExpression }
+make_struct! { FunctionLiteral => generics: Option<IdentifierGeneric>, parameters: Vec<Parameter>, return_type: DataType, body: BlockExpression }
 make_struct! { ArrayLiteral => elements: Vec<Expression> }
 make_struct! { StructLiteral => name: Identifier, fields: Vec<(Identifier, Expression)> }
 
@@ -207,4 +205,11 @@ pub enum Priority {
     Prefix,
     Call,
     Index,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Parameter {
+    pub name: Identifier,
+    pub data_type: DataType,
+    pub spread: bool,
 }

@@ -2,7 +2,7 @@ use crate::{
     identifier,
     parser::{
         ast::{
-            ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DefTypeStatement, Expression,
+            ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DeclareStatement, Expression,
             ExpressionStatement, FunctionLiteral, FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, IndexExpression,
             InfixExpression, LetStatement, NumberLiteral, Position, PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral,
             StructLiteral, StructStatement, TypeStatement, TypeofExpression,
@@ -14,6 +14,8 @@ use crate::{
         token::{Token, Tokens},
     },
 };
+
+use super::ast::Parameter;
 
 pub type ParseResult<T> = Result<T, ParsingError>;
 
@@ -34,7 +36,7 @@ pub trait ParserTrait {
     fn parse_auto_statement(&mut self) -> ParseResult<AutoStatement>;
     fn parse_return_statement(&mut self) -> ParseResult<ReturnStatement>;
     fn parse_type_statement(&mut self) -> ParseResult<TypeStatement>;
-    fn parse_deftype_statement(&mut self) -> ParseResult<DefTypeStatement>;
+    fn parse_declare_statement(&mut self) -> ParseResult<DeclareStatement>;
     fn parse_struct_statement(&mut self) -> ParseResult<StructStatement>;
     fn parse_expression_statement(&mut self) -> ParseResult<ExpressionStatement>;
     fn parse_expression(&mut self, precedence: &Priority) -> ParseResult<Expression>;
@@ -160,7 +162,7 @@ impl ParserTrait for Parser {
             Tokens::Auto => Statement::AutoStatement(self.parse_auto_statement()?),
             Tokens::Return => Statement::ReturnStatement(self.parse_return_statement()?),
             Tokens::Type => Statement::TypeStatement(self.parse_type_statement()?),
-            Tokens::DefType => Statement::DefTypeStatement(self.parse_deftype_statement()?),
+            Tokens::Declare => Statement::DeclareStatement(self.parse_declare_statement()?),
             Tokens::Struct => Statement::StructStatement(self.parse_struct_statement()?),
             _ => Statement::ExpressionStatement(self.parse_expression_statement()?),
         })
@@ -278,7 +280,7 @@ impl ParserTrait for Parser {
         }
     }
 
-    fn parse_deftype_statement(&mut self) -> ParseResult<DefTypeStatement> {
+    fn parse_declare_statement(&mut self) -> ParseResult<DeclareStatement> {
         self.next_token();
 
         let ident = identifier! { self };
@@ -289,7 +291,7 @@ impl ParserTrait for Parser {
         let data_type = self.parse_data_type()?;
 
         if self.current_token.token_type == Tokens::Semicolon {
-            Ok(DefTypeStatement::new(data_type, Identifier::new(ident, self.position), self.position))
+            Ok(DeclareStatement::new(data_type, Identifier::new(ident, self.position), self.position))
         } else {
             Err(ParsingError::new(
                 ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
@@ -635,13 +637,24 @@ impl ParserTrait for Parser {
         let mut parameters = Vec::new();
 
         while self.current_token.token_type != Tokens::RParen {
+            let is_spread = if self.current_token.token_type == Tokens::Spread {
+                self.next_token();
+                true
+            } else {
+                false
+            };
+
             if let Tokens::IDENT(identifier) = self.current_token.token_type.clone() {
                 self.next_token();
                 self.expect_token(&Tokens::Colon)?;
 
                 let data_type = self.parse_data_type()?;
 
-                parameters.push((Identifier::new(identifier.clone(), self.position), data_type));
+                parameters.push(Parameter {
+                    name: Identifier::new(identifier.clone(), self.position),
+                    data_type,
+                    spread: is_spread,
+                });
             } else {
                 return Err(ParsingError::new(
                     ParsingErrorKind::ExpectedNextToken(Tokens::IDENT("".to_string()).to_string(), self.current_token.token_type.to_string()),
@@ -776,7 +789,14 @@ impl TypeParser for Parser {
         let mut parameters = Vec::new();
 
         while self.current_token.token_type != Tokens::RParen {
-            parameters.push(self.parse_data_type()?);
+            let spread = if self.current_token.token_type == Tokens::Spread {
+                self.next_token();
+                true
+            } else {
+                false
+            };
+
+            parameters.push((self.parse_data_type()?, spread));
 
             if self.current_token.token_type == Tokens::RParen {
                 break;

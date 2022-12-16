@@ -1,6 +1,6 @@
 [package]
 name = "sntk_core"
-version = "0.0.1"
+version = "0.0.12"
 edition = "2021"
 authors = ["ky0422 (Kim Jun Young)"]
 description = "Core library for Sanetaka (sntk) programming language"
