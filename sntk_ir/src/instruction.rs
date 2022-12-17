@@ -1,12 +1,10 @@
+use crate::interpreter::IrEnvironment;
 use sntk_core::{
     parser::ast::{DataType, Parameter, Position},
     tokenizer::token::Tokens,
 };
 use std::fmt;
 
-use crate::interpreter::IrEnvironment;
-
-pub type Identifier = String;
 pub type Block = Vec<Instruction>;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -30,10 +28,10 @@ impl fmt::Display for Instruction {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum InstructionType {
-    StoreName(Identifier, IrExpression), /* identifier, literal */
-    Return(IrExpression),                /* literal */
-    Expression(IrExpression),            /* expression */
-    None,                                /* none */
+    StoreName(String, IrExpression), /* identifier, literal */
+    Return(IrExpression),            /* literal */
+    Expression(IrExpression),        /* expression */
+    None,                            /* none */
 }
 
 impl fmt::Display for InstructionType {
@@ -49,7 +47,7 @@ impl fmt::Display for InstructionType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum IrExpression {
-    Identifier(Identifier),                                              /* identifier */
+    Identifier(String),                                                  /* identifier */
     Literal(LiteralValue),                                               /* literal */
     Block(Block),                                                        /* block */
     If(Box<IrExpression>, Box<IrExpression>, Box<Option<IrExpression>>), /* condition, consequence, alternative */

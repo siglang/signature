@@ -1,6 +1,6 @@
 use crate::{
     builtin::get_builtin_function,
-    instruction::{Identifier, Instruction, InstructionType, IrExpression, LiteralValue},
+    instruction::{Instruction, InstructionType, IrExpression, LiteralValue},
     RuntimeError, RuntimeErrorKind,
 };
 use sntk_core::{parser::ast::Position, tokenizer::token::Tokens};
@@ -8,7 +8,7 @@ use std::{collections::HashMap, fmt};
 
 #[derive(Clone, PartialEq)]
 pub struct IrEnvironment {
-    pub values: HashMap<Identifier, LiteralValue>,
+    pub values: HashMap<String, LiteralValue>,
     pub parent: Option<Box<IrEnvironment>>,
 }
 
@@ -21,7 +21,7 @@ impl IrEnvironment {
         }
     }
 
-    pub fn get(&self, name: &Identifier) -> Option<LiteralValue> {
+    pub fn get(&self, name: &String) -> Option<LiteralValue> {
         match self.values.get(name) {
             Some(value) => Some(value.clone()),
             None => match &self.parent {
@@ -31,7 +31,7 @@ impl IrEnvironment {
         }
     }
 
-    pub fn set(&mut self, name: &Identifier, value: &LiteralValue) {
+    pub fn set(&mut self, name: &String, value: &LiteralValue) {
         self.values.insert(name.to_string(), value.clone());
     }
 }
