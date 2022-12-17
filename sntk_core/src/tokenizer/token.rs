@@ -7,7 +7,7 @@ pub enum Tokens {
 
     Number(f64), String(String), Boolean(bool), Comment,
 
-    Assign, Plus, Minus, Bang, Asterisk, Slash, Percent, Arrow /* -> */,
+    Assign, Plus, Minus, Bang, Asterisk, Slash, Percent, Arrow, DoubleArrow,
 
     Dot, Comma, Colon, Semicolon,
 

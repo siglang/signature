@@ -192,16 +192,26 @@ impl LexerTrait for Lexer {
         }
 
         let token = match_token! {
-            '+' => Plus, '*' => Asterisk, '%' => Percent,
-            '.' => Dot, ',' => Comma, ';' => Semicolon, ':' => Colon,
-            '(' => LParen, ')' => RParen,
-            '{' => LBrace, '}' => RBrace,
-            '[' => LBracket, ']' => RBracket,
+            '+' => Plus,
+            '*' => Asterisk,
+            '%' => Percent,
+            '.' => Dot,
+            ',' => Comma,
+            ';' => Semicolon,
+            ':' => Colon,
+            '(' => LParen,
+            ')' => RParen,
+            '{' => LBrace,
+            '}' => RBrace,
+            '[' => LBracket,
+            ']' => RBracket,
 
             '-' => next!('>' => Arrow; Minus),
 
-            '=' => next!('=' => EQ; Assign), '!' => next!('=' => NEQ; Bang),
-            '<' => next!('=' => LTE; LT), '>' => next!('=' => GTE; GT),
+            '=' => next!('=' => EQ; next!('>' => DoubleArrow; Assign)),
+            '!' => next!('=' => NEQ; Bang),
+            '<' => next!('=' => LTE; LT),
+            '>' => next!('=' => GTE; GT),
 
             '"' => String(self.read_string()),
 

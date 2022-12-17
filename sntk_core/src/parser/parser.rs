@@ -255,11 +255,12 @@ impl ParserTrait for Parser {
         self.next_token();
 
         let generics = if self.current_token.token_type == Tokens::LT {
-            self.parse_generic_identifier()?
+            let result = self.parse_generic_identifier()?;
+            self.next_token();
+            result
         } else {
             Vec::new()
         };
-        self.next_token();
 
         self.expect_token(&Tokens::Assign)?;
 
@@ -676,7 +677,7 @@ impl ParserTrait for Parser {
 
         let body = match self.current_token.token_type {
             Tokens::LBrace => self.parse_block_expression()?,
-            Tokens::Arrow => {
+            Tokens::DoubleArrow => {
                 self.next_token();
 
                 BlockExpression::new(
