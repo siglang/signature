@@ -7,14 +7,45 @@ use sntk_ir::instruction::{Identifier, InstructionType, IrExpression, LiteralVal
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypeEnvironment {
+pub struct DeclaredTypes {
     pub types: HashMap<Identifier, DataType>,
-    pub parent: Option<Box<TypeEnvironment>>,
+    pub parent: Option<Box<DeclaredTypes>>,
 }
 
-impl TypeEnvironment {
+impl DeclaredTypes {
     #[inline]
-    pub fn new(parent: Option<&TypeEnvironment>) -> Self {
+    pub fn new(parent: Option<&DeclaredTypes>) -> Self {
+        Self {
+            types: HashMap::new(),
+            parent: parent.map(|parent| Box::new(parent.clone())),
+        }
+    }
+
+    pub fn get(&self, name: &Identifier) -> Option<DataType> {
+        match self.types.get(name) {
+            Some(value) => Some(value.clone()),
+            None => match &self.parent {
+                Some(parent) => parent.get(name),
+                None => None,
+            },
+        }
+    }
+
+    #[inline]
+    pub fn set(&mut self, name: &Identifier, value: &DataType) {
+        self.types.insert(name.to_string(), value.clone());
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CustomTypes {
+    pub types: HashMap<Identifier, DataType>,
+    pub parent: Option<Box<CustomTypes>>,
+}
+
+impl CustomTypes {
+    #[inline]
+    pub fn new(parent: Option<&CustomTypes>) -> Self {
         Self {
             types: HashMap::new(),
             parent: parent.map(|parent| Box::new(parent.clone())),
@@ -39,16 +70,22 @@ impl TypeEnvironment {
 
 pub fn get_type_from_ir_expression(
     expression: &IrExpression,
-    types: &TypeEnvironment,
+    declares: &DeclaredTypes,
+    customs: &CustomTypes,
     data_type: Option<&DataType>,
     position: &Position,
 ) -> CompileResult<DataType> {
-    match expression.clone() {
-        IrExpression::Identifier(identifier) => match types.get(&identifier) {
+    let data_type = match data_type {
+        Some(data_type) => Some(custom_data_type(data_type, customs, position)?),
+        None => None,
+    };
+
+    let result = match expression.clone() {
+        IrExpression::Identifier(identifier) => match declares.get(&identifier) {
             Some(data_type) => Ok(data_type),
             None => Err(TypeError::new(TypeErrorKind::UndefinedIdentifier(identifier.to_string()), *position)),
         },
-        IrExpression::Literal(literal) => get_type_from_literal_value(&literal, types, data_type, position),
+        IrExpression::Literal(literal) => get_type_from_literal_value(&literal, declares, customs, data_type.as_ref(), position),
         IrExpression::Block(block) => get_type_from_ir_expression(
             match block.last() {
                 Some(instruction) => match instruction.instruction {
@@ -57,15 +94,16 @@ pub fn get_type_from_ir_expression(
                 },
                 None => return Ok(DataType::Boolean),
             },
-            types,
-            data_type,
+            declares,
+            customs,
+            data_type.as_ref(),
             position,
         ),
         IrExpression::If(condition, consequence, alternative) => {
-            let condition_type = get_type_from_ir_expression(&condition, types, data_type, position)?;
-            let consequence_type = get_type_from_ir_expression(&consequence, types, data_type, position)?;
+            let condition_type = get_type_from_ir_expression(&condition, declares, customs, data_type.as_ref(), position)?;
+            let consequence_type = get_type_from_ir_expression(&consequence, declares, customs, data_type.as_ref(), position)?;
             let alternative_type = match *alternative {
-                Some(alternative) => get_type_from_ir_expression(&alternative, types, data_type, position)?,
+                Some(alternative) => get_type_from_ir_expression(&alternative, declares, customs, data_type.as_ref(), position)?,
                 None => DataType::Boolean,
             };
 
@@ -86,14 +124,14 @@ pub fn get_type_from_ir_expression(
             }
         }
         IrExpression::Call(function, arguments) => {
-            let function_type = get_type_from_ir_expression(&function, types, data_type, position)?;
+            let function_type = get_type_from_ir_expression(&function, declares, customs, data_type.as_ref(), position)?;
 
             match function_type {
                 DataType::Fn(FunctionType(_, parameters, return_type)) => {
                     let mut arguments_len = arguments.len();
 
                     for (index, ((parameter, spread), argument)) in parameters.iter().zip(arguments.iter()).enumerate() {
-                        let argument_type = get_type_from_ir_expression(argument, types, data_type, position)?;
+                        let argument_type = get_type_from_ir_expression(argument, declares, customs, data_type.as_ref(), position)?;
 
                         if *spread {
                             if parameter != &argument_type {
@@ -129,8 +167,8 @@ pub fn get_type_from_ir_expression(
             }
         }
         IrExpression::Index(left, index) => {
-            let left_type = get_type_from_ir_expression(&left, types, data_type, position)?;
-            let index_type = get_type_from_ir_expression(&index, types, data_type, position)?;
+            let left_type = get_type_from_ir_expression(&left, declares, customs, data_type.as_ref(), position)?;
+            let index_type = get_type_from_ir_expression(&index, declares, customs, data_type.as_ref(), position)?;
 
             match left_type {
                 DataType::Array(data_type) => {
@@ -146,10 +184,10 @@ pub fn get_type_from_ir_expression(
                 _ => Err(TypeError::new(TypeErrorKind::NotIndexable(left_type.to_string()), *position)),
             }
         }
-        IrExpression::Prefix(_, expression) => get_type_from_ir_expression(&expression, types, data_type, position),
+        IrExpression::Prefix(_, expression) => get_type_from_ir_expression(&expression, declares, customs, data_type.as_ref(), position),
         IrExpression::Infix(left, operator, right) => {
-            let left_type = get_type_from_ir_expression(&left, types, data_type, position)?;
-            let right_type = get_type_from_ir_expression(&right, types, data_type, position)?;
+            let left_type = get_type_from_ir_expression(&left, declares, customs, data_type.as_ref(), position)?;
+            let right_type = get_type_from_ir_expression(&right, declares, customs, data_type.as_ref(), position)?;
 
             match operator {
                 Tokens::Plus | Tokens::Minus | Tokens::Asterisk | Tokens::Slash | Tokens::Percent => {
@@ -175,12 +213,15 @@ pub fn get_type_from_ir_expression(
                 _ => unreachable!(),
             }
         }
-    }
+    };
+
+    custom_data_type(&result?, customs, position)
 }
 
-pub fn get_type_from_literal_value(
+fn get_type_from_literal_value(
     literal: &LiteralValue,
-    types: &TypeEnvironment,
+    declares: &DeclaredTypes,
+    customs: &CustomTypes,
     data_type: Option<&DataType>,
     position: &Position,
 ) -> CompileResult<DataType> {
@@ -192,7 +233,7 @@ pub fn get_type_from_literal_value(
             let mut element_type = DataType::Unknown;
 
             for element in elements {
-                let data_type = get_type_from_ir_expression(element, types, data_type, position)?;
+                let data_type = get_type_from_ir_expression(element, declares, customs, data_type, position)?;
 
                 if element_type == DataType::Unknown {
                     element_type = data_type;
@@ -230,15 +271,10 @@ pub fn get_type_from_literal_value(
             Ok(DataType::Array(Box::new(element_type)))
         }
         LiteralValue::Function(parameters, body, return_type, _) => {
-            let mut types = TypeEnvironment::new(Some(types));
-
-            for Parameter { name, data_type, .. } in parameters {
-                types.set(&name.value, data_type);
-            }
-
             let block_return_type = Box::new(get_type_from_ir_expression(
                 &IrExpression::Block(body.clone()),
-                &types,
+                &declares,
+                customs,
                 data_type,
                 position,
             )?);
@@ -271,4 +307,19 @@ pub fn get_type_from_literal_value(
             Ok(function_type)
         }
     }
+}
+
+pub fn custom_data_type(data_type: &DataType, customs: &CustomTypes, position: &Position) -> CompileResult<DataType> {
+    Ok(match data_type {
+        DataType::Custom(name) => match customs.get(name) {
+            Some(custom) => custom.clone(),
+            None => return Err(TypeError::new(TypeErrorKind::UndefinedType(name.clone()), *position)),
+        },
+        DataType::Fn(FunctionType(generics, parameters, return_type)) => {
+            let return_type = custom_data_type(return_type, customs, position)?;
+
+            DataType::Fn(FunctionType(generics.clone(), parameters.clone(), Box::new(return_type)))
+        }
+        _ => data_type.clone(),
+    })
 }

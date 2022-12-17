@@ -1,25 +1,26 @@
 use crate::{
-    checker::{get_type_from_ir_expression, TypeEnvironment},
+    checker::{custom_data_type, get_type_from_ir_expression, CustomTypes, DeclaredTypes},
     CompileError, TypeError, TypeErrorKind,
 };
 use sntk_core::parser::ast::{
     ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DeclareStatement, Expression, ExpressionStatement,
     FunctionLiteral, Identifier, IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, Parameter, Position, PrefixExpression,
-    Program, ReturnStatement, Statement, StringLiteral, TypeofExpression,
+    Program, ReturnStatement, Statement, StringLiteral, TypeStatement, TypeofExpression,
 };
 use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralValue};
 
 #[derive(Debug)]
 pub struct Compiler {
     pub program: Program,
-    pub types: TypeEnvironment,
+    pub declares: DeclaredTypes,
+    pub customs: CustomTypes,
 }
 
 pub type CompileResult<T> = Result<T, CompileError>;
 
 pub trait CompilerTrait {
     fn new(program: Program) -> Self;
-    fn new_with_types(program: Program, types: TypeEnvironment) -> Self;
+    fn new_with(program: Program, declares: DeclaredTypes, customs: CustomTypes) -> Self;
     fn compile_program(&mut self) -> CompileResult<Vec<Instruction>>;
     fn compile_statement(&mut self, statement: &Statement) -> CompileResult<Instruction>;
     fn compile_expression(&mut self, expression: &Expression, position: &Position) -> CompileResult<IrExpression>;
@@ -30,13 +31,14 @@ impl CompilerTrait for Compiler {
     fn new(program: Program) -> Self {
         Self {
             program,
-            types: TypeEnvironment::new(None),
+            declares: DeclaredTypes::new(None),
+            customs: CustomTypes::new(None),
         }
     }
 
     #[inline]
-    fn new_with_types(program: Program, types: TypeEnvironment) -> Self {
-        Self { program, types }
+    fn new_with(program: Program, declares: DeclaredTypes, customs: CustomTypes) -> Self {
+        Self { program, declares, customs }
     }
 
     fn compile_program(&mut self) -> CompileResult<Vec<Instruction>> {
@@ -62,7 +64,7 @@ impl CompilerTrait for Compiler {
                 data_type,
             }) => {
                 let value = self.compile_expression(value, position)?;
-                let value_type = get_type_from_ir_expression(&value, &self.types, Some(data_type), position)?;
+                let value_type = get_type_from_ir_expression(&value, &self.declares, &self.customs, Some(data_type), position)?;
 
                 if data_type == &value_type {
                     return Err(TypeError::new(
@@ -71,24 +73,33 @@ impl CompilerTrait for Compiler {
                     ));
                 }
 
-                self.types.set(&name.value, data_type);
+                self.declares.set(&name.value, data_type);
 
                 Instruction::new(InstructionType::StoreName(name.value.clone(), value), *position)
             }
             Statement::AutoStatement(AutoStatement { name, value, position }) => {
                 let value = self.compile_expression(value, position)?;
 
-                self.types
-                    .set(&name.value, &get_type_from_ir_expression(&value, &self.types, None, position)?);
+                self.declares.set(
+                    &name.value,
+                    &get_type_from_ir_expression(&value, &self.declares, &self.customs, None, position)?,
+                );
 
                 Instruction::new(InstructionType::StoreName(name.value.clone(), value), *position)
             }
             Statement::ReturnStatement(ReturnStatement { value, position }) => {
                 Instruction::new(InstructionType::Return(self.compile_expression(value, position)?), *position)
             }
-            Statement::TypeStatement(_) | Statement::StructStatement(_) => unimplemented!(),
+            Statement::TypeStatement(TypeStatement {
+                name, data_type, position, ..
+            }) => {
+                self.customs.set(&name.value, data_type);
+
+                Instruction::new(InstructionType::None, *position)
+            }
+            Statement::StructStatement(_) => unimplemented!(),
             Statement::DeclareStatement(DeclareStatement { name, data_type, position }) => {
-                self.types.set(&name.value, data_type);
+                self.declares.set(&name.value, data_type);
 
                 Instruction::new(InstructionType::None, *position)
             }
@@ -143,40 +154,42 @@ impl CompilerTrait for Compiler {
                 return_type,
                 position,
                 ..
-            }) => IrExpression::Literal(LiteralValue::Function(
-                {
-                    let mut new_parameters = Vec::new();
+            }) => {
+                let mut new_parameters = Vec::new();
 
-                    for (index, parameter @ Parameter { name, data_type, spread }) in parameters.iter().enumerate() {
-                        if *spread {
-                            if index != parameters.len() - 1 {
-                                return Err(TypeError::new(TypeErrorKind::SpreadParameterMustBeLast, *position));
-                            }
+                for (index, parameter @ Parameter { name, data_type, spread }) in parameters.iter().enumerate() {
+                    let data_type = custom_data_type(data_type, &self.customs, position)?;
 
-                            self.types.set(&name.value, &DataType::Array(Box::new(data_type.clone())));
-
-                            new_parameters.push(Parameter {
-                                name: name.clone(),
-                                data_type: DataType::Array(Box::new(data_type.clone())),
-                                spread: *spread,
-                            });
-
-                            break;
-                        } else {
-                            self.types.set(&name.value, data_type);
-                            new_parameters.push(parameter.clone());
+                    if *spread {
+                        if index != parameters.len() - 1 {
+                            return Err(TypeError::new(TypeErrorKind::SpreadParameterMustBeLast, *position));
                         }
-                    }
 
-                    new_parameters
-                },
-                match self.compile_expression(&Expression::BlockExpression(body.clone()), position)? {
-                    IrExpression::Block(instructions) => instructions,
-                    _ => unreachable!(),
-                },
-                return_type.clone(),
-                None,
-            )),
+                        self.declares.set(&name.value, &DataType::Array(Box::new(data_type.clone())));
+
+                        new_parameters.push(Parameter {
+                            name: name.clone(),
+                            data_type: DataType::Array(Box::new(data_type.clone())),
+                            spread: *spread,
+                        });
+
+                        break;
+                    } else {
+                        self.declares.set(&name.value, &data_type);
+                        new_parameters.push(parameter.clone());
+                    }
+                }
+
+                IrExpression::Literal(LiteralValue::Function(
+                    new_parameters,
+                    match self.compile_expression(&Expression::BlockExpression(body.clone()), position)? {
+                        IrExpression::Block(instructions) => instructions,
+                        _ => unreachable!(),
+                    },
+                    custom_data_type(return_type, &self.customs, position)?,
+                    None,
+                ))
+            }
             Expression::CallExpression(CallExpression {
                 function,
                 arguments,
@@ -184,7 +197,7 @@ impl CompilerTrait for Compiler {
             }) => {
                 let mut compiled_arguments = Vec::new();
                 let function = self.compile_expression(function, position)?;
-                let function_type = match get_type_from_ir_expression(&function, &self.types, None, position)? {
+                let function_type = match get_type_from_ir_expression(&function, &self.declares, &self.customs, None, position)? {
                     DataType::Fn(function_type) => function_type,
                     _ => unreachable!(),
                 };
@@ -211,7 +224,7 @@ impl CompilerTrait for Compiler {
                 let expression = self.compile_expression(expression, position)?;
 
                 IrExpression::Literal(LiteralValue::String(
-                    get_type_from_ir_expression(&expression, &self.types, None, position)?.to_string(),
+                    get_type_from_ir_expression(&expression, &self.declares, &self.customs, None, position)?.to_string(),
                 ))
             }
             Expression::IndexExpression(IndexExpression { left, index, position }) => IrExpression::Index(
@@ -233,7 +246,7 @@ impl CompilerTrait for Compiler {
             Expression::StructLiteral(_) => todo!(),
         };
 
-        get_type_from_ir_expression(&expression, &self.types, None, position)?;
+        get_type_from_ir_expression(&expression, &self.declares, &self.customs, None, position)?;
 
         Ok(expression)
     }
