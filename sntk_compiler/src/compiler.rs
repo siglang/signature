@@ -1,5 +1,5 @@
 use crate::{
-    checker::{custom_data_type, get_type_from_ir_expression, CustomTypes, DeclaredTypes},
+    checker::{custom_data_type, Checker, CustomTypes, DeclaredTypes},
     CompileError, TypeError, TypeErrorKind,
 };
 use sntk_core::parser::ast::{
@@ -64,7 +64,7 @@ impl CompilerTrait for Compiler {
                 data_type,
             }) => {
                 let value = self.compile_expression(value, position)?;
-                let value_type = get_type_from_ir_expression(&value, &self.declares, &self.customs, Some(data_type), position)?;
+                let value_type = Checker::new(Some(data_type), &self.declares, &self.customs, position)?.get_type_from_ir_expression(&value)?;
 
                 if data_type == &value_type {
                     return Err(TypeError::new(
@@ -82,7 +82,7 @@ impl CompilerTrait for Compiler {
 
                 self.declares.set(
                     &name.value,
-                    &get_type_from_ir_expression(&value, &self.declares, &self.customs, None, position)?,
+                    &Checker::new(None, &self.declares, &self.customs, position)?.get_type_from_ir_expression(&value)?,
                 );
 
                 Instruction::new(InstructionType::StoreName(name.value.clone(), value), *position)
@@ -197,7 +197,7 @@ impl CompilerTrait for Compiler {
             }) => {
                 let mut compiled_arguments = Vec::new();
                 let function = self.compile_expression(function, position)?;
-                let function_type = match get_type_from_ir_expression(&function, &self.declares, &self.customs, None, position)? {
+                let function_type = match Checker::new(None, &self.declares, &self.customs, position)?.get_type_from_ir_expression(&function)? {
                     DataType::Fn(function_type) => function_type,
                     _ => unreachable!(),
                 };
@@ -224,7 +224,9 @@ impl CompilerTrait for Compiler {
                 let expression = self.compile_expression(expression, position)?;
 
                 IrExpression::Literal(LiteralValue::String(
-                    get_type_from_ir_expression(&expression, &self.declares, &self.customs, None, position)?.to_string(),
+                    Checker::new(None, &self.declares, &self.customs, position)?
+                        .get_type_from_ir_expression(&expression)?
+                        .to_string(),
                 ))
             }
             Expression::IndexExpression(IndexExpression { left, index, position }) => IrExpression::Index(
@@ -246,7 +248,7 @@ impl CompilerTrait for Compiler {
             Expression::StructLiteral(_) => todo!(),
         };
 
-        get_type_from_ir_expression(&expression, &self.declares, &self.customs, None, position)?;
+        Checker::new(None, &self.declares, &self.customs, position)?.get_type_from_ir_expression(&expression)?;
 
         Ok(expression)
     }
