@@ -2,29 +2,27 @@ use crate::{
     identifier,
     parser::{
         ast::{
-            ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DeclareStatement, Expression,
+            ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DataTypeKind, DeclareStatement, Expression,
             ExpressionStatement, FunctionLiteral, FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, IndexExpression,
-            InfixExpression, LetStatement, NumberLiteral, Position, PrefixExpression, Priority, Program, ReturnStatement, Statement, StringLiteral,
-            StructLiteral, StructStatement, TypeStatement, TypeofExpression,
+            InfixExpression, LetStatement, NumberLiteral, Parameter, Position, PrefixExpression, Priority, Program, ReturnStatement, Statement,
+            StringLiteral, StructLiteral, StructStatement, TypeStatement, TypeofExpression,
         },
         ParsingError, ParsingErrorKind,
     },
     tokenizer::{
         lexer::{Lexer, LexerTrait},
-        token::{Token, Tokens},
+        token::{Token, TokenKind},
     },
 };
-
-use super::ast::Parameter;
 
 pub type ParseResult<T> = Result<T, ParsingError>;
 
 pub trait ParserBase {
     fn new(lexer: Lexer) -> Self;
     fn next_token(&mut self);
-    fn expect_token(&mut self, token_type: &Tokens) -> ParseResult<()>;
-    fn peek_token(&self, token_type: &Tokens) -> bool;
-    fn get_priority(&self, token_type: &Tokens) -> Priority;
+    fn expect_token(&mut self, token_type: &TokenKind) -> ParseResult<()>;
+    fn peek_token(&self, token_type: &TokenKind) -> bool;
+    fn get_priority(&self, token_type: &TokenKind) -> Priority;
     fn peek_priority(&mut self) -> Priority;
     fn current_priority(&self) -> Priority;
 }
@@ -49,7 +47,7 @@ pub trait ParserTrait {
 
 pub trait TypeParser {
     fn parse_data_type(&mut self) -> ParseResult<DataType>;
-    fn parse_data_type_without_next(&mut self) -> ParseResult<DataType>;
+    fn parse_data_type_without_next(&mut self) -> ParseResult<DataTypeKind>;
     fn parse_function_type(&mut self) -> ParseResult<FunctionType>;
     fn parse_generic(&mut self) -> ParseResult<Generic>;
     fn parse_generic_identifier(&mut self) -> ParseResult<IdentifierGeneric>;
@@ -91,7 +89,7 @@ impl ParserBase for Parser {
         self.position = Position::new(self.current_token.position.0, self.current_token.position.1);
     }
 
-    fn expect_token(&mut self, token_type: &Tokens) -> ParseResult<()> {
+    fn expect_token(&mut self, token_type: &TokenKind) -> ParseResult<()> {
         if self.current_token.token_type == *token_type {
             self.next_token();
 
@@ -105,19 +103,19 @@ impl ParserBase for Parser {
     }
 
     #[inline]
-    fn peek_token(&self, token_type: &Tokens) -> bool {
+    fn peek_token(&self, token_type: &TokenKind) -> bool {
         self.peek_token.token_type == *token_type
     }
 
-    fn get_priority(&self, token_type: &Tokens) -> Priority {
+    fn get_priority(&self, token_type: &TokenKind) -> Priority {
         match token_type {
-            Tokens::Dot | Tokens::Arrow => Priority::Dot,
-            Tokens::Assign | Tokens::EQ | Tokens::NEQ => Priority::Equals,
-            Tokens::Plus | Tokens::Minus => Priority::Sum,
-            Tokens::Slash | Tokens::Asterisk => Priority::Product,
-            Tokens::LT | Tokens::GT | Tokens::LTE | Tokens::GTE => Priority::LessGreater,
-            Tokens::LParen => Priority::Call,
-            Tokens::LBracket => Priority::Index,
+            TokenKind::Dot | TokenKind::Arrow => Priority::Dot,
+            TokenKind::Assign | TokenKind::EQ | TokenKind::NEQ => Priority::Equals,
+            TokenKind::Plus | TokenKind::Minus => Priority::Sum,
+            TokenKind::Slash | TokenKind::Asterisk => Priority::Product,
+            TokenKind::LT | TokenKind::GT | TokenKind::LTE | TokenKind::GTE => Priority::LessGreater,
+            TokenKind::LParen => Priority::Call,
+            TokenKind::LBracket => Priority::Index,
             _ => Priority::Lowest,
         }
     }
@@ -138,7 +136,7 @@ impl ParserTrait for Parser {
 
         let mut program = Program::default();
 
-        while self.current_token.token_type != Tokens::EOF {
+        while self.current_token.token_type != TokenKind::EOF {
             match self.parse_statement() {
                 Ok(statement) => program.statements.push(statement),
                 Err(error) => self.errors.push(error),
@@ -158,12 +156,12 @@ impl ParserTrait for Parser {
 
     fn parse_statement(&mut self) -> ParseResult<Statement> {
         Ok(match self.current_token.token_type {
-            Tokens::Let => Statement::LetStatement(self.parse_let_statement()?),
-            Tokens::Auto => Statement::AutoStatement(self.parse_auto_statement()?),
-            Tokens::Return => Statement::ReturnStatement(self.parse_return_statement()?),
-            Tokens::Type => Statement::TypeStatement(self.parse_type_statement()?),
-            Tokens::Declare => Statement::DeclareStatement(self.parse_declare_statement()?),
-            Tokens::Struct => Statement::StructStatement(self.parse_struct_statement()?),
+            TokenKind::Let => Statement::LetStatement(self.parse_let_statement()?),
+            TokenKind::Auto => Statement::AutoStatement(self.parse_auto_statement()?),
+            TokenKind::Return => Statement::ReturnStatement(self.parse_return_statement()?),
+            TokenKind::Type => Statement::TypeStatement(self.parse_type_statement()?),
+            TokenKind::Declare => Statement::DeclareStatement(self.parse_declare_statement()?),
+            TokenKind::Struct => Statement::StructStatement(self.parse_struct_statement()?),
             _ => Statement::ExpressionStatement(self.parse_expression_statement()?),
         })
     }
@@ -174,20 +172,20 @@ impl ParserTrait for Parser {
         let ident = Identifier::new(identifier! { self }, self.position);
         self.next_token();
 
-        self.expect_token(&Tokens::Colon)?;
+        self.expect_token(&TokenKind::Colon)?;
 
         let data_type = self.parse_data_type()?;
 
-        self.expect_token(&Tokens::Assign)?;
+        self.expect_token(&TokenKind::Assign)?;
 
         if let Ok(expression) = self.parse_expression(&Priority::Lowest) {
-            return if self.peek_token(&Tokens::Semicolon) {
+            return if self.peek_token(&TokenKind::Semicolon) {
                 self.next_token();
 
                 Ok(LetStatement::new(data_type, ident, expression, self.position))
             } else {
                 Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
                     self.position,
                 ))
             };
@@ -205,16 +203,16 @@ impl ParserTrait for Parser {
         let ident = Identifier::new(identifier! { self }, self.position);
         self.next_token();
 
-        self.expect_token(&Tokens::Assign)?;
+        self.expect_token(&TokenKind::Assign)?;
 
         if let Ok(expression) = self.parse_expression(&Priority::Lowest) {
-            return if self.peek_token(&Tokens::Semicolon) {
+            return if self.peek_token(&TokenKind::Semicolon) {
                 self.next_token();
 
                 Ok(AutoStatement::new(ident, expression, self.position))
             } else {
                 Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
                     self.position,
                 ))
             };
@@ -230,13 +228,13 @@ impl ParserTrait for Parser {
         self.next_token();
 
         if let Ok(expression) = self.parse_expression(&Priority::Lowest) {
-            return if self.peek_token(&Tokens::Semicolon) {
+            return if self.peek_token(&TokenKind::Semicolon) {
                 self.next_token();
 
                 Ok(ReturnStatement::new(expression, self.position))
             } else {
                 Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
                     self.position,
                 ))
             };
@@ -254,7 +252,7 @@ impl ParserTrait for Parser {
         let ident = identifier! { self };
         self.next_token();
 
-        let generics = if self.current_token.token_type == Tokens::LT {
+        let generics = if self.current_token.token_type == TokenKind::LT {
             let result = self.parse_generic_identifier()?;
             self.next_token();
             result
@@ -262,11 +260,11 @@ impl ParserTrait for Parser {
             Vec::new()
         };
 
-        self.expect_token(&Tokens::Assign)?;
+        self.expect_token(&TokenKind::Assign)?;
 
         let data_type = self.parse_data_type()?;
 
-        if self.current_token.token_type == Tokens::Semicolon {
+        if self.current_token.token_type == TokenKind::Semicolon {
             Ok(TypeStatement::new(
                 data_type,
                 Identifier::new(ident, self.position),
@@ -275,7 +273,7 @@ impl ParserTrait for Parser {
             ))
         } else {
             Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
                 self.position,
             ))
         }
@@ -287,15 +285,15 @@ impl ParserTrait for Parser {
         let ident = identifier! { self };
         self.next_token();
 
-        self.expect_token(&Tokens::Assign)?;
+        self.expect_token(&TokenKind::Assign)?;
 
         let data_type = self.parse_data_type()?;
 
-        if self.current_token.token_type == Tokens::Semicolon {
+        if self.current_token.token_type == TokenKind::Semicolon {
             Ok(DeclareStatement::new(data_type, Identifier::new(ident, self.position), self.position))
         } else {
             Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
                 self.position,
             ))
         }
@@ -307,7 +305,7 @@ impl ParserTrait for Parser {
         let ident = identifier! { self };
         self.next_token();
 
-        let generics = if self.current_token.token_type == Tokens::LT {
+        let generics = if self.current_token.token_type == TokenKind::LT {
             let generic = self.parse_generic_identifier()?;
 
             self.next_token();
@@ -317,28 +315,28 @@ impl ParserTrait for Parser {
             Vec::new()
         };
 
-        self.expect_token(&Tokens::LBrace)?;
+        self.expect_token(&TokenKind::LBrace)?;
 
         let mut fields = Vec::new();
 
-        while self.current_token.token_type != Tokens::RBrace {
+        while self.current_token.token_type != TokenKind::RBrace {
             let key = Identifier::new(identifier! { self }, self.position);
             self.next_token();
 
-            self.expect_token(&Tokens::Colon)?;
+            self.expect_token(&TokenKind::Colon)?;
 
             let value = self.parse_data_type()?;
 
             fields.push((key, value));
 
-            if self.current_token.token_type == Tokens::RBrace {
+            if self.current_token.token_type == TokenKind::RBrace {
                 break;
             }
 
-            self.expect_token(&Tokens::Comma)?;
+            self.expect_token(&TokenKind::Comma)?;
         }
 
-        self.expect_token(&Tokens::RBrace)?;
+        self.expect_token(&TokenKind::RBrace)?;
 
         Ok(StructStatement::new(
             Identifier::new(ident, self.position),
@@ -351,13 +349,13 @@ impl ParserTrait for Parser {
     fn parse_expression_statement(&mut self) -> ParseResult<ExpressionStatement> {
         let expression = self.parse_expression(&Priority::Lowest)?;
 
-        if self.peek_token(&Tokens::Semicolon) {
+        if self.peek_token(&TokenKind::Semicolon) {
             self.next_token();
 
             Ok(ExpressionStatement::new(expression, self.position))
         } else {
             Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(Tokens::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
                 self.position,
             ))
         }
@@ -365,11 +363,11 @@ impl ParserTrait for Parser {
 
     fn parse_expression(&mut self, priority: &Priority) -> ParseResult<Expression> {
         let left_expression = match self.current_token.token_type.clone() {
-            Tokens::IDENT(ident) => Some(Ok(Expression::Identifier(Identifier::new(ident, self.position)))),
-            Tokens::Number(number) => Some(Ok(Expression::NumberLiteral(NumberLiteral::new(number, self.position)))),
-            Tokens::String(string) => Some(Ok(Expression::StringLiteral(StringLiteral::new(string, self.position)))),
-            Tokens::Boolean(boolean) => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(boolean, self.position)))),
-            Tokens::Bang | Tokens::Minus => {
+            TokenKind::IDENT(ident) => Some(Ok(Expression::Identifier(Identifier::new(ident, self.position)))),
+            TokenKind::Number(number) => Some(Ok(Expression::NumberLiteral(NumberLiteral::new(number, self.position)))),
+            TokenKind::String(string) => Some(Ok(Expression::StringLiteral(StringLiteral::new(string, self.position)))),
+            TokenKind::Boolean(boolean) => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(boolean, self.position)))),
+            TokenKind::Bang | TokenKind::Minus => {
                 let operator = self.current_token.token_type.clone();
 
                 self.next_token();
@@ -380,27 +378,27 @@ impl ParserTrait for Parser {
                     self.position,
                 ))))
             }
-            Tokens::LParen => {
+            TokenKind::LParen => {
                 self.next_token();
 
                 let expression = self.parse_expression(&Priority::Lowest);
                 self.next_token();
 
-                if self.current_token.token_type != Tokens::RParen {
+                if self.current_token.token_type != TokenKind::RParen {
                     return Err(ParsingError::new(
-                        ParsingErrorKind::ExpectedNextToken(Tokens::RParen.to_string(), self.current_token.token_type.to_string()),
+                        ParsingErrorKind::ExpectedNextToken(TokenKind::RParen.to_string(), self.current_token.token_type.to_string()),
                         self.position,
                     ));
                 }
 
                 Some(expression)
             }
-            Tokens::LBrace => Some(Ok(Expression::BlockExpression(self.parse_block_expression()?))),
-            Tokens::LBracket => Some(Ok(Expression::ArrayLiteral(self.parse_array_literal()?))),
-            Tokens::Function => Some(Ok(Expression::FunctionLiteral(self.parse_function_literal()?))),
-            Tokens::Struct => Some(Ok(Expression::StructLiteral(self.parse_struct_literal()?))),
-            Tokens::If => Some(Ok(Expression::IfExpression(self.parse_if_expression()?))),
-            Tokens::Typeof => {
+            TokenKind::LBrace => Some(Ok(Expression::BlockExpression(self.parse_block_expression()?))),
+            TokenKind::LBracket => Some(Ok(Expression::ArrayLiteral(self.parse_array_literal()?))),
+            TokenKind::Function => Some(Ok(Expression::FunctionLiteral(self.parse_function_literal()?))),
+            TokenKind::Struct => Some(Ok(Expression::StructLiteral(self.parse_struct_literal()?))),
+            TokenKind::If => Some(Ok(Expression::IfExpression(self.parse_if_expression()?))),
+            TokenKind::Typeof => {
                 self.next_token();
 
                 Some(Ok(Expression::TypeofExpression(TypeofExpression::new(
@@ -411,7 +409,7 @@ impl ParserTrait for Parser {
             _ => None,
         };
 
-        if left_expression.is_none() && self.current_token.token_type != Tokens::Semicolon {
+        if left_expression.is_none() && self.current_token.token_type != TokenKind::Semicolon {
             return Err(ParsingError::new(
                 ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
                 self.position,
@@ -425,23 +423,22 @@ impl ParserTrait for Parser {
             )
         })?;
 
-        while !self.peek_token(&Tokens::Semicolon) && priority < &self.peek_priority() {
+        while !self.peek_token(&TokenKind::Semicolon) && priority < &self.peek_priority() {
             self.next_token();
 
             left_expression = match self.current_token.token_type {
-                Tokens::Plus
-                | Tokens::Minus
-                | Tokens::Dot
-                | Tokens::Slash
-                | Tokens::Asterisk
-                | Tokens::Percent
-                // | Tokens::Arrow
-                | Tokens::EQ
-                | Tokens::NEQ
-                | Tokens::LT
-                | Tokens::GT
-                | Tokens::LTE
-                | Tokens::GTE => Ok(Expression::InfixExpression(InfixExpression::new(
+                TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Dot
+                | TokenKind::Slash
+                | TokenKind::Asterisk
+                | TokenKind::Percent
+                | TokenKind::EQ
+                | TokenKind::NEQ
+                | TokenKind::LT
+                | TokenKind::GT
+                | TokenKind::LTE
+                | TokenKind::GTE => Ok(Expression::InfixExpression(InfixExpression::new(
                     Box::new(left_expression?),
                     self.current_token.token_type.clone(),
                     {
@@ -450,40 +447,35 @@ impl ParserTrait for Parser {
                     },
                     self.position,
                 ))),
-                Tokens::LParen => {
+                TokenKind::LParen => {
                     self.next_token();
 
                     let mut arguments = Vec::new();
 
-                    if self.current_token.token_type != Tokens::RParen {
+                    if self.current_token.token_type != TokenKind::RParen {
                         arguments.push(self.parse_expression(&Priority::Lowest)?);
                         self.next_token();
 
-                        if self.current_token.token_type == Tokens::Comma {
+                        if self.current_token.token_type == TokenKind::Comma {
                             self.next_token();
                         }
 
-                        while self.current_token.token_type != Tokens::RParen {
+                        while self.current_token.token_type != TokenKind::RParen {
                             arguments.push(self.parse_expression(&Priority::Lowest)?);
                             self.next_token();
 
-                            if self.current_token.token_type == Tokens::RParen {
+                            if self.current_token.token_type == TokenKind::RParen {
                                 break;
                             }
 
-                            self.expect_token(&Tokens::Comma)?;
+                            self.expect_token(&TokenKind::Comma)?;
                         }
 
-                        if self.current_token.token_type != Tokens::RParen {
-                            return Err(
-                                ParsingError::new(
-                                    ParsingErrorKind::ExpectedNextToken(
-                                        Tokens::RParen.to_string(),
-                                        self.current_token.token_type.to_string(),
-                                    ),
-                                    self.position,
-                                )
-                            );
+                        if self.current_token.token_type != TokenKind::RParen {
+                            return Err(ParsingError::new(
+                                ParsingErrorKind::ExpectedNextToken(TokenKind::RParen.to_string(), self.current_token.token_type.to_string()),
+                                self.position,
+                            ));
                         }
                     }
 
@@ -493,22 +485,17 @@ impl ParserTrait for Parser {
                         self.position,
                     )))
                 }
-                Tokens::LBracket => {
+                TokenKind::LBracket => {
                     self.next_token();
 
                     let index = self.parse_expression(&Priority::Lowest)?;
                     self.next_token();
 
-                    if self.current_token.token_type != Tokens::RBracket {
-                        return Err(
-                            ParsingError::new(
-                                ParsingErrorKind::ExpectedNextToken(
-                                    Tokens::RBracket.to_string(),
-                                    self.current_token.token_type.to_string(),
-                                ),
-                                self.position,
-                            )
-                        );
+                    if self.current_token.token_type != TokenKind::RBracket {
+                        return Err(ParsingError::new(
+                            ParsingErrorKind::ExpectedNextToken(TokenKind::RBracket.to_string(), self.current_token.token_type.to_string()),
+                            self.position,
+                        ));
                     }
 
                     Ok(Expression::IndexExpression(IndexExpression::new(
@@ -546,7 +533,7 @@ impl ParserTrait for Parser {
 
         let mut statements = Vec::new();
 
-        while self.current_token.token_type != Tokens::RBrace {
+        while self.current_token.token_type != TokenKind::RBrace {
             statements.push(self.parse_statement()?);
             self.next_token();
         }
@@ -559,24 +546,24 @@ impl ParserTrait for Parser {
 
         let mut elements = Vec::new();
 
-        if self.current_token.token_type == Tokens::RBracket {
+        if self.current_token.token_type == TokenKind::RBracket {
             return Ok(ArrayLiteral::new(elements, self.position));
         }
 
-        while self.current_token.token_type != Tokens::RBrace {
+        while self.current_token.token_type != TokenKind::RBrace {
             elements.push(self.parse_expression(&Priority::Lowest)?);
             self.next_token();
 
-            if self.current_token.token_type == Tokens::RBracket {
+            if self.current_token.token_type == TokenKind::RBracket {
                 break;
             }
 
-            self.expect_token(&Tokens::Comma)?;
+            self.expect_token(&TokenKind::Comma)?;
         }
 
-        if self.current_token.token_type != Tokens::RBracket {
+        if self.current_token.token_type != TokenKind::RBracket {
             return Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(Tokens::RBracket.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::RBracket.to_string(), self.current_token.token_type.to_string()),
                 self.position,
             ));
         }
@@ -593,27 +580,27 @@ impl ParserTrait for Parser {
 
         let mut fields = Vec::new();
 
-        while self.current_token.token_type != Tokens::RBrace {
+        while self.current_token.token_type != TokenKind::RBrace {
             let key = Identifier::new(identifier! { self }, self.position);
             self.next_token();
 
-            self.expect_token(&Tokens::Colon)?;
+            self.expect_token(&TokenKind::Colon)?;
 
             let value = self.parse_expression(&Priority::Lowest)?;
             self.next_token();
 
             fields.push((key, value));
 
-            if self.current_token.token_type == Tokens::RBrace {
+            if self.current_token.token_type == TokenKind::RBrace {
                 break;
             }
 
-            self.expect_token(&Tokens::Comma)?;
+            self.expect_token(&TokenKind::Comma)?;
         }
 
-        if self.current_token.token_type != Tokens::RBrace {
+        if self.current_token.token_type != TokenKind::RBrace {
             return Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(Tokens::RBrace.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::RBrace.to_string(), self.current_token.token_type.to_string()),
                 self.position,
             ));
         }
@@ -624,7 +611,7 @@ impl ParserTrait for Parser {
     fn parse_function_literal(&mut self) -> ParseResult<FunctionLiteral> {
         self.next_token();
 
-        let generics = if self.current_token.token_type == Tokens::LT {
+        let generics = if self.current_token.token_type == TokenKind::LT {
             let result = Some(self.parse_generic_identifier()?);
             self.next_token();
 
@@ -633,51 +620,52 @@ impl ParserTrait for Parser {
             None
         };
 
-        self.expect_token(&Tokens::LParen)?;
+        self.expect_token(&TokenKind::LParen)?;
 
         let mut parameters = Vec::new();
 
-        while self.current_token.token_type != Tokens::RParen {
-            let is_spread = if self.current_token.token_type == Tokens::Spread {
+        while self.current_token.token_type != TokenKind::RParen {
+            let is_spread = if self.current_token.token_type == TokenKind::Spread {
                 self.next_token();
                 true
             } else {
                 false
             };
 
-            if let Tokens::IDENT(identifier) = self.current_token.token_type.clone() {
+            if let TokenKind::IDENT(identifier) = self.current_token.token_type.clone() {
                 self.next_token();
-                self.expect_token(&Tokens::Colon)?;
+                self.expect_token(&TokenKind::Colon)?;
 
                 let data_type = self.parse_data_type()?;
 
-                parameters.push(Parameter {
-                    name: Identifier::new(identifier.clone(), self.position),
+                parameters.push(Parameter::new(
+                    Identifier::new(identifier.clone(), self.position),
                     data_type,
-                    spread: is_spread,
-                });
+                    is_spread,
+                    self.position,
+                ));
             } else {
                 return Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(Tokens::IDENT("".to_string()).to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::IDENT("".to_string()).to_string(), self.current_token.token_type.to_string()),
                     self.position,
                 ));
             }
 
-            if self.current_token.token_type == Tokens::RParen {
+            if self.current_token.token_type == TokenKind::RParen {
                 break;
             }
 
-            self.expect_token(&Tokens::Comma)?;
+            self.expect_token(&TokenKind::Comma)?;
         }
 
-        self.expect_token(&Tokens::RParen)?;
-        self.expect_token(&Tokens::Arrow)?;
+        self.expect_token(&TokenKind::RParen)?;
+        self.expect_token(&TokenKind::Arrow)?;
 
         let return_type = self.parse_data_type()?;
 
         let body = match self.current_token.token_type {
-            Tokens::LBrace => self.parse_block_expression()?,
-            Tokens::DoubleArrow => {
+            TokenKind::LBrace => self.parse_block_expression()?,
+            TokenKind::DoubleArrow => {
                 self.next_token();
 
                 BlockExpression::new(
@@ -690,7 +678,7 @@ impl ParserTrait for Parser {
             }
             _ => {
                 return Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(Tokens::LBrace.to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::LBrace.to_string(), self.current_token.token_type.to_string()),
                     self.position,
                 ))
             }
@@ -708,10 +696,10 @@ impl ParserTrait for Parser {
         let consequence = self.parse_block_expression()?;
         self.next_token();
 
-        let alternative = if self.current_token.token_type == Tokens::Else {
+        let alternative = if self.current_token.token_type == TokenKind::Else {
             self.next_token();
 
-            if self.current_token.token_type == Tokens::If {
+            if self.current_token.token_type == TokenKind::If {
                 Some(Box::new(BlockExpression {
                     statements: vec![Statement::ExpressionStatement(ExpressionStatement::new(
                         Expression::IfExpression(self.parse_if_expression()?),
@@ -732,42 +720,45 @@ impl ParserTrait for Parser {
 
 impl TypeParser for Parser {
     fn parse_data_type(&mut self) -> ParseResult<DataType> {
+        let position = self.position;
+
         let result = self.parse_data_type_without_next();
         self.next_token();
-        result
+
+        result.map(|data_type| DataType::new(data_type, position))
     }
 
-    fn parse_data_type_without_next(&mut self) -> ParseResult<DataType> {
+    fn parse_data_type_without_next(&mut self) -> ParseResult<DataTypeKind> {
         let mut data_type = match self.current_token.token_type {
-            Tokens::NumberType => Ok(DataType::Number),
-            Tokens::StringType => Ok(DataType::String),
-            Tokens::BooleanType => Ok(DataType::Boolean),
-            Tokens::Function => Ok(DataType::Fn(self.parse_function_type()?)),
-            Tokens::IDENT(ref ident) => Ok(DataType::Custom(ident.clone())),
+            TokenKind::NumberType => Ok(DataTypeKind::Number),
+            TokenKind::StringType => Ok(DataTypeKind::String),
+            TokenKind::BooleanType => Ok(DataTypeKind::Boolean),
+            TokenKind::Function => Ok(DataTypeKind::Fn(self.parse_function_type()?)),
+            TokenKind::IDENT(ref ident) => Ok(DataTypeKind::Custom(ident.clone())),
             _ => Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(Tokens::NumberType.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::NumberType.to_string(), self.current_token.token_type.to_string()),
                 self.position,
             )),
         };
 
-        if self.peek_token(&Tokens::LT) {
+        if self.peek_token(&TokenKind::LT) {
             let generics = self.parse_generic()?;
 
-            data_type = Ok(DataType::Generic(generics));
+            data_type = Ok(DataTypeKind::Generic(generics));
         }
 
-        while self.peek_token(&Tokens::LBracket) {
+        while self.peek_token(&TokenKind::LBracket) {
             self.next_token();
             self.next_token();
 
-            if self.current_token.token_type != Tokens::RBracket {
+            if self.current_token.token_type != TokenKind::RBracket {
                 return Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(Tokens::RBracket.to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::RBracket.to_string(), self.current_token.token_type.to_string()),
                     self.position,
                 ));
             }
 
-            data_type = data_type.map(|t| DataType::Array(Box::new(t)));
+            data_type = data_type.map(|t| DataTypeKind::Array(Box::new(DataType::new(t, self.position))));
         }
 
         data_type
@@ -776,7 +767,7 @@ impl TypeParser for Parser {
     fn parse_function_type(&mut self) -> ParseResult<FunctionType> {
         self.next_token();
 
-        let generics = if self.current_token.token_type == Tokens::LT {
+        let generics = if self.current_token.token_type == TokenKind::LT {
             let result = Some(self.parse_generic_identifier()?);
             self.next_token();
 
@@ -785,12 +776,12 @@ impl TypeParser for Parser {
             None
         };
 
-        self.expect_token(&Tokens::LParen)?;
+        self.expect_token(&TokenKind::LParen)?;
 
         let mut parameters = Vec::new();
 
-        while self.current_token.token_type != Tokens::RParen {
-            let spread = if self.current_token.token_type == Tokens::Spread {
+        while self.current_token.token_type != TokenKind::RParen {
+            let spread = if self.current_token.token_type == TokenKind::Spread {
                 self.next_token();
                 true
             } else {
@@ -799,19 +790,19 @@ impl TypeParser for Parser {
 
             parameters.push((self.parse_data_type()?, spread));
 
-            if self.current_token.token_type == Tokens::RParen {
+            if self.current_token.token_type == TokenKind::RParen {
                 break;
             }
 
-            self.expect_token(&Tokens::Comma)?;
+            self.expect_token(&TokenKind::Comma)?;
         }
 
-        self.expect_token(&Tokens::RParen)?;
-        self.expect_token(&Tokens::Arrow)?;
+        self.expect_token(&TokenKind::RParen)?;
+        self.expect_token(&TokenKind::Arrow)?;
 
         let return_type = self.parse_data_type_without_next()?;
 
-        Ok(FunctionType::new(generics, parameters, return_type))
+        Ok(FunctionType::new(generics, parameters, DataType::new(return_type, self.position)))
     }
 
     fn parse_generic(&mut self) -> ParseResult<Generic> {
@@ -820,39 +811,39 @@ impl TypeParser for Parser {
 
         let mut generics = Vec::new();
 
-        self.expect_token(&Tokens::LT)?;
+        self.expect_token(&TokenKind::LT)?;
 
-        while self.current_token.token_type != Tokens::GT {
+        while self.current_token.token_type != TokenKind::GT {
             let data_type = self.parse_data_type()?;
 
             generics.push(data_type);
 
-            if self.current_token.token_type == Tokens::GT {
+            if self.current_token.token_type == TokenKind::GT {
                 break;
             }
 
-            self.expect_token(&Tokens::Comma)?;
+            self.expect_token(&TokenKind::Comma)?;
         }
 
-        Ok(Generic::new(DataType::Custom(ident), generics))
+        Ok(Generic::new(DataType::new(DataTypeKind::Custom(ident), self.position), generics))
     }
 
     fn parse_generic_identifier(&mut self) -> ParseResult<IdentifierGeneric> {
         let mut generics = Vec::new();
 
-        self.expect_token(&Tokens::LT)?;
+        self.expect_token(&TokenKind::LT)?;
 
-        while self.current_token.token_type != Tokens::GT {
+        while self.current_token.token_type != TokenKind::GT {
             let ident = identifier! { self };
             self.next_token();
 
             generics.push(Identifier::new(ident, self.position));
 
-            if self.current_token.token_type == Tokens::GT {
+            if self.current_token.token_type == TokenKind::GT {
                 break;
             }
 
-            self.expect_token(&Tokens::Comma)?;
+            self.expect_token(&TokenKind::Comma)?;
         }
 
         Ok(generics)
@@ -893,11 +884,11 @@ impl EEE for Parser {
         }
 
         match operator {
-            Tokens::Plus => f64_ops! { + },
-            Tokens::Minus => f64_ops! { - },
-            Tokens::Asterisk => f64_ops! { * },
-            Tokens::Slash => f64_ops! { / },
-            Tokens::Percent => f64_ops! { % },
+            TokenKind::Plus => f64_ops! { + },
+            TokenKind::Minus => f64_ops! { - },
+            TokenKind::Asterisk => f64_ops! { * },
+            TokenKind::Slash => f64_ops! { / },
+            TokenKind::Percent => f64_ops! { % },
             _ => None,
         }
     }
@@ -923,12 +914,12 @@ impl EEE for Parser {
         }
 
         match operator {
-            Tokens::EQ => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(left == right, self.position)))),
-            Tokens::NEQ => f64_ops! { != },
-            Tokens::GT => f64_ops! { > },
-            Tokens::LT => f64_ops! { < },
-            Tokens::GTE => f64_ops! { >= },
-            Tokens::LTE => f64_ops! { <= },
+            TokenKind::EQ => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(left == right, self.position)))),
+            TokenKind::NEQ => f64_ops! { != },
+            TokenKind::GT => f64_ops! { > },
+            TokenKind::LT => f64_ops! { < },
+            TokenKind::GTE => f64_ops! { >= },
+            TokenKind::LTE => f64_ops! { <= },
             _ => self.eval_infix_expression_opt_1(infix),
         }
     }
@@ -937,14 +928,14 @@ impl EEE for Parser {
         let PrefixExpression { operator, right, position } = prefix;
 
         match operator {
-            Tokens::Minus => {
+            TokenKind::Minus => {
                 if let Expression::NumberLiteral(right) = *right.clone() {
                     return Some(Ok(Expression::NumberLiteral(NumberLiteral::new(-right.value, *position))));
                 }
 
                 None
             }
-            Tokens::Bang => {
+            TokenKind::Bang => {
                 if let Expression::BooleanLiteral(right) = *right.clone() {
                     return Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(!right.value, *position))));
                 }

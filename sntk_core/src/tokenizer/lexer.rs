@@ -1,4 +1,4 @@
-use crate::tokenizer::token::{Token, Tokens};
+use crate::tokenizer::token::{Token, TokenKind};
 
 pub trait LexerTrait {
     fn new(input: String) -> Self;
@@ -152,24 +152,24 @@ impl LexerTrait for Lexer {
                 self.read_char();
             }
 
-            self.current_position.0 += 1;
-
             self.skip_whitespace();
         }
     }
 
     fn next_token(&mut self) -> Token {
-        use super::token::Tokens::*;
+        use super::token::TokenKind::*;
 
         self.skip_whitespace();
 
         macro_rules! match_token {
-            ($($token:expr => $token_type:expr),*) => {
+            ($($token:expr => $token_type:expr),*) => {{
+                let position = self.current_position;
+
                 match self.current_char {
-                    $( $token => Token::new($token_type, self.current_position), )*
-                    token => Token::new(Tokens::ILLEGAL(token.to_string()), self.current_position)
+                    $( $token => Token::new($token_type, position), )*
+                    token => Token::new(TokenKind::ILLEGAL(token.to_string()), position)
                 }
-            }
+            }}
         }
 
         macro_rules! next {
@@ -230,8 +230,14 @@ impl LexerTrait for Lexer {
         };
 
         match self.current_char {
-            c if c.is_alphabetic() => Token::new(Tokens::from(self.read_identifier()), self.current_position),
-            c if c.is_numeric() => Token::new(Tokens::Number(self.read_number()), self.current_position),
+            c if c.is_alphabetic() => {
+                let position = self.current_position;
+                Token::new(TokenKind::from(self.read_identifier()), position)
+            }
+            c if c.is_numeric() => {
+                let position = self.current_position;
+                Token::new(TokenKind::Number(self.read_number()), position)
+            }
             _ => {
                 self.read_char();
                 token

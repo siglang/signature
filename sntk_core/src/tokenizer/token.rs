@@ -2,7 +2,7 @@ use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
 #[rustfmt::skip]
-pub enum Tokens {
+pub enum TokenKind {
     ILLEGAL(String), EOF, IDENT(String),
 
     Number(f64), String(String), Boolean(bool), Comment,
@@ -20,42 +20,42 @@ pub enum Tokens {
     NumberType, StringType, BooleanType
 }
 
-impl From<String> for Tokens {
+impl From<String> for TokenKind {
     fn from(s: String) -> Self {
         match s.as_str() {
-            "let" => Tokens::Let,
-            "auto" => Tokens::Auto,
-            "if" => Tokens::If,
-            "else" => Tokens::Else,
-            "return" => Tokens::Return,
-            "fn" => Tokens::Function,
-            "type" => Tokens::Type,
-            "declare" => Tokens::Declare,
-            "struct" => Tokens::Struct,
-            "typeof" => Tokens::Typeof,
-            "spread" => Tokens::Spread,
-            "true" => Tokens::Boolean(true),
-            "false" => Tokens::Boolean(false),
-            "number" => Tokens::NumberType,
-            "string" => Tokens::StringType,
-            "boolean" => Tokens::BooleanType,
-            s => Tokens::IDENT(s.to_string()),
+            "let" => TokenKind::Let,
+            "auto" => TokenKind::Auto,
+            "if" => TokenKind::If,
+            "else" => TokenKind::Else,
+            "return" => TokenKind::Return,
+            "fn" => TokenKind::Function,
+            "type" => TokenKind::Type,
+            "declare" => TokenKind::Declare,
+            "struct" => TokenKind::Struct,
+            "typeof" => TokenKind::Typeof,
+            "spread" => TokenKind::Spread,
+            "true" => TokenKind::Boolean(true),
+            "false" => TokenKind::Boolean(false),
+            "number" => TokenKind::NumberType,
+            "string" => TokenKind::StringType,
+            "boolean" => TokenKind::BooleanType,
+            s => TokenKind::IDENT(s.to_string()),
         }
     }
 }
 
-impl fmt::Display for Tokens {
+impl fmt::Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.stringify())
     }
 }
 
-impl Tokens {
+impl TokenKind {
     pub fn stringify(&self) -> String {
         macro_rules! to_s {
                 ($( $x:ident )*) => {
                     match &self {
-                        $( Tokens::$x(x) => x.to_string(), )*
+                        $( TokenKind::$x(x) => x.to_string(), )*
                         _ => format!("{:?}", self)
                     }
                 }
@@ -67,13 +67,13 @@ impl Tokens {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Token {
-    pub token_type: Tokens,
+    pub token_type: TokenKind,
     pub position: (usize, usize),
 }
 
 impl Default for Token {
     fn default() -> Self {
-        Token::new(Tokens::ILLEGAL(String::from("")), (0, 0))
+        Token::new(TokenKind::ILLEGAL(String::from("")), (0, 0))
     }
 }
 
@@ -85,7 +85,7 @@ impl std::fmt::Display for Token {
 
 impl Token {
     #[inline]
-    pub fn new(token_type: Tokens, position: (usize, usize)) -> Self {
+    pub fn new(token_type: TokenKind, position: (usize, usize)) -> Self {
         Token { token_type, position }
     }
 }
