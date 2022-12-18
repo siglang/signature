@@ -3,7 +3,7 @@ use crate::{
     instruction::{Instruction, InstructionType, IrExpression, LiteralValue},
     RuntimeError, RuntimeErrorKind,
 };
-use sntk_core::{parser::ast::Position, tokenizer::token::Tokens};
+use sntk_core::{parser::ast::Position, tokenizer::token::TokenKind};
 use std::{collections::HashMap, fmt};
 
 #[derive(Clone, PartialEq)]
@@ -17,7 +17,7 @@ impl IrEnvironment {
     pub fn new(parent: Option<&IrEnvironment>) -> Self {
         Self {
             values: HashMap::new(),
-            parent: parent.map(|parent| Box::new(parent.clone())),
+            parent: parent.map(Clone::clone).map(Box::new),
         }
     }
 
@@ -231,8 +231,8 @@ impl IrInterpreterTrait for IrInterpreter {
                 let right = self.eval_expression(right, position)?;
 
                 match (operator, right) {
-                    (Tokens::Minus, LiteralValue::Number(right)) => Ok(LiteralValue::Number(-right)),
-                    (Tokens::Bang, LiteralValue::Boolean(right)) => Ok(LiteralValue::Boolean(!right)),
+                    (TokenKind::Minus, LiteralValue::Number(right)) => Ok(LiteralValue::Number(-right)),
+                    (TokenKind::Bang, LiteralValue::Boolean(right)) => Ok(LiteralValue::Boolean(!right)),
                     (operator, _) => Err(RuntimeError::new(RuntimeErrorKind::InvalidOperator(operator.to_string()), *position)),
                 }
             }
@@ -241,31 +241,31 @@ impl IrInterpreterTrait for IrInterpreter {
 
                 match (left, right) {
                     (LiteralValue::Number(left), LiteralValue::Number(right)) => match operator {
-                        Tokens::Plus => Ok(LiteralValue::Number(left + right)),
-                        Tokens::Minus => Ok(LiteralValue::Number(left - right)),
-                        Tokens::Asterisk => Ok(LiteralValue::Number(left * right)),
-                        Tokens::Slash => Ok(LiteralValue::Number(left / right)),
-                        Tokens::EQ => Ok(LiteralValue::Boolean(left == right)),
-                        Tokens::NEQ => Ok(LiteralValue::Boolean(left != right)),
-                        Tokens::LT => Ok(LiteralValue::Boolean(left < right)),
-                        Tokens::LTE => Ok(LiteralValue::Boolean(left <= right)),
-                        Tokens::GT => Ok(LiteralValue::Boolean(left > right)),
-                        Tokens::GTE => Ok(LiteralValue::Boolean(left >= right)),
+                        TokenKind::Plus => Ok(LiteralValue::Number(left + right)),
+                        TokenKind::Minus => Ok(LiteralValue::Number(left - right)),
+                        TokenKind::Asterisk => Ok(LiteralValue::Number(left * right)),
+                        TokenKind::Slash => Ok(LiteralValue::Number(left / right)),
+                        TokenKind::EQ => Ok(LiteralValue::Boolean(left == right)),
+                        TokenKind::NEQ => Ok(LiteralValue::Boolean(left != right)),
+                        TokenKind::LT => Ok(LiteralValue::Boolean(left < right)),
+                        TokenKind::LTE => Ok(LiteralValue::Boolean(left <= right)),
+                        TokenKind::GT => Ok(LiteralValue::Boolean(left > right)),
+                        TokenKind::GTE => Ok(LiteralValue::Boolean(left >= right)),
                         _ => Err(RuntimeError::new(RuntimeErrorKind::InvalidOperator(operator.to_string()), *position)),
                     },
                     (LiteralValue::String(left), LiteralValue::String(right)) => match operator {
-                        Tokens::Plus => Ok(LiteralValue::String(format!("{}{}", left, right))),
-                        Tokens::EQ => Ok(LiteralValue::Boolean(left == right)),
-                        Tokens::NEQ => Ok(LiteralValue::Boolean(left != right)),
-                        Tokens::LT => Ok(LiteralValue::Boolean(left < right)),
-                        Tokens::LTE => Ok(LiteralValue::Boolean(left <= right)),
-                        Tokens::GT => Ok(LiteralValue::Boolean(left > right)),
-                        Tokens::GTE => Ok(LiteralValue::Boolean(left >= right)),
+                        TokenKind::Plus => Ok(LiteralValue::String(format!("{}{}", left, right))),
+                        TokenKind::EQ => Ok(LiteralValue::Boolean(left == right)),
+                        TokenKind::NEQ => Ok(LiteralValue::Boolean(left != right)),
+                        TokenKind::LT => Ok(LiteralValue::Boolean(left < right)),
+                        TokenKind::LTE => Ok(LiteralValue::Boolean(left <= right)),
+                        TokenKind::GT => Ok(LiteralValue::Boolean(left > right)),
+                        TokenKind::GTE => Ok(LiteralValue::Boolean(left >= right)),
                         _ => Err(RuntimeError::new(RuntimeErrorKind::InvalidOperator(operator.to_string()), *position)),
                     },
                     (LiteralValue::Boolean(left), LiteralValue::Boolean(right)) => match operator {
-                        Tokens::EQ => Ok(LiteralValue::Boolean(left == right)),
-                        Tokens::NEQ => Ok(LiteralValue::Boolean(left != right)),
+                        TokenKind::EQ => Ok(LiteralValue::Boolean(left == right)),
+                        TokenKind::NEQ => Ok(LiteralValue::Boolean(left != right)),
                         _ => Err(RuntimeError::new(RuntimeErrorKind::InvalidOperator(operator.to_string()), *position)),
                     },
                     (left, right) => Err(RuntimeError::new(

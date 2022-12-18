@@ -1,7 +1,7 @@
 use crate::interpreter::IrEnvironment;
 use sntk_core::{
-    parser::ast::{DataType, Parameter, Position},
-    tokenizer::token::Tokens,
+    parser::ast::{DataTypeKind, Parameter, Position},
+    tokenizer::token::TokenKind,
 };
 use std::fmt;
 
@@ -53,8 +53,8 @@ pub enum IrExpression {
     If(Box<IrExpression>, Box<IrExpression>, Box<Option<IrExpression>>), /* condition, consequence, alternative */
     Call(Box<IrExpression>, Vec<IrExpression>),                          /* function, arguments */
     Index(Box<IrExpression>, Box<IrExpression>),                         /* left, index */
-    Prefix(Tokens, Box<IrExpression>),                                   /* operator, right */
-    Infix(Box<IrExpression>, Tokens, Box<IrExpression>),                 /* left, operator, right */
+    Prefix(TokenKind, Box<IrExpression>),                                /* operator, right */
+    Infix(Box<IrExpression>, TokenKind, Box<IrExpression>),              /* left, operator, right */
 }
 
 impl fmt::Display for IrExpression {
@@ -107,11 +107,11 @@ impl fmt::Display for IrExpression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
-    Number(f64),                                                      /* number */
-    String(String),                                                   /* string */
-    Boolean(bool),                                                    /* boolean */
-    Array(Vec<IrExpression>),                                         /* array */
-    Function(Vec<Parameter>, Block, DataType, Option<IrEnvironment>), /* parameters, block, return type, environment */
+    Number(f64),                                                          /* number */
+    String(String),                                                       /* string */
+    Boolean(bool),                                                        /* boolean */
+    Array(Vec<IrExpression>),                                             /* array */
+    Function(Vec<Parameter>, Block, DataTypeKind, Option<IrEnvironment>), /* parameters, block, return type, environment */
 }
 
 impl fmt::Display for LiteralValue {
