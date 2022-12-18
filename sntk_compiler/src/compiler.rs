@@ -3,9 +3,9 @@ use crate::{
     CompileError, TypeError, TypeErrorKind,
 };
 use sntk_core::parser::ast::{
-    ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DeclareStatement, Expression, ExpressionStatement,
-    FunctionLiteral, Identifier, IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, Parameter, Position, PrefixExpression,
-    Program, ReturnStatement, Statement, StringLiteral, TypeStatement, TypeofExpression,
+    ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DataTypeKind, DeclareStatement, Expression,
+    ExpressionStatement, FunctionLiteral, Identifier, IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, Parameter,
+    Position, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral, TypeStatement, TypeofExpression,
 };
 use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralValue};
 
@@ -157,20 +157,31 @@ impl CompilerTrait for Compiler {
             }) => {
                 let mut new_parameters = Vec::new();
 
-                for (index, parameter @ Parameter { name, data_type, spread }) in parameters.iter().enumerate() {
-                    let data_type = custom_data_type(data_type, &self.customs, position)?;
+                for (
+                    index,
+                    parameter @ Parameter {
+                        name,
+                        data_type,
+                        spread,
+                        position,
+                    },
+                ) in parameters.iter().enumerate()
+                {
+                    let data_type = custom_data_type(data_type, &self.customs)?;
 
                     if *spread {
                         if index != parameters.len() - 1 {
                             return Err(TypeError::new(TypeErrorKind::SpreadParameterMustBeLast, *position));
                         }
 
-                        self.declares.set(&name.value, &DataType::Array(Box::new(data_type.clone())));
+                        self.declares
+                            .set(&name.value, &DataType::new(DataTypeKind::Array(Box::new(data_type.clone())), *position));
 
                         new_parameters.push(Parameter {
                             name: name.clone(),
-                            data_type: DataType::Array(Box::new(data_type.clone())),
+                            data_type: data_type.clone(),
                             spread: *spread,
+                            position: *position,
                         });
 
                         break;
@@ -186,7 +197,7 @@ impl CompilerTrait for Compiler {
                         IrExpression::Block(instructions) => instructions,
                         _ => unreachable!(),
                     },
-                    custom_data_type(return_type, &self.customs, position)?,
+                    custom_data_type(return_type, &self.customs).map(|data_type| data_type.data_type)?,
                     None,
                 ))
             }
@@ -197,12 +208,15 @@ impl CompilerTrait for Compiler {
             }) => {
                 let mut compiled_arguments = Vec::new();
                 let function = self.compile_expression(function, position)?;
-                let function_type = match Checker::new(None, &self.declares, &self.customs, position)?.get_type_from_ir_expression(&function)? {
-                    DataType::Fn(function_type) => function_type,
+                let function_type = match Checker::new(None, &self.declares, &self.customs, position)?
+                    .get_type_from_ir_expression(&function)?
+                    .data_type
+                {
+                    DataTypeKind::Fn(function_type) => function_type,
                     _ => unreachable!(),
                 };
 
-                for (index, (argument, (_, spread))) in arguments.iter().zip(function_type.1.iter()).enumerate() {
+                for (index, (argument, (_, spread))) in arguments.iter().zip(function_type.parameters.iter()).enumerate() {
                     if *spread {
                         compiled_arguments.push(self.compile_expression(
                             &Expression::ArrayLiteral(ArrayLiteral {
