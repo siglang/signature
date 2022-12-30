@@ -1,18 +1,5 @@
 use crate::tokenizer::token::{Token, TokenKind};
 
-pub trait LexerTrait {
-    fn new(input: String) -> Self;
-    fn read_char(&mut self);
-    fn peek_char(&self) -> char;
-    fn skip_whitespace(&mut self);
-    fn read_identifier(&mut self) -> String;
-    fn read_number(&mut self) -> f64;
-    fn read_string(&mut self) -> String;
-    fn read_comment(&mut self);
-    fn read_inline_comment(&mut self);
-    fn next_token(&mut self) -> Token;
-}
-
 #[derive(Debug)]
 pub struct Lexer {
     pub input: String,
@@ -34,16 +21,16 @@ impl Default for Lexer {
     }
 }
 
-impl LexerTrait for Lexer {
+impl Lexer {
     #[inline]
-    fn new(input: String) -> Self {
+    pub fn new(input: String) -> Self {
         let mut lexer = Lexer { input, ..Default::default() };
 
         lexer.read_char();
         lexer
     }
 
-    fn read_char(&mut self) {
+    pub fn read_char(&mut self) {
         if self.read_position >= self.input.len() {
             self.current_char = '\0';
         } else {
@@ -56,7 +43,7 @@ impl LexerTrait for Lexer {
         self.current_position.1 += 1;
     }
 
-    fn peek_char(&self) -> char {
+    pub fn peek_char(&self) -> char {
         if self.read_position >= self.input.len() {
             '\0'
         } else {
@@ -64,7 +51,7 @@ impl LexerTrait for Lexer {
         }
     }
 
-    fn skip_whitespace(&mut self) {
+    pub fn skip_whitespace(&mut self) {
         while self.current_char.is_whitespace() {
             if self.current_char == '\n' {
                 self.current_position.0 += 1;
@@ -75,7 +62,7 @@ impl LexerTrait for Lexer {
         }
     }
 
-    fn read_identifier(&mut self) -> String {
+    pub fn read_identifier(&mut self) -> String {
         let position = self.position;
         while self.current_char.is_alphanumeric() || self.current_char == '_' {
             self.read_char();
@@ -101,7 +88,7 @@ impl LexerTrait for Lexer {
         }
     }
 
-    fn read_number(&mut self) -> f64 {
+    pub fn read_number(&mut self) -> f64 {
         let position = self.position;
         let mut has_dot = false;
 
@@ -120,7 +107,7 @@ impl LexerTrait for Lexer {
         self.input[position..self.position].parse().unwrap_or(0.)
     }
 
-    fn read_string(&mut self) -> String {
+    pub fn read_string(&mut self) -> String {
         let position = self.position + 1;
         while self.peek_char() != '"' && self.current_char != '\0' {
             self.read_char();
@@ -130,7 +117,7 @@ impl LexerTrait for Lexer {
         self.input[position..self.position].to_string()
     }
 
-    fn read_comment(&mut self) {
+    pub fn read_comment(&mut self) {
         if self.current_char == '/' && self.peek_char() == '*' {
             self.read_char();
             self.read_char();
@@ -143,7 +130,7 @@ impl LexerTrait for Lexer {
         }
     }
 
-    fn read_inline_comment(&mut self) {
+    pub fn read_inline_comment(&mut self) {
         if self.current_char == '/' && self.peek_char() == '/' {
             self.read_char();
             self.read_char();
@@ -156,7 +143,7 @@ impl LexerTrait for Lexer {
         }
     }
 
-    fn next_token(&mut self) -> Token {
+    pub fn next_token(&mut self) -> Token {
         use super::token::TokenKind::*;
 
         self.skip_whitespace();

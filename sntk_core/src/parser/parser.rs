@@ -10,56 +10,12 @@ use crate::{
         ParsingError, ParsingErrorKind,
     },
     tokenizer::{
-        lexer::{Lexer, LexerTrait},
+        lexer::Lexer,
         token::{Token, TokenKind},
     },
 };
 
 pub type ParseResult<T> = Result<T, ParsingError>;
-
-pub trait ParserBase {
-    fn new(lexer: Lexer) -> Self;
-    fn next_token(&mut self);
-    fn expect_token(&mut self, token_type: &TokenKind) -> ParseResult<()>;
-    fn peek_token(&self, token_type: &TokenKind) -> bool;
-    fn get_priority(&self, token_type: &TokenKind) -> Priority;
-    fn peek_priority(&mut self) -> Priority;
-    fn current_priority(&self) -> Priority;
-}
-
-pub trait ParserTrait {
-    fn parse_program(&mut self) -> Program;
-    fn parse_statement(&mut self) -> ParseResult<Statement>;
-    fn parse_let_statement(&mut self) -> ParseResult<LetStatement>;
-    fn parse_auto_statement(&mut self) -> ParseResult<AutoStatement>;
-    fn parse_return_statement(&mut self) -> ParseResult<ReturnStatement>;
-    fn parse_type_statement(&mut self) -> ParseResult<TypeStatement>;
-    fn parse_declare_statement(&mut self) -> ParseResult<DeclareStatement>;
-    fn parse_struct_statement(&mut self) -> ParseResult<StructStatement>;
-    fn parse_expression_statement(&mut self) -> ParseResult<ExpressionStatement>;
-    fn parse_expression(&mut self, precedence: &Priority) -> ParseResult<Expression>;
-    fn parse_block_expression(&mut self) -> ParseResult<BlockExpression>;
-    fn parse_if_expression(&mut self) -> ParseResult<IfExpression>;
-    fn parse_array_literal(&mut self) -> ParseResult<ArrayLiteral>;
-    fn parse_function_literal(&mut self) -> ParseResult<FunctionLiteral>;
-    fn parse_struct_literal(&mut self) -> ParseResult<StructLiteral>;
-}
-
-pub trait TypeParser {
-    fn parse_data_type(&mut self) -> ParseResult<DataType>;
-    fn parse_data_type_without_next(&mut self) -> ParseResult<DataTypeKind>;
-    fn parse_function_type(&mut self) -> ParseResult<FunctionType>;
-    fn parse_generic(&mut self) -> ParseResult<Generic>;
-    fn parse_generic_identifier(&mut self) -> ParseResult<IdentifierGeneric>;
-}
-
-pub trait EEE {
-    fn eval_expression(&mut self, expression: &Expression) -> Option<ParseResult<Expression>>;
-    fn eval_infix_expression(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>>;
-    fn eval_infix_expression_opt_1(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>>;
-    fn eval_infix_expression_opt_2(&mut self, infix: &InfixExpression) -> Option<ParseResult<Expression>>;
-    fn eval_prefix_expression(&mut self, prefix: &PrefixExpression) -> Option<ParseResult<Expression>>;
-}
 
 #[derive(Debug, Default)]
 pub struct Parser {
@@ -76,9 +32,9 @@ impl From<String> for Parser {
     }
 }
 
-impl ParserBase for Parser {
+impl Parser {
     #[inline]
-    fn new(lexer: Lexer) -> Self {
+    pub fn new(lexer: Lexer) -> Self {
         Parser { lexer, ..Default::default() }
     }
 
@@ -127,10 +83,8 @@ impl ParserBase for Parser {
     fn current_priority(&self) -> Priority {
         self.get_priority(&self.current_token.token_type)
     }
-}
 
-impl ParserTrait for Parser {
-    fn parse_program(&mut self) -> Program {
+    pub fn parse_program(&mut self) -> Program {
         self.next_token();
         self.next_token();
 
@@ -716,9 +670,7 @@ impl ParserTrait for Parser {
 
         Ok(IfExpression::new(Box::new(condition), Box::new(consequence), alternative, self.position))
     }
-}
 
-impl TypeParser for Parser {
     fn parse_data_type(&mut self) -> ParseResult<DataType> {
         let position = self.position;
 
@@ -848,9 +800,7 @@ impl TypeParser for Parser {
 
         Ok(generics)
     }
-}
 
-impl EEE for Parser {
     fn eval_expression(&mut self, expression: &Expression) -> Option<ParseResult<Expression>> {
         match expression {
             Expression::InfixExpression(infix) => self.eval_infix_expression(infix),
