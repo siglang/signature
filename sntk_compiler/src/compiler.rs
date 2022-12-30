@@ -18,17 +18,9 @@ pub struct Compiler {
 
 pub type CompileResult<T> = Result<T, CompileError>;
 
-pub trait CompilerTrait {
-    fn new(program: Program) -> Self;
-    fn new_with(program: Program, declares: DeclaredTypes, customs: CustomTypes) -> Self;
-    fn compile_program(&mut self) -> CompileResult<Vec<Instruction>>;
-    fn compile_statement(&mut self, statement: &Statement) -> CompileResult<Instruction>;
-    fn compile_expression(&mut self, expression: &Expression, position: &Position) -> CompileResult<IrExpression>;
-}
-
-impl CompilerTrait for Compiler {
+impl Compiler {
     #[inline]
-    fn new(program: Program) -> Self {
+    pub fn new(program: Program) -> Self {
         Self {
             program,
             declares: DeclaredTypes::new(None),
@@ -37,11 +29,11 @@ impl CompilerTrait for Compiler {
     }
 
     #[inline]
-    fn new_with(program: Program, declares: DeclaredTypes, customs: CustomTypes) -> Self {
+    pub fn new_with(program: Program, declares: DeclaredTypes, customs: CustomTypes) -> Self {
         Self { program, declares, customs }
     }
 
-    fn compile_program(&mut self) -> CompileResult<Vec<Instruction>> {
+    pub fn compile_program(&mut self) -> CompileResult<Vec<Instruction>> {
         let mut instructions = Vec::new();
 
         if !self.program.errors.is_empty() {
@@ -55,7 +47,7 @@ impl CompilerTrait for Compiler {
         Ok(instructions)
     }
 
-    fn compile_statement(&mut self, statement: &Statement) -> CompileResult<Instruction> {
+    pub fn compile_statement(&mut self, statement: &Statement) -> CompileResult<Instruction> {
         Ok(match statement {
             Statement::LetStatement(LetStatement {
                 name,
@@ -109,7 +101,7 @@ impl CompilerTrait for Compiler {
         })
     }
 
-    fn compile_expression(&mut self, expression: &Expression, position: &Position) -> CompileResult<IrExpression> {
+    pub fn compile_expression(&mut self, expression: &Expression, position: &Position) -> CompileResult<IrExpression> {
         let expression = match expression {
             Expression::Identifier(Identifier { value, .. }) => IrExpression::Identifier(value.clone()),
             Expression::BlockExpression(BlockExpression { statements, .. }) => {
