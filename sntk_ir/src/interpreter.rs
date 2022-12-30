@@ -50,34 +50,22 @@ pub struct IrInterpreter {
 
 pub type Result<T> = std::result::Result<T, crate::RuntimeError>;
 
-pub trait IrInterpreterBase {
-    fn new(instructions: Vec<Instruction>) -> Self;
-    fn new_with_environment(instructions: Vec<Instruction>, environment: &IrEnvironment) -> Self;
-    fn eval(&mut self) -> Result<()>;
-    fn last(&mut self) -> Result<LiteralValue>;
-}
-
-pub trait IrInterpreterTrait {
-    fn eval_instruction(&mut self, instruction: &Instruction) -> Result<()>;
-    fn eval_expression(&mut self, expression: &IrExpression, position: &Position) -> Result<LiteralValue>;
-}
-
-impl IrInterpreterBase for IrInterpreter {
-    fn new(instructions: Vec<Instruction>) -> Self {
+impl IrInterpreter {
+    pub fn new(instructions: Vec<Instruction>) -> Self {
         Self {
             instructions,
             environment: IrEnvironment::new(None),
         }
     }
 
-    fn new_with_environment(instructions: Vec<Instruction>, environment: &IrEnvironment) -> Self {
+    pub fn new_with_environment(instructions: Vec<Instruction>, environment: &IrEnvironment) -> Self {
         Self {
             instructions,
             environment: environment.clone(),
         }
     }
 
-    fn eval(&mut self) -> Result<()> {
+    pub fn eval(&mut self) -> Result<()> {
         for instruction in self.instructions.clone().iter() {
             self.eval_instruction(instruction)?;
         }
@@ -85,7 +73,7 @@ impl IrInterpreterBase for IrInterpreter {
         Ok(())
     }
 
-    fn last(&mut self) -> Result<LiteralValue> {
+    pub fn last(&mut self) -> Result<LiteralValue> {
         self.clone()
             .instructions
             .last()
@@ -98,10 +86,8 @@ impl IrInterpreterBase for IrInterpreter {
             })
             .unwrap_or(Ok(LiteralValue::Boolean(false)))
     }
-}
 
-impl IrInterpreterTrait for IrInterpreter {
-    fn eval_instruction(&mut self, instruction: &Instruction) -> Result<()> {
+    pub fn eval_instruction(&mut self, instruction: &Instruction) -> Result<()> {
         let position = Position(instruction.position.0, instruction.position.1);
 
         match instruction.instruction.clone() {
@@ -124,7 +110,7 @@ impl IrInterpreterTrait for IrInterpreter {
         Ok(())
     }
 
-    fn eval_expression(&mut self, expression: &IrExpression, position: &Position) -> Result<LiteralValue> {
+    pub fn eval_expression(&mut self, expression: &IrExpression, position: &Position) -> Result<LiteralValue> {
         match expression {
             IrExpression::Identifier(name) => match self.environment.get(name) {
                 Some(value) => Ok(value),

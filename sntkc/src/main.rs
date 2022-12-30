@@ -1,14 +1,11 @@
 #![allow(unused_imports)]
 
-use sntk_compiler::compiler::{Compiler, CompilerTrait};
+use sntk_compiler::compiler::Compiler;
 use sntk_core::{
-    parser::parser::{Parser, ParserBase, ParserTrait},
-    tokenizer::{
-        lexer::{Lexer, LexerTrait},
-        token::TokenKind,
-    },
+    parser::parser::Parser,
+    tokenizer::{lexer::Lexer, token::TokenKind},
 };
-use sntk_ir::interpreter::{IrInterpreter, IrInterpreterBase};
+use sntk_ir::interpreter::IrInterpreter;
 use std::time::Instant;
 
 fn main() {
