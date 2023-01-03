@@ -65,7 +65,7 @@ impl Compiler {
                     ));
                 }
 
-                self.declares.set(&name.value, data_type);
+                self.declares.set(name.value.clone(), data_type.clone());
 
                 Instruction::new(InstructionType::StoreName(name.value.clone(), value), *position)
             }
@@ -73,8 +73,8 @@ impl Compiler {
                 let value = self.compile_expression(value, position)?;
 
                 self.declares.set(
-                    &name.value,
-                    &Checker::new(None, &self.declares, &self.customs, position)?.get_type_from_ir_expression(&value)?,
+                    name.value.clone(),
+                    Checker::new(None, &self.declares, &self.customs, position)?.get_type_from_ir_expression(&value)?,
                 );
 
                 Instruction::new(InstructionType::StoreName(name.value.clone(), value), *position)
@@ -85,13 +85,13 @@ impl Compiler {
             Statement::TypeStatement(TypeStatement {
                 name, data_type, position, ..
             }) => {
-                self.customs.set(&name.value, data_type);
+                self.customs.set(name.value.clone(), data_type.clone());
 
                 Instruction::new(InstructionType::None, *position)
             }
             Statement::StructStatement(_) => unimplemented!(),
             Statement::DeclareStatement(DeclareStatement { name, data_type, position }) => {
-                self.declares.set(&name.value, data_type);
+                self.declares.set(name.value.clone(), data_type.clone());
 
                 Instruction::new(InstructionType::None, *position)
             }
@@ -166,19 +166,21 @@ impl Compiler {
                             return Err(TypeError::new(TypeErrorKind::SpreadParameterMustBeLast, *position));
                         }
 
-                        self.declares
-                            .set(&name.value, &DataType::new(DataTypeKind::Array(Box::new(data_type.clone())), *position));
+                        self.declares.set(
+                            name.value.clone(),
+                            DataType::new(DataTypeKind::Array(Box::new(data_type.clone())), *position),
+                        );
 
                         new_parameters.push(Parameter {
                             name: name.clone(),
-                            data_type: data_type.clone(),
+                            data_type,
                             spread: *spread,
                             position: *position,
                         });
 
                         break;
                     } else {
-                        self.declares.set(&name.value, &data_type);
+                        self.declares.set(name.value.clone(), data_type);
                         new_parameters.push(parameter.clone());
                     }
                 }

@@ -14,15 +14,15 @@ pub struct DeclaredTypes {
 
 impl DeclaredTypes {
     #[inline]
-    pub fn new(parent: Option<&DeclaredTypes>) -> Self {
+    pub fn new(parent: Option<DeclaredTypes>) -> Self {
         Self {
             types: HashMap::new(),
-            parent: parent.map(Clone::clone).map(Box::new),
+            parent: parent.map(Box::new),
         }
     }
 
-    pub fn get(&self, name: &String) -> Option<DataType> {
-        match self.types.get(name) {
+    pub fn get(&self, name: String) -> Option<DataType> {
+        match self.types.get(&name) {
             Some(value) => Some(value.clone()),
             None => match &self.parent {
                 Some(parent) => parent.get(name),
@@ -32,8 +32,8 @@ impl DeclaredTypes {
     }
 
     #[inline]
-    pub fn set(&mut self, name: &String, value: &DataType) {
-        self.types.insert(name.to_string(), value.clone());
+    pub fn set(&mut self, name: String, value: DataType) {
+        self.types.insert(name, value);
     }
 }
 
@@ -45,15 +45,15 @@ pub struct CustomTypes {
 
 impl CustomTypes {
     #[inline]
-    pub fn new(parent: Option<&CustomTypes>) -> Self {
+    pub fn new(parent: Option<CustomTypes>) -> Self {
         Self {
             types: HashMap::new(),
-            parent: parent.map(Clone::clone).map(Box::new),
+            parent: parent.map(Box::new),
         }
     }
 
-    pub fn get(&self, name: &String) -> Option<DataType> {
-        match self.types.get(name) {
+    pub fn get(&self, name: String) -> Option<DataType> {
+        match self.types.get(&name) {
             Some(value) => Some(value.clone()),
             None => match &self.parent {
                 Some(parent) => parent.get(name),
@@ -63,8 +63,8 @@ impl CustomTypes {
     }
 
     #[inline]
-    pub fn set(&mut self, name: &String, value: &DataType) {
-        self.types.insert(name.to_string(), value.clone());
+    pub fn set(&mut self, name: String, value: DataType) {
+        self.types.insert(name, value);
     }
 }
 
@@ -92,9 +92,9 @@ impl Checker {
 
     pub fn get_type_from_ir_expression(&self, expression: &IrExpression) -> CompileResult<DataType> {
         let result = match expression.clone() {
-            IrExpression::Identifier(identifier) => match self.declares.get(&identifier) {
+            IrExpression::Identifier(identifier) => match self.declares.get(identifier.clone()) {
                 Some(data_type) => Ok(data_type),
-                None => Err(TypeError::new(TypeErrorKind::UndefinedIdentifier(identifier.to_string()), self.position)),
+                None => Err(TypeError::new(TypeErrorKind::UndefinedIdentifier(identifier), self.position)),
             },
             IrExpression::Literal(literal) => self.get_type_from_literal_value(&literal),
             IrExpression::Block(block) => self.get_type_from_ir_expression(match block.last() {
@@ -314,7 +314,7 @@ pub fn custom_data_type(data_type: &DataType, customs: &CustomTypes) -> CompileR
     let data_type_ @ DataType { data_type, position } = data_type;
 
     Ok(match &data_type {
-        DataTypeKind::Custom(name) => match customs.get(name) {
+        DataTypeKind::Custom(name) => match customs.get(name.clone()) {
             Some(custom) => custom,
             None => return Err(TypeError::new(TypeErrorKind::UndefinedType(name.clone()), *position)),
         },
