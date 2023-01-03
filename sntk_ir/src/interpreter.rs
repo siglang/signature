@@ -1,5 +1,5 @@
 use crate::{
-    builtin::get_builtin_function,
+    builtin::builtin_function,
     instruction::{Instruction, InstructionType, IrExpression, LiteralValue},
     RuntimeError, RuntimeErrorKind,
 };
@@ -14,15 +14,15 @@ pub struct IrEnvironment {
 
 impl IrEnvironment {
     #[inline]
-    pub fn new(parent: Option<&IrEnvironment>) -> Self {
+    pub fn new(parent: Option<IrEnvironment>) -> Self {
         Self {
             values: HashMap::new(),
-            parent: parent.map(Clone::clone).map(Box::new),
+            parent: parent.map(Box::new),
         }
     }
 
-    pub fn get(&self, name: &String) -> Option<LiteralValue> {
-        match self.values.get(name) {
+    pub fn get(&self, name: String) -> Option<LiteralValue> {
+        match self.values.get(&name) {
             Some(value) => Some(value.clone()),
             None => match &self.parent {
                 Some(parent) => parent.get(name),
@@ -31,8 +31,8 @@ impl IrEnvironment {
         }
     }
 
-    pub fn set(&mut self, name: &String, value: &LiteralValue) {
-        self.values.insert(name.to_string(), value.clone());
+    pub fn set(&mut self, name: String, value: LiteralValue) {
+        self.values.insert(name, value);
     }
 }
 
@@ -58,11 +58,8 @@ impl IrInterpreter {
         }
     }
 
-    pub fn new_with_environment(instructions: Vec<Instruction>, environment: &IrEnvironment) -> Self {
-        Self {
-            instructions,
-            environment: environment.clone(),
-        }
+    pub fn new_with_environment(instructions: Vec<Instruction>, environment: IrEnvironment) -> Self {
+        Self { instructions, environment }
     }
 
     pub fn eval(&mut self) -> Result<()> {
@@ -93,18 +90,12 @@ impl IrInterpreter {
         match instruction.instruction.clone() {
             InstructionType::StoreName(name, expression) => {
                 let expression = self.eval_expression(&expression, &position)?;
-
-                self.environment.set(&name, &expression);
+                self.environment.set(name, expression);
             }
             InstructionType::Expression(expression) => {
                 self.eval_expression(&expression, &position)?;
             }
-            #[allow(unused_variables)]
-            InstructionType::Return(expression) => {
-                // println!("{:?}", self.eval_expression(&expression, position)?);
-                // ^ for debugging. TODO: remove this.
-            }
-            InstructionType::None => {}
+            InstructionType::Return(_) | InstructionType::None => {}
         }
 
         Ok(())
@@ -112,7 +103,7 @@ impl IrInterpreter {
 
     pub fn eval_expression(&mut self, expression: &IrExpression, position: &Position) -> Result<LiteralValue> {
         match expression {
-            IrExpression::Identifier(name) => match self.environment.get(name) {
+            IrExpression::Identifier(name) => match self.environment.get(name.clone()) {
                 Some(value) => Ok(value),
                 None => Err(RuntimeError::new(RuntimeErrorKind::UndefinedVariable(name.to_string()), *position)),
             },
@@ -131,7 +122,7 @@ impl IrInterpreter {
                 _ => Ok(value.clone()),
             },
             IrExpression::Block(block) => {
-                let mut interpreter = IrInterpreter::new_with_environment(block.clone(), &IrEnvironment::new(Some(&self.environment)));
+                let mut interpreter = IrInterpreter::new_with_environment(block.clone(), IrEnvironment::new(Some(self.environment.clone())));
                 interpreter.eval()?;
                 Ok(interpreter.last()?)
             }
@@ -154,10 +145,10 @@ impl IrInterpreter {
                     .collect::<std::result::Result<Vec<_>, _>>()?;
 
                 let function = match *function.clone() {
-                    IrExpression::Identifier(name) => match self.environment.get(&name) {
+                    IrExpression::Identifier(name) => match self.environment.get(name.clone()) {
                         Some(value) => value,
                         None => {
-                            return match get_builtin_function(&name) {
+                            return match builtin_function(&name) {
                                 Some(function) => Ok(function(arguments.iter().collect())),
                                 None => Err(RuntimeError::new(RuntimeErrorKind::UndefinedVariable(name.to_string()), *position)),
                             };
@@ -172,31 +163,33 @@ impl IrInterpreter {
                         block,
                         match environment {
                             Some(environment) => environment,
-                            None => IrEnvironment::new(Some(&self.environment)),
+                            None => IrEnvironment::new(Some(self.environment.clone())),
                         },
                     ),
                     value => return Err(RuntimeError::new(RuntimeErrorKind::NotAFunction(value.to_string()), *position)),
                 };
 
                 for (parameter, argument) in parameters.iter().zip(arguments.iter()) {
-                    environment.set(parameter, argument);
+                    environment.set(parameter.clone(), argument.clone());
                 }
 
-                let mut interpreter = IrInterpreter::new_with_environment(body, &environment);
+                let mut interpreter = IrInterpreter::new_with_environment(body, environment.clone());
                 interpreter.eval()?;
 
-                Ok(match interpreter.last()? {
-                    LiteralValue::Function(parameters, body, return_type, r_environment) => LiteralValue::Function(
+                let last = match interpreter.last()? {
+                    LiteralValue::Function(parameters, body, return_type, function_environment) => LiteralValue::Function(
                         parameters,
                         body,
                         return_type,
-                        Some(IrEnvironment::new(Some(&match r_environment {
+                        Some(IrEnvironment::new(Some(match function_environment {
                             Some(environment) => environment,
                             None => environment,
                         }))),
                     ),
                     value => value,
-                })
+                };
+
+                Ok(last)
             }
             IrExpression::Index(left, index) => {
                 let (left, index) = (self.eval_expression(left, position)?, self.eval_expression(index, position)?);
