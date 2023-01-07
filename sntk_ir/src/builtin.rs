@@ -7,11 +7,7 @@ trait BuiltIn {
 struct Print;
 impl BuiltIn for Print {
     fn call(arguments: Vec<&LiteralValue>) -> LiteralValue {
-        let arguments = arguments
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join(" ");
+        let arguments = arguments.iter().map(ToString::to_string).collect::<Vec<_>>().join(" ");
 
         println!("{arguments}");
 
@@ -19,16 +15,18 @@ impl BuiltIn for Print {
     }
 }
 
+type BoxedCall = Box<dyn FnOnce(Vec<&LiteralValue>) -> LiteralValue>;
+
 #[allow(clippy::type_complexity)]
 #[inline]
-fn boxed_call<F>() -> Box<dyn FnOnce(Vec<&LiteralValue>) -> LiteralValue>
+fn boxed_call<F>() -> BoxedCall
 where
-    F: BuiltIn + ?Sized + 'static,
+    F: BuiltIn + 'static,
 {
-    Box::new(|arguments| <F as BuiltIn>::call(arguments))
+    Box::new(F::call)
 }
 
-pub fn builtin_function(name: &str) -> Option<impl FnOnce(Vec<&LiteralValue>) -> LiteralValue> {
+pub fn builtin_function(name: &str) -> Option<BoxedCall> {
     match name {
         "println" => Some(boxed_call::<Print>()),
         _ => None,
