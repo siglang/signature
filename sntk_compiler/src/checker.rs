@@ -78,7 +78,7 @@ pub struct Checker {
 
 impl Checker {
     #[inline]
-    pub fn new(data_type: Option<&DataType>, declares: &DeclaredTypes, customs: &CustomTypes, position: &Position) -> CompileResult<Self> {
+    pub fn new(data_type: Option<&DataType>, declares: &DeclaredTypes, customs: &CustomTypes, position: Position) -> CompileResult<Self> {
         Ok(Self {
             data_type: match data_type {
                 Some(data_type) => Some(custom_data_type(data_type, customs)?),
@@ -86,7 +86,7 @@ impl Checker {
             },
             declares: declares.clone(),
             customs: customs.clone(),
-            position: *position,
+            position,
         })
     }
 
