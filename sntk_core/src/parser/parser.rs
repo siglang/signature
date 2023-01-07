@@ -46,13 +46,13 @@ impl Parser {
     }
 
     fn expect_token(&mut self, token_type: &TokenKind) -> ParseResult<()> {
-        if self.current_token.token_type == *token_type {
+        if self.current_token.kind == *token_type {
             self.next_token();
 
             Ok(())
         } else {
             Err(ParsingError::new(
-                ParsingErrorKind::ExpectedExpression(self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedExpression(self.current_token.kind.to_string()),
                 self.position,
             ))
         }
@@ -60,7 +60,7 @@ impl Parser {
 
     #[inline]
     fn peek_token(&self, token_type: &TokenKind) -> bool {
-        self.peek_token.token_type == *token_type
+        self.peek_token.kind == *token_type
     }
 
     fn get_priority(&self, token_type: &TokenKind) -> Priority {
@@ -77,11 +77,11 @@ impl Parser {
     }
 
     fn peek_priority(&mut self) -> Priority {
-        self.get_priority(&self.peek_token.token_type)
+        self.get_priority(&self.peek_token.kind)
     }
 
     fn current_priority(&self) -> Priority {
-        self.get_priority(&self.current_token.token_type)
+        self.get_priority(&self.current_token.kind)
     }
 
     pub fn parse_program(&mut self) -> Program {
@@ -90,7 +90,7 @@ impl Parser {
 
         let mut program = Program::default();
 
-        while self.current_token.token_type != TokenKind::EOF {
+        while self.current_token.kind != TokenKind::EOF {
             match self.parse_statement() {
                 Ok(statement) => program.statements.push(statement),
                 Err(error) => self.errors.push(error),
@@ -109,7 +109,7 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> ParseResult<Statement> {
-        Ok(match self.current_token.token_type {
+        Ok(match self.current_token.kind {
             TokenKind::Let => Statement::LetStatement(self.parse_let_statement()?),
             TokenKind::Auto => Statement::AutoStatement(self.parse_auto_statement()?),
             TokenKind::Return => Statement::ReturnStatement(self.parse_return_statement()?),
@@ -139,14 +139,14 @@ impl Parser {
                 Ok(LetStatement::new(data_type, ident, expression, self.position))
             } else {
                 Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.kind.to_string()),
                     self.position,
                 ))
             };
         }
 
         Err(ParsingError::new(
-            ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+            ParsingErrorKind::UnexpectedToken(self.current_token.kind.to_string()),
             self.position,
         ))
     }
@@ -166,14 +166,14 @@ impl Parser {
                 Ok(AutoStatement::new(ident, expression, self.position))
             } else {
                 Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.kind.to_string()),
                     self.position,
                 ))
             };
         }
 
         Err(ParsingError::new(
-            ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+            ParsingErrorKind::UnexpectedToken(self.current_token.kind.to_string()),
             self.position,
         ))
     }
@@ -188,14 +188,14 @@ impl Parser {
                 Ok(ReturnStatement::new(expression, self.position))
             } else {
                 Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.kind.to_string()),
                     self.position,
                 ))
             };
         }
 
         Err(ParsingError::new(
-            ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+            ParsingErrorKind::UnexpectedToken(self.current_token.kind.to_string()),
             self.position,
         ))
     }
@@ -206,7 +206,7 @@ impl Parser {
         let ident = identifier! { self };
         self.next_token();
 
-        let generics = if self.current_token.token_type == TokenKind::LT {
+        let generics = if self.current_token.kind == TokenKind::LT {
             let result = self.parse_generic_identifier()?;
             self.next_token();
             result
@@ -218,7 +218,7 @@ impl Parser {
 
         let data_type = self.parse_data_type()?;
 
-        if self.current_token.token_type == TokenKind::Semicolon {
+        if self.current_token.kind == TokenKind::Semicolon {
             Ok(TypeStatement::new(
                 data_type,
                 Identifier::new(ident, self.position),
@@ -227,7 +227,7 @@ impl Parser {
             ))
         } else {
             Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.kind.to_string()),
                 self.position,
             ))
         }
@@ -243,11 +243,11 @@ impl Parser {
 
         let data_type = self.parse_data_type()?;
 
-        if self.current_token.token_type == TokenKind::Semicolon {
+        if self.current_token.kind == TokenKind::Semicolon {
             Ok(DeclareStatement::new(data_type, Identifier::new(ident, self.position), self.position))
         } else {
             Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.kind.to_string()),
                 self.position,
             ))
         }
@@ -259,7 +259,7 @@ impl Parser {
         let ident = identifier! { self };
         self.next_token();
 
-        let generics = if self.current_token.token_type == TokenKind::LT {
+        let generics = if self.current_token.kind == TokenKind::LT {
             let generic = self.parse_generic_identifier()?;
 
             self.next_token();
@@ -273,7 +273,7 @@ impl Parser {
 
         let mut fields = Vec::new();
 
-        while self.current_token.token_type != TokenKind::RBrace {
+        while self.current_token.kind != TokenKind::RBrace {
             let key = Identifier::new(identifier! { self }, self.position);
             self.next_token();
 
@@ -283,7 +283,7 @@ impl Parser {
 
             fields.push((key, value));
 
-            if self.current_token.token_type == TokenKind::RBrace {
+            if self.current_token.kind == TokenKind::RBrace {
                 break;
             }
 
@@ -309,20 +309,20 @@ impl Parser {
             Ok(ExpressionStatement::new(expression, self.position))
         } else {
             Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::Semicolon.to_string(), self.current_token.kind.to_string()),
                 self.position,
             ))
         }
     }
 
     fn parse_expression(&mut self, priority: &Priority) -> ParseResult<Expression> {
-        let left_expression = match self.current_token.token_type.clone() {
+        let left_expression = match self.current_token.kind.clone() {
             TokenKind::IDENT(ident) => Some(Ok(Expression::Identifier(Identifier::new(ident, self.position)))),
             TokenKind::Number(number) => Some(Ok(Expression::NumberLiteral(NumberLiteral::new(number, self.position)))),
             TokenKind::String(string) => Some(Ok(Expression::StringLiteral(StringLiteral::new(string, self.position)))),
             TokenKind::Boolean(boolean) => Some(Ok(Expression::BooleanLiteral(BooleanLiteral::new(boolean, self.position)))),
             TokenKind::Bang | TokenKind::Minus => {
-                let operator = self.current_token.token_type.clone();
+                let operator = self.current_token.kind.clone();
 
                 self.next_token();
 
@@ -338,9 +338,9 @@ impl Parser {
                 let expression = self.parse_expression(&Priority::Lowest);
                 self.next_token();
 
-                if self.current_token.token_type != TokenKind::RParen {
+                if self.current_token.kind != TokenKind::RParen {
                     return Err(ParsingError::new(
-                        ParsingErrorKind::ExpectedNextToken(TokenKind::RParen.to_string(), self.current_token.token_type.to_string()),
+                        ParsingErrorKind::ExpectedNextToken(TokenKind::RParen.to_string(), self.current_token.kind.to_string()),
                         self.position,
                     ));
                 }
@@ -363,16 +363,16 @@ impl Parser {
             _ => None,
         };
 
-        if left_expression.is_none() && self.current_token.token_type != TokenKind::Semicolon {
+        if left_expression.is_none() && self.current_token.kind != TokenKind::Semicolon {
             return Err(ParsingError::new(
-                ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+                ParsingErrorKind::UnexpectedToken(self.current_token.kind.to_string()),
                 self.position,
             ));
         }
 
         let mut left_expression = left_expression.ok_or_else(|| {
             ParsingError::new(
-                ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+                ParsingErrorKind::UnexpectedToken(self.current_token.kind.to_string()),
                 self.position,
             )
         })?;
@@ -380,7 +380,7 @@ impl Parser {
         while !self.peek_token(&TokenKind::Semicolon) && priority < &self.peek_priority() {
             self.next_token();
 
-            left_expression = match self.current_token.token_type {
+            left_expression = match self.current_token.kind {
                 TokenKind::Plus
                 | TokenKind::Minus
                 | TokenKind::Dot
@@ -394,7 +394,7 @@ impl Parser {
                 | TokenKind::LTE
                 | TokenKind::GTE => Ok(Expression::InfixExpression(InfixExpression::new(
                     Box::new(left_expression?),
-                    self.current_token.token_type.clone(),
+                    self.current_token.kind.clone(),
                     {
                         self.next_token();
                         Box::new(self.parse_expression(&self.current_priority())?)
@@ -406,28 +406,28 @@ impl Parser {
 
                     let mut arguments = Vec::new();
 
-                    if self.current_token.token_type != TokenKind::RParen {
+                    if self.current_token.kind != TokenKind::RParen {
                         arguments.push(self.parse_expression(&Priority::Lowest)?);
                         self.next_token();
 
-                        if self.current_token.token_type == TokenKind::Comma {
+                        if self.current_token.kind == TokenKind::Comma {
                             self.next_token();
                         }
 
-                        while self.current_token.token_type != TokenKind::RParen {
+                        while self.current_token.kind != TokenKind::RParen {
                             arguments.push(self.parse_expression(&Priority::Lowest)?);
                             self.next_token();
 
-                            if self.current_token.token_type == TokenKind::RParen {
+                            if self.current_token.kind == TokenKind::RParen {
                                 break;
                             }
 
                             self.expect_token(&TokenKind::Comma)?;
                         }
 
-                        if self.current_token.token_type != TokenKind::RParen {
+                        if self.current_token.kind != TokenKind::RParen {
                             return Err(ParsingError::new(
-                                ParsingErrorKind::ExpectedNextToken(TokenKind::RParen.to_string(), self.current_token.token_type.to_string()),
+                                ParsingErrorKind::ExpectedNextToken(TokenKind::RParen.to_string(), self.current_token.kind.to_string()),
                                 self.position,
                             ));
                         }
@@ -445,9 +445,9 @@ impl Parser {
                     let index = self.parse_expression(&Priority::Lowest)?;
                     self.next_token();
 
-                    if self.current_token.token_type != TokenKind::RBracket {
+                    if self.current_token.kind != TokenKind::RBracket {
                         return Err(ParsingError::new(
-                            ParsingErrorKind::ExpectedNextToken(TokenKind::RBracket.to_string(), self.current_token.token_type.to_string()),
+                            ParsingErrorKind::ExpectedNextToken(TokenKind::RBracket.to_string(), self.current_token.kind.to_string()),
                             self.position,
                         ));
                     }
@@ -459,7 +459,7 @@ impl Parser {
                     )))
                 }
                 _ => Err(ParsingError::new(
-                    ParsingErrorKind::UnexpectedToken(self.current_token.token_type.to_string()),
+                    ParsingErrorKind::UnexpectedToken(self.current_token.kind.to_string()),
                     self.position,
                 )),
             };
@@ -487,7 +487,7 @@ impl Parser {
 
         let mut statements = Vec::new();
 
-        while self.current_token.token_type != TokenKind::RBrace {
+        while self.current_token.kind != TokenKind::RBrace {
             statements.push(self.parse_statement()?);
             self.next_token();
         }
@@ -500,24 +500,24 @@ impl Parser {
 
         let mut elements = Vec::new();
 
-        if self.current_token.token_type == TokenKind::RBracket {
+        if self.current_token.kind == TokenKind::RBracket {
             return Ok(ArrayLiteral::new(elements, self.position));
         }
 
-        while self.current_token.token_type != TokenKind::RBrace {
+        while self.current_token.kind != TokenKind::RBrace {
             elements.push(self.parse_expression(&Priority::Lowest)?);
             self.next_token();
 
-            if self.current_token.token_type == TokenKind::RBracket {
+            if self.current_token.kind == TokenKind::RBracket {
                 break;
             }
 
             self.expect_token(&TokenKind::Comma)?;
         }
 
-        if self.current_token.token_type != TokenKind::RBracket {
+        if self.current_token.kind != TokenKind::RBracket {
             return Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(TokenKind::RBracket.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::RBracket.to_string(), self.current_token.kind.to_string()),
                 self.position,
             ));
         }
@@ -534,7 +534,7 @@ impl Parser {
 
         let mut fields = Vec::new();
 
-        while self.current_token.token_type != TokenKind::RBrace {
+        while self.current_token.kind != TokenKind::RBrace {
             let key = Identifier::new(identifier! { self }, self.position);
             self.next_token();
 
@@ -545,16 +545,16 @@ impl Parser {
 
             fields.push((key, value));
 
-            if self.current_token.token_type == TokenKind::RBrace {
+            if self.current_token.kind == TokenKind::RBrace {
                 break;
             }
 
             self.expect_token(&TokenKind::Comma)?;
         }
 
-        if self.current_token.token_type != TokenKind::RBrace {
+        if self.current_token.kind != TokenKind::RBrace {
             return Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(TokenKind::RBrace.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::RBrace.to_string(), self.current_token.kind.to_string()),
                 self.position,
             ));
         }
@@ -565,7 +565,7 @@ impl Parser {
     fn parse_function_literal(&mut self) -> ParseResult<FunctionLiteral> {
         self.next_token();
 
-        let generics = if self.current_token.token_type == TokenKind::LT {
+        let generics = if self.current_token.kind == TokenKind::LT {
             let result = Some(self.parse_generic_identifier()?);
             self.next_token();
 
@@ -578,15 +578,15 @@ impl Parser {
 
         let mut parameters = Vec::new();
 
-        while self.current_token.token_type != TokenKind::RParen {
-            let is_spread = if self.current_token.token_type == TokenKind::Spread {
+        while self.current_token.kind != TokenKind::RParen {
+            let is_spread = if self.current_token.kind == TokenKind::Spread {
                 self.next_token();
                 true
             } else {
                 false
             };
 
-            if let TokenKind::IDENT(identifier) = self.current_token.token_type.clone() {
+            if let TokenKind::IDENT(identifier) = self.current_token.kind.clone() {
                 self.next_token();
                 self.expect_token(&TokenKind::Colon)?;
 
@@ -600,12 +600,12 @@ impl Parser {
                 ));
             } else {
                 return Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(TokenKind::IDENT("".to_string()).to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::IDENT("".to_string()).to_string(), self.current_token.kind.to_string()),
                     self.position,
                 ));
             }
 
-            if self.current_token.token_type == TokenKind::RParen {
+            if self.current_token.kind == TokenKind::RParen {
                 break;
             }
 
@@ -617,7 +617,7 @@ impl Parser {
 
         let return_type = self.parse_data_type()?;
 
-        let body = match self.current_token.token_type {
+        let body = match self.current_token.kind {
             TokenKind::LBrace => self.parse_block_expression()?,
             TokenKind::DoubleArrow => {
                 self.next_token();
@@ -632,7 +632,7 @@ impl Parser {
             }
             _ => {
                 return Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(TokenKind::LBrace.to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::LBrace.to_string(), self.current_token.kind.to_string()),
                     self.position,
                 ))
             }
@@ -650,10 +650,10 @@ impl Parser {
         let consequence = self.parse_block_expression()?;
         self.next_token();
 
-        let alternative = if self.current_token.token_type == TokenKind::Else {
+        let alternative = if self.current_token.kind == TokenKind::Else {
             self.next_token();
 
-            if self.current_token.token_type == TokenKind::If {
+            if self.current_token.kind == TokenKind::If {
                 Some(Box::new(BlockExpression {
                     statements: vec![Statement::ExpressionStatement(ExpressionStatement::new(
                         Expression::IfExpression(self.parse_if_expression()?),
@@ -681,14 +681,14 @@ impl Parser {
     }
 
     fn parse_data_type_without_next(&mut self) -> ParseResult<DataTypeKind> {
-        let mut data_type = match self.current_token.token_type {
+        let mut data_type = match self.current_token.kind {
             TokenKind::NumberType => Ok(DataTypeKind::Number),
             TokenKind::StringType => Ok(DataTypeKind::String),
             TokenKind::BooleanType => Ok(DataTypeKind::Boolean),
             TokenKind::Function => Ok(DataTypeKind::Fn(self.parse_function_type()?)),
             TokenKind::IDENT(ref ident) => Ok(DataTypeKind::Custom(ident.clone())),
             _ => Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(TokenKind::NumberType.to_string(), self.current_token.token_type.to_string()),
+                ParsingErrorKind::ExpectedNextToken(TokenKind::NumberType.to_string(), self.current_token.kind.to_string()),
                 self.position,
             )),
         };
@@ -703,9 +703,9 @@ impl Parser {
             self.next_token();
             self.next_token();
 
-            if self.current_token.token_type != TokenKind::RBracket {
+            if self.current_token.kind != TokenKind::RBracket {
                 return Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(TokenKind::RBracket.to_string(), self.current_token.token_type.to_string()),
+                    ParsingErrorKind::ExpectedNextToken(TokenKind::RBracket.to_string(), self.current_token.kind.to_string()),
                     self.position,
                 ));
             }
@@ -719,7 +719,7 @@ impl Parser {
     fn parse_function_type(&mut self) -> ParseResult<FunctionType> {
         self.next_token();
 
-        let generics = if self.current_token.token_type == TokenKind::LT {
+        let generics = if self.current_token.kind == TokenKind::LT {
             let result = Some(self.parse_generic_identifier()?);
             self.next_token();
 
@@ -732,8 +732,8 @@ impl Parser {
 
         let mut parameters = Vec::new();
 
-        while self.current_token.token_type != TokenKind::RParen {
-            let spread = if self.current_token.token_type == TokenKind::Spread {
+        while self.current_token.kind != TokenKind::RParen {
+            let spread = if self.current_token.kind == TokenKind::Spread {
                 self.next_token();
                 true
             } else {
@@ -742,7 +742,7 @@ impl Parser {
 
             parameters.push((self.parse_data_type()?, spread));
 
-            if self.current_token.token_type == TokenKind::RParen {
+            if self.current_token.kind == TokenKind::RParen {
                 break;
             }
 
@@ -765,12 +765,12 @@ impl Parser {
 
         self.expect_token(&TokenKind::LT)?;
 
-        while self.current_token.token_type != TokenKind::GT {
+        while self.current_token.kind != TokenKind::GT {
             let data_type = self.parse_data_type()?;
 
             generics.push(data_type);
 
-            if self.current_token.token_type == TokenKind::GT {
+            if self.current_token.kind == TokenKind::GT {
                 break;
             }
 
@@ -785,13 +785,13 @@ impl Parser {
 
         self.expect_token(&TokenKind::LT)?;
 
-        while self.current_token.token_type != TokenKind::GT {
+        while self.current_token.kind != TokenKind::GT {
             let ident = identifier! { self };
             self.next_token();
 
             generics.push(Identifier::new(ident, self.position));
 
-            if self.current_token.token_type == TokenKind::GT {
+            if self.current_token.kind == TokenKind::GT {
                 break;
             }
 

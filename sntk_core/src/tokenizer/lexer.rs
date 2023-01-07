@@ -1,24 +1,15 @@
-use crate::tokenizer::token::{Token, TokenKind};
+use crate::{
+    parser::ast::Position,
+    tokenizer::token::{Token, TokenKind},
+};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Lexer {
     pub input: String,
     pub position: usize,
     pub read_position: usize,
     pub current_char: char,
-    pub current_position: (usize, usize),
-}
-
-impl Default for Lexer {
-    fn default() -> Self {
-        Self {
-            input: String::new(),
-            position: 0,
-            read_position: 0,
-            current_char: '\0',
-            current_position: (1, 0),
-        }
-    }
+    pub current_position: Position,
 }
 
 impl Lexer {

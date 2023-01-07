@@ -1,4 +1,5 @@
 use std::fmt;
+use crate::parser::ast::Position;
 
 #[derive(Debug, PartialEq, Clone)]
 #[rustfmt::skip]
@@ -67,25 +68,25 @@ impl TokenKind {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Token {
-    pub token_type: TokenKind,
-    pub position: (usize, usize),
+    pub kind: TokenKind,
+    pub position: Position,
 }
 
 impl Default for Token {
     fn default() -> Self {
-        Token::new(TokenKind::ILLEGAL(String::from("")), (0, 0))
+        Token::new(TokenKind::ILLEGAL(String::from("")), Position(0, 0))
     }
 }
 
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Token {:?} at {:?}", self.token_type, self.position)
+        write!(f, "Token {:?} at {:?}", self.kind, self.position)
     }
 }
 
 impl Token {
     #[inline]
-    pub fn new(token_type: TokenKind, position: (usize, usize)) -> Self {
-        Token { token_type, position }
+    pub fn new(token_type: TokenKind, position: Position) -> Self {
+        Token { kind: token_type, position }
     }
 }
