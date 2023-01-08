@@ -14,11 +14,12 @@ pub enum CompileError {
 pub struct TypeError {
     pub message: TypeErrorKind,
     pub position: Position,
+    pub debug: usize,
 }
 
 impl TypeError {
-    pub fn new(message: TypeErrorKind, position: Position) -> CompileError {
-        CompileError::TypeError(Self { message, position })
+    pub fn new(message: TypeErrorKind, position: Position, debug: usize) -> CompileError {
+        CompileError::TypeError(Self { message, position, debug })
     }
 }
 
@@ -35,4 +36,5 @@ pub enum TypeErrorKind {
     #[error("`{0}` is not a callable")] NotCallable(String),
     #[error("`{0}` is not a indexable")] NotIndexable(String),
     #[error("Spread parameter must be last")] SpreadParameterMustBeLast,
+    #[error("`if` expression without alternative")] IfExpressionWithoutAlternative
 }

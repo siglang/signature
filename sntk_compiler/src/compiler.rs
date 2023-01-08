@@ -58,10 +58,11 @@ impl Compiler {
                 let value = self.compile_expression(value, *position)?;
                 let value_type = Checker::new(Some(data_type), &self.declares, &self.customs, *position)?.get_type_from_ir_expression(&value)?;
 
-                if data_type == &value_type {
+                if data_type != &value_type {
                     return Err(TypeError::new(
                         TypeErrorKind::ExpectedDataType(data_type.to_string(), value_type.to_string()),
                         *position,
+                        1
                     ));
                 }
 
@@ -163,7 +164,7 @@ impl Compiler {
 
                     if *spread {
                         if index != parameters.len() - 1 {
-                            return Err(TypeError::new(TypeErrorKind::SpreadParameterMustBeLast, *position));
+                            return Err(TypeError::new(TypeErrorKind::SpreadParameterMustBeLast, *position, 2));
                         }
 
                         self.declares.set(
@@ -256,7 +257,7 @@ impl Compiler {
             Expression::StructLiteral(_) => todo!(),
         };
 
-        Checker::new(None, &self.declares, &self.customs, position)?.get_type_from_ir_expression(&expression)?;
+        // Checker::new(None, &self.declares, &self.customs, position)?.get_type_from_ir_expression(&expression)?;
 
         Ok(expression)
     }
