@@ -648,9 +648,9 @@ impl Parser {
         self.next_token();
 
         let consequence = self.parse_block_expression()?;
-        self.next_token();
 
-        let alternative = if self.current_token.kind == TokenKind::Else {
+        let alternative = if self.peek_token.kind == TokenKind::Else {
+            self.next_token();
             self.next_token();
 
             if self.current_token.kind == TokenKind::If {

@@ -74,6 +74,7 @@ pub enum DataTypeKind {
     Fn(FunctionType),
     Generic(Generic),
     Custom(String),
+    Auto,
     Unknown,
 }
 
@@ -87,6 +88,7 @@ impl fmt::Display for DataTypeKind {
             DataTypeKind::Fn(function_type) => write!(f, "{}", function_type),
             DataTypeKind::Generic(generic) => write!(f, "{}", generic),
             DataTypeKind::Custom(name) => write!(f, "{}", name),
+            DataTypeKind::Auto => write!(f, "Auto"),
             DataTypeKind::Unknown => write!(f, "Unknown"),
         }
     }
