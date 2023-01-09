@@ -99,7 +99,7 @@ pub type IdentifierGeneric = Vec<Identifier>;
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionType {
     pub generics: Option<IdentifierGeneric>,
-    pub parameters: Vec<(DataType, bool)>,
+    pub parameters: Vec<(DataType, bool)>, // Vec<(type, is_spread)>
     pub return_type: Box<DataType>,
 }
 

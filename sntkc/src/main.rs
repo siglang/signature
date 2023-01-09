@@ -19,7 +19,7 @@ type F = fn(boolean) -> number[];
 auto x = fn(a: number, b: number, spread c: number) ->
     fn(string) -> F
 {
-    return fn(x: string) -> Foo =>
+    return fn(x: string) -> F =>
             fn(y: boolean) -> number[] => c;
 };
 println(x(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)("foo")(true));
@@ -45,6 +45,8 @@ println(x(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)("foo")(true));
             println!("Compiling Elapsed: {}s", start.elapsed().as_secs_f64());
             start = Instant::now();
 
+            println!("{:#?}", instructions);
+
             let mut ir_interpreter = IrInterpreter::new(instructions);
 
             match ir_interpreter.eval() {
@@ -52,6 +54,6 @@ println(x(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)("foo")(true));
                 Err(error) => println!("{:?}", error),
             }
         }
-        Err(e) => println!("{:?}", e),
+        Err(e) => println!("{e:?}"),
     }
 }

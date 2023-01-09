@@ -109,17 +109,23 @@ impl Checker {
                     None => return Err(TypeError::new(TypeErrorKind::IfExpressionWithoutAlternative, self.position, 100)),
                 };
 
+                // check if condition is boolean
                 if condition_type.data_type == DataTypeKind::Boolean {
+                    // check if consequence and alternative are the same type
                     if consequence_type == alternative_type {
                         Ok(consequence_type)
-                    } else {
+                    }
+                    // if consequence and alternative are not the same type
+                    else {
                         Err(TypeError::new(
                             TypeErrorKind::ExpectedDataType(consequence_type.to_string(), alternative_type.to_string()),
                             self.position,
                             4,
                         ))
                     }
-                } else {
+                }
+                // if condition is not boolean
+                else {
                     Err(TypeError::new(
                         TypeErrorKind::ExpectedDataType(DataTypeKind::Boolean.to_string(), condition_type.to_string()),
                         self.position,
@@ -137,6 +143,7 @@ impl Checker {
                         for (index, ((parameter, spread), argument)) in parameters.iter().zip(arguments.iter()).enumerate() {
                             let argument_type = self.get_type_from_ir_expression(argument)?;
 
+                            // if parameter is spread
                             if *spread {
                                 let parameter = DataType::new(DataTypeKind::Array(Box::new(parameter.clone())), self.position);
                                 if parameter != argument_type {
@@ -151,6 +158,7 @@ impl Checker {
                                 break;
                             }
 
+                            // if parameter and argument are not the same type
                             if parameter != &argument_type {
                                 return Err(TypeError::new(
                                     TypeErrorKind::ExpectedDataType(parameter.to_string(), argument_type.to_string()),
@@ -160,6 +168,7 @@ impl Checker {
                             }
                         }
 
+                        // if parameters and arguments are not the same length
                         if parameters.len() != arguments_len {
                             return Err(TypeError::new(
                                 TypeErrorKind::ExpectedArguments(parameters.len(), arguments.len()),
@@ -240,12 +249,15 @@ impl Checker {
                 LiteralValue::Array(elements) => {
                     let mut element_type = DataTypeKind::Unknown;
 
+                    // check elements
                     for element in elements {
                         let data_type = self.get_type_from_ir_expression(element)?;
 
                         if element_type == DataTypeKind::Unknown {
-                            element_type = data_type.data_type;
-                        } else if element_type != data_type.data_type {
+                            element_type = data_type.data_type; // default element type
+                        }
+                        // if element type is not the same as the default element type
+                        else if element_type != data_type.data_type {
                             return Err(TypeError::new(
                                 TypeErrorKind::ExpectedDataType(element_type.to_string(), data_type.to_string()),
                                 self.position,
@@ -343,4 +355,201 @@ pub fn custom_data_type(data_type: &DataType, customs: &CustomTypes) -> CompileR
         ),
         _ => data_type_.clone(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Checker, CustomTypes, DeclaredTypes};
+    use sntk_core::{
+        parser::ast::{DataType, DataTypeKind, FunctionType, Position},
+        tokenizer::token::TokenKind,
+    };
+    use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralValue};
+    use std::collections::HashMap;
+
+    const POSITION: Position = Position(1, 0);
+
+    #[test]
+    fn identifier_type_test() {
+        let declarations = DeclaredTypes {
+            types: HashMap::from([("a".to_string(), DataType::new(DataTypeKind::Number, POSITION))]),
+            parent: Some(Box::new(DeclaredTypes {
+                types: HashMap::from([("a".to_string(), DataType::new(DataTypeKind::String, POSITION))]),
+                parent: None,
+            })),
+        };
+
+        assert_eq!(
+            Checker::new(None, &declarations, &CustomTypes::new(None), POSITION)
+                .unwrap()
+                .get_type_from_ir_expression(&IrExpression::Identifier("a".to_string()))
+                .unwrap(),
+            DataType::new(DataTypeKind::Number, POSITION)
+        );
+    }
+
+    #[test]
+    fn block_return_type_test() {
+        let declarations = DeclaredTypes {
+            types: HashMap::from([
+                ("a".to_string(), DataType::new(DataTypeKind::Number, POSITION)),
+                ("b".to_string(), DataType::new(DataTypeKind::Number, POSITION)),
+            ]),
+            parent: None,
+        };
+
+        assert_eq!(
+            Checker::new(None, &declarations, &CustomTypes::new(None), POSITION)
+                .unwrap()
+                .get_type_from_ir_expression(&IrExpression::Block(vec![
+                    Instruction::new(
+                        InstructionType::StoreName("a".to_string(), IrExpression::Literal(LiteralValue::Number(5.))),
+                        POSITION
+                    ),
+                    Instruction::new(
+                        InstructionType::StoreName("b".to_string(), IrExpression::Literal(LiteralValue::Number(5.))),
+                        POSITION
+                    ),
+                    Instruction::new(
+                        InstructionType::Return(IrExpression::Infix(
+                            Box::new(IrExpression::Identifier("a".to_string())),
+                            TokenKind::Plus,
+                            Box::new(IrExpression::Identifier("b".to_string()))
+                        )),
+                        POSITION
+                    )
+                ]))
+                .unwrap(),
+            DataType::new(DataTypeKind::Number, POSITION)
+        );
+    }
+
+    #[test]
+    fn if_return_type_test() {
+        let declarations = DeclaredTypes {
+            types: HashMap::from([
+                ("a".to_string(), DataType::new(DataTypeKind::Number, POSITION)),
+                ("b".to_string(), DataType::new(DataTypeKind::Number, POSITION)),
+            ]),
+            parent: None,
+        };
+
+        let consequence = IrExpression::Block(vec![Instruction::new(
+            InstructionType::Return(IrExpression::Literal(LiteralValue::Number(5.))),
+            POSITION,
+        )]);
+        let alternative = IrExpression::Block(vec![Instruction::new(
+            InstructionType::Return(IrExpression::Literal(LiteralValue::Number(10.))),
+            POSITION,
+        )]);
+
+        assert_eq!(
+            Checker::new(None, &declarations, &CustomTypes::new(None), POSITION)
+                .unwrap()
+                .get_type_from_ir_expression(&IrExpression::If(
+                    Box::new(IrExpression::Literal(LiteralValue::Boolean(true))),
+                    Box::new(consequence),
+                    Box::new(Some(alternative))
+                ))
+                .unwrap(),
+            DataType::new(DataTypeKind::Number, POSITION)
+        );
+    }
+
+    #[test]
+    fn call_return_type_test() {
+        let declarations = DeclaredTypes {
+            types: HashMap::from([(
+                "a".to_string(),
+                DataType::new(
+                    DataTypeKind::Fn(FunctionType {
+                        generics: None,
+                        parameters: vec![
+                            (DataType::new(DataTypeKind::Number, POSITION), false),
+                            (DataType::new(DataTypeKind::String, POSITION), true),
+                        ],
+                        return_type: Box::new(DataType::new(DataTypeKind::Number, POSITION)),
+                    }),
+                    POSITION,
+                ),
+            )]),
+            parent: None,
+        };
+
+        assert_eq!(
+            Checker::new(None, &declarations, &CustomTypes::new(None), POSITION)
+                .unwrap()
+                .get_type_from_ir_expression(&IrExpression::Call(
+                    Box::new(IrExpression::Identifier("a".to_string())),
+                    vec![
+                        IrExpression::Literal(LiteralValue::Number(5.)),
+                        IrExpression::Literal(LiteralValue::Array(vec![
+                            IrExpression::Literal(LiteralValue::String("foo".to_string())),
+                            IrExpression::Literal(LiteralValue::String("bar".to_string())),
+                            IrExpression::Literal(LiteralValue::String("baz".to_string())),
+                        ]))
+                    ]
+                ))
+                .unwrap(),
+            DataType::new(DataTypeKind::Number, POSITION)
+        );
+    }
+
+    #[test]
+    fn index_type() {
+        assert_eq!(
+            Checker::new(None, &DeclaredTypes::new(None), &CustomTypes::new(None), POSITION)
+                .unwrap()
+                .get_type_from_ir_expression(&IrExpression::Index(
+                    Box::new(IrExpression::Literal(LiteralValue::Array(vec![
+                        IrExpression::Literal(LiteralValue::Number(5.)),
+                        IrExpression::Literal(LiteralValue::Number(10.)),
+                        IrExpression::Literal(LiteralValue::Number(15.)),
+                    ]))),
+                    Box::new(IrExpression::Literal(LiteralValue::Number(1.)))
+                ))
+                .unwrap(),
+            DataType::new(DataTypeKind::Number, POSITION)
+        );
+    }
+
+    #[test]
+    fn prefix_type() {
+        assert_eq!(
+            Checker::new(None, &DeclaredTypes::new(None), &CustomTypes::new(None), POSITION)
+                .unwrap()
+                .get_type_from_ir_expression(&IrExpression::Prefix(
+                    TokenKind::Minus,
+                    Box::new(IrExpression::Literal(LiteralValue::Number(5.)))
+                ))
+                .unwrap(),
+            DataType::new(DataTypeKind::Number, POSITION)
+        );
+    }
+
+    #[test]
+    fn infix_type() {
+        assert_eq!(
+            Checker::new(None, &DeclaredTypes::new(None), &CustomTypes::new(None), POSITION)
+                .unwrap()
+                .get_type_from_ir_expression(&IrExpression::Infix(
+                    Box::new(IrExpression::Literal(LiteralValue::Number(5.))),
+                    TokenKind::EQ,
+                    Box::new(IrExpression::Literal(LiteralValue::Number(10.)))
+                ))
+                .unwrap(),
+            DataType::new(DataTypeKind::Boolean, POSITION)
+        );
+    }
+
+    #[test]
+    fn literal_type_test() {
+        assert_eq!(
+            Checker::new(None, &DeclaredTypes::new(None), &CustomTypes::new(None), POSITION)
+                .unwrap()
+                .get_type_from_ir_expression(&IrExpression::Literal(LiteralValue::Number(10.0)))
+                .unwrap(),
+            DataType::new(DataTypeKind::Number, POSITION)
+        );
+    }
 }
