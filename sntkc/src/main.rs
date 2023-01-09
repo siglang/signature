@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 
-use sntk_compiler::compiler::Compiler;
+use sntk_compiler::{compiler::Compiler, CompileError};
 use sntk_core::{
     parser::parser::Parser,
     tokenizer::{lexer::Lexer, token::TokenKind},
@@ -45,8 +45,6 @@ println(x(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)("foo")(true));
             println!("Compiling Elapsed: {}s", start.elapsed().as_secs_f64());
             start = Instant::now();
 
-            println!("{:#?}", instructions);
-
             let mut ir_interpreter = IrInterpreter::new(instructions);
 
             match ir_interpreter.eval() {
@@ -54,6 +52,6 @@ println(x(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)("foo")(true));
                 Err(error) => println!("{:?}", error),
             }
         }
-        Err(e) => println!("{e:?}"),
+        Err(e) => println!("{e}"),
     }
 }

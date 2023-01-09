@@ -2,12 +2,22 @@ pub mod checker;
 pub mod compiler;
 
 use sntk_core::parser::{ast::Position, ParsingError};
+use std::fmt;
 use thiserror::Error;
 
 #[derive(Debug, Clone)]
 pub enum CompileError {
     ParsingError(Vec<ParsingError>),
     TypeError(TypeError),
+}
+
+impl fmt::Display for CompileError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ParsingError(errors) => write!(f, "{}", errors.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n")),
+            Self::TypeError(TypeError { message, position, .. }) => write!(f, "{}: {}", position, message),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

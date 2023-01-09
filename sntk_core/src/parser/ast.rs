@@ -172,6 +172,12 @@ impl PartialEq for Position {
     }
 }
 
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "[{}:{}]", self.0, self.1)
+    }
+}
+
 macro_rules! make_struct {
     ($name:ident => $( $field:ident: $type:ty ),*) => {
         #[derive(Debug, PartialEq, Clone)]

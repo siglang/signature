@@ -1,4 +1,5 @@
 use self::ast::Position;
+use std::fmt;
 use thiserror::Error;
 
 pub mod ast;
@@ -8,6 +9,12 @@ pub mod parser;
 pub struct ParsingError {
     pub message: ParsingErrorKind,
     pub position: Position,
+}
+
+impl fmt::Display for ParsingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.position, self.message)
+    }
 }
 
 impl ParsingError {
