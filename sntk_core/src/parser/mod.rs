@@ -1,9 +1,10 @@
-use self::ast::Position;
-use std::fmt;
-use thiserror::Error;
-
 pub mod ast;
 pub mod parser;
+
+pub use ast::*;
+pub use parser::*;
+use std::fmt;
+use thiserror::Error;
 
 #[derive(Debug, Clone)]
 pub struct ParsingError {

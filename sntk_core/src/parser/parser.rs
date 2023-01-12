@@ -1,18 +1,12 @@
 use crate::{
     identifier,
     parser::{
-        ast::{
-            ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DataTypeKind, DeclareStatement, Expression,
-            ExpressionStatement, FunctionLiteral, FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, IndexExpression,
-            InfixExpression, LetStatement, NumberLiteral, Parameter, Position, PrefixExpression, Priority, Program, ReturnStatement, Statement,
-            StringLiteral, StructLiteral, StructStatement, TypeStatement, TypeofExpression,
-        },
-        ParsingError, ParsingErrorKind,
+        ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DataTypeKind, DeclareStatement, Expression,
+        ExpressionStatement, FunctionLiteral, FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, IndexExpression, InfixExpression,
+        LetStatement, NumberLiteral, Parameter, ParsingError, ParsingErrorKind, Position, PrefixExpression, Priority, Program, ReturnStatement,
+        Statement, StringLiteral, StructLiteral, StructStatement, TypeStatement, TypeofExpression,
     },
-    tokenizer::{
-        lexer::Lexer,
-        token::{Token, TokenKind},
-    },
+    tokenizer::{Lexer, Token, TokenKind},
 };
 
 pub type ParseResult<T> = Result<T, ParsingError>;
@@ -370,12 +364,8 @@ impl Parser {
             ));
         }
 
-        let mut left_expression = left_expression.ok_or_else(|| {
-            ParsingError::new(
-                ParsingErrorKind::UnexpectedToken(self.current_token.kind.to_string()),
-                self.position,
-            )
-        })?;
+        let mut left_expression = left_expression
+            .ok_or_else(|| ParsingError::new(ParsingErrorKind::UnexpectedToken(self.current_token.kind.to_string()), self.position))?;
 
         while !self.peek_token(&TokenKind::Semicolon) && priority < &self.peek_priority() {
             self.next_token();

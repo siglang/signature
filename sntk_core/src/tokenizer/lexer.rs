@@ -1,6 +1,6 @@
 use crate::{
-    parser::ast::Position,
-    tokenizer::token::{Token, TokenKind},
+    parser::Position,
+    tokenizer::{Token, TokenKind},
 };
 
 #[derive(Debug, Default)]

@@ -1,4 +1,4 @@
-use crate::{parser::ParsingError, tokenizer::token::TokenKind};
+use crate::{tokenizer::TokenKind, parser::ParsingError};
 use std::fmt;
 
 #[derive(Debug, Default)]

@@ -1,5 +1,5 @@
+use crate::parser::Position;
 use std::fmt;
-use crate::parser::ast::Position;
 
 #[derive(Debug, PartialEq, Clone)]
 #[rustfmt::skip]
