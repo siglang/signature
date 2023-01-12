@@ -1,4 +1,4 @@
-use sntk_core::parser::ast::Position;
+use sntk_core::parser::Position;
 use thiserror::Error;
 
 pub mod builtin;

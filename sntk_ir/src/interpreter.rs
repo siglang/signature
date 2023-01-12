@@ -3,7 +3,7 @@ use crate::{
     instruction::{Instruction, InstructionType, IrExpression, LiteralValue},
     RuntimeError, RuntimeErrorKind,
 };
-use sntk_core::{parser::ast::Position, tokenizer::token::TokenKind};
+use sntk_core::{parser::Position, tokenizer::TokenKind};
 use std::{collections::HashMap, fmt};
 
 #[derive(Clone, PartialEq)]

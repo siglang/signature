@@ -1,7 +1,7 @@
 use crate::interpreter::IrEnvironment;
 use sntk_core::{
-    parser::ast::{DataTypeKind, Parameter, Position},
-    tokenizer::token::TokenKind,
+    parser::{DataTypeKind, Parameter, Position},
+    tokenizer::TokenKind,
 };
 use std::fmt;
 
