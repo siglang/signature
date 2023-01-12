@@ -2,7 +2,7 @@ use crate::{
     checker::{custom_data_type, Checker, CustomTypes, DeclaredTypes},
     CompileError, TypeError, TypeErrorKind,
 };
-use sntk_core::parser::ast::{
+use sntk_core::parser::{
     ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DataTypeKind, DeclareStatement, Expression,
     ExpressionStatement, FunctionLiteral, Identifier, IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, Parameter,
     Position, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral, TypeStatement, TypeofExpression,

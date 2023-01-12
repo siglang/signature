@@ -1,7 +1,7 @@
 pub mod checker;
 pub mod compiler;
 
-use sntk_core::parser::{ast::Position, ParsingError};
+use sntk_core::parser::{ParsingError, Position};
 use std::fmt;
 use thiserror::Error;
 
