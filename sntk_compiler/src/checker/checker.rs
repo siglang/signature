@@ -91,7 +91,11 @@ impl Checker {
         let result = match expression.clone() {
             IrExpression::Identifier(identifier) => match self.declares.get(identifier.clone()) {
                 Some(data_type) => Ok(data_type),
-                None => Err(TypeError::new(TypeErrorKind::UndefinedIdentifier(identifier), self.position, 3)),
+                None => Err(TypeError::new::<&str>(
+                    TypeErrorKind::UndefinedIdentifier(identifier),
+                    None,
+                    self.position,
+                )),
             },
             IrExpression::Literal(literal) => self.get_type_from_literal_value(&literal),
             IrExpression::Block(block) => self.get_type_from_ir_expression(match block.last() {
@@ -106,7 +110,7 @@ impl Checker {
                 let consequence_type = self.get_type_from_ir_expression(&consequence)?;
                 let alternative_type = match *alternative {
                     Some(alternative) => self.get_type_from_ir_expression(&alternative)?,
-                    None => return Err(TypeError::new(TypeErrorKind::IfExpressionWithoutAlternative, self.position, 100)),
+                    None => return Err(TypeError::new::<&str>(TypeErrorKind::IfExpressionWithoutAlternative, None, self.position)),
                 };
 
                 // check if condition is boolean
@@ -117,19 +121,19 @@ impl Checker {
                     }
                     // if consequence and alternative are not the same type
                     else {
-                        Err(TypeError::new(
+                        Err(TypeError::new::<&str>(
                             TypeErrorKind::ExpectedDataType(consequence_type.to_string(), alternative_type.to_string()),
+                            None,
                             self.position,
-                            4,
                         ))
                     }
                 }
                 // if condition is not boolean
                 else {
-                    Err(TypeError::new(
+                    Err(TypeError::new::<&str>(
                         TypeErrorKind::ExpectedDataType(DataTypeKind::Boolean.to_string(), condition_type.to_string()),
+                        None,
                         self.position,
-                        5,
                     ))
                 }
             }
@@ -147,10 +151,10 @@ impl Checker {
                             if *spread {
                                 let parameter = DataType::new(DataTypeKind::Array(Box::new(parameter.clone())), self.position);
                                 if parameter != argument_type {
-                                    return Err(TypeError::new(
+                                    return Err(TypeError::new::<&str>(
                                         TypeErrorKind::ExpectedDataType(parameter.to_string(), argument_type.to_string()),
+                                        None,
                                         self.position,
-                                        6,
                                     ));
                                 }
 
@@ -160,26 +164,30 @@ impl Checker {
 
                             // if parameter and argument are not the same type
                             if parameter != &argument_type {
-                                return Err(TypeError::new(
+                                return Err(TypeError::new::<&str>(
                                     TypeErrorKind::ExpectedDataType(parameter.to_string(), argument_type.to_string()),
+                                    None,
                                     self.position,
-                                    7,
                                 ));
                             }
                         }
 
                         // if parameters and arguments are not the same length
                         if parameters.len() != arguments_len {
-                            return Err(TypeError::new(
+                            return Err(TypeError::new::<&str>(
                                 TypeErrorKind::ExpectedArguments(parameters.len(), arguments.len()),
+                                None,
                                 self.position,
-                                8,
                             ));
                         }
 
                         Ok(*return_type)
                     }
-                    _ => Err(TypeError::new(TypeErrorKind::NotCallable(function_type.to_string()), self.position, 9)),
+                    _ => Err(TypeError::new::<&str>(
+                        TypeErrorKind::NotCallable(function_type.to_string()),
+                        None,
+                        self.position,
+                    )),
                 }
             }
             IrExpression::Index(left, index) => {
@@ -191,18 +199,22 @@ impl Checker {
                         if index_type.data_type == DataTypeKind::Number {
                             Ok(*data_type)
                         } else {
-                            Err(TypeError::new(
+                            Err(TypeError::new::<&str>(
                                 TypeErrorKind::ExpectedDataType(DataTypeKind::Number.to_string(), index_type.to_string()),
+                                None,
                                 self.position,
-                                10,
                             ))
                         }
                     }
-                    _ => Err(TypeError::new(TypeErrorKind::NotIndexable(left_type.to_string()), self.position, 11)),
+                    _ => Err(TypeError::new::<&str>(
+                        TypeErrorKind::NotIndexable(left_type.to_string()),
+                        None,
+                        self.position,
+                    )),
                 }
             }
             IrExpression::Prefix(_, expression) => self.get_type_from_ir_expression(&expression),
-            IrExpression::Infix(left, operator, right) => Ok({
+            IrExpression::Infix(operator, left, right) => Ok({
                 let left_type = self.get_type_from_ir_expression(&left)?;
                 let right_type = self.get_type_from_ir_expression(&right)?;
 
@@ -212,10 +224,10 @@ impl Checker {
                             if left_type.data_type == DataTypeKind::Number && right_type.data_type == DataTypeKind::Number {
                                 Ok(DataTypeKind::Number)
                             } else {
-                                Err(TypeError::new(
+                                Err(TypeError::new::<&str>(
                                     TypeErrorKind::ExpectedDataType(DataTypeKind::Number.to_string(), left_type.to_string()),
+                                    None,
                                     self.position,
-                                    12,
                                 ))
                             }
                         }
@@ -223,10 +235,10 @@ impl Checker {
                             if left_type == right_type {
                                 Ok(DataTypeKind::Boolean)
                             } else {
-                                Err(TypeError::new(
+                                Err(TypeError::new::<&str>(
                                     TypeErrorKind::ExpectedDataType(left_type.to_string(), right_type.to_string()),
+                                    None,
                                     self.position,
-                                    13,
                                 ))
                             }
                         }
@@ -258,10 +270,10 @@ impl Checker {
                         }
                         // if element type is not the same as the default element type
                         else if element_type != data_type.data_type {
-                            return Err(TypeError::new(
+                            return Err(TypeError::new::<&str>(
                                 TypeErrorKind::ExpectedDataType(element_type.to_string(), data_type.to_string()),
+                                None,
                                 self.position,
-                                14,
                             ));
                         }
                     }
@@ -276,19 +288,19 @@ impl Checker {
                             }
 
                             if data_type.data_type != DataTypeKind::Array(Box::new(DataType::new(element_type.clone(), self.position))) {
-                                return Err(TypeError::new(
+                                return Err(TypeError::new::<&str>(
                                     TypeErrorKind::ExpectedDataType(
                                         data_type.to_string(),
                                         DataTypeKind::Array(Box::new(DataType::new(element_type, self.position))).to_string(),
                                     ),
+                                    None,
                                     self.position,
-                                    15,
                                 ));
                             }
                         }
                         None => {
                             if element_type == DataTypeKind::Unknown {
-                                return Err(TypeError::new(TypeErrorKind::UnknownArrayType, self.position, 16));
+                                return Err(TypeError::new::<&str>(TypeErrorKind::UnknownArrayType, None, self.position));
                             }
                         }
                     }
@@ -308,19 +320,19 @@ impl Checker {
                     });
 
                     if return_type.clone() == DataTypeKind::Auto || return_type.clone() != block_return_type.data_type {
-                        return Err(TypeError::new(
+                        return Err(TypeError::new::<&str>(
                             TypeErrorKind::ExpectedDataType(return_type.to_string(), block_return_type.to_string()),
+                            None,
                             self.position,
-                            17,
                         ));
                     }
 
                     if let Some(data_type) = &self.data_type {
                         if data_type.data_type != function_type {
-                            return Err(TypeError::new(
+                            return Err(TypeError::new::<&str>(
                                 TypeErrorKind::ExpectedDataType(data_type.to_string(), function_type.to_string()),
+                                None,
                                 self.position,
-                                18,
                             ));
                         }
                     }
@@ -339,7 +351,7 @@ pub fn custom_data_type(data_type: &DataType, customs: &CustomTypes) -> CompileR
     Ok(match &data_type {
         DataTypeKind::Custom(name) => match customs.get(name.clone()) {
             Some(custom) => custom,
-            None => return Err(TypeError::new(TypeErrorKind::UndefinedType(name.clone()), *position, 19)),
+            None => return Err(TypeError::new::<&str>(TypeErrorKind::UndefinedType(name.clone()), None, *position)),
         },
         DataTypeKind::Fn(FunctionType {
             generics,

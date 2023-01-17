@@ -53,8 +53,8 @@ mod tests {
                     ),
                     Instruction::new(
                         InstructionType::Return(IrExpression::Infix(
-                            Box::new(IrExpression::Identifier("a".to_string())),
                             TokenKind::Plus,
+                            Box::new(IrExpression::Identifier("a".to_string())),
                             Box::new(IrExpression::Identifier("b".to_string()))
                         )),
                         POSITION
@@ -174,8 +174,8 @@ mod tests {
             Checker::new(None, &DeclaredTypes::new(None), &CustomTypes::new(None), POSITION)
                 .unwrap()
                 .get_type_from_ir_expression(&IrExpression::Infix(
-                    Box::new(IrExpression::Literal(LiteralValue::Number(5.))),
                     TokenKind::EQ,
+                    Box::new(IrExpression::Literal(LiteralValue::Number(5.))),
                     Box::new(IrExpression::Literal(LiteralValue::Number(10.)))
                 ))
                 .unwrap(),

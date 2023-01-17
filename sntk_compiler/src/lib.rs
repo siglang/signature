@@ -11,7 +11,7 @@ pub enum CompileError {
     TypeError(TypeError),
 }
 
-impl fmt::Display for CompileError {
+impl<'help> fmt::Display for CompileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ParsingError(errors) => write!(f, "{}", errors.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n")),
@@ -23,13 +23,17 @@ impl fmt::Display for CompileError {
 #[derive(Debug, Clone)]
 pub struct TypeError {
     pub message: TypeErrorKind,
+    pub help: Option<String>,
     pub position: Position,
-    pub debug: usize,
 }
 
 impl TypeError {
-    pub fn new(message: TypeErrorKind, position: Position, debug: usize) -> CompileError {
-        CompileError::TypeError(Self { message, position, debug })
+    pub fn new<T>(message: TypeErrorKind, help: Option<T>, position: Position) -> CompileError
+    where
+        T: ToString + 'static,
+    {
+        let help = help.map(|help| help.to_string());
+        CompileError::TypeError(Self { message, help, position })
     }
 }
 
