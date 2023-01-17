@@ -215,7 +215,7 @@ impl IrInterpreter {
                     (operator, _) => Err(RuntimeError::new(RuntimeErrorKind::InvalidOperator(operator.to_string()), *position)),
                 }
             }
-            IrExpression::Infix(left, operator, right) => {
+            IrExpression::Infix(operator, left, right) => {
                 let (left, right) = (self.eval_expression(left, position)?, self.eval_expression(right, position)?);
 
                 match (left, right) {

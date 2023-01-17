@@ -54,7 +54,7 @@ pub enum IrExpression {
     Call(Box<IrExpression>, Vec<IrExpression>),                          /* function, arguments */
     Index(Box<IrExpression>, Box<IrExpression>),                         /* left, index */
     Prefix(TokenKind, Box<IrExpression>),                                /* operator, right */
-    Infix(Box<IrExpression>, TokenKind, Box<IrExpression>),              /* left, operator, right */
+    Infix(TokenKind, Box<IrExpression>, Box<IrExpression>),              /* operator, left, right */
 }
 
 impl fmt::Display for IrExpression {
