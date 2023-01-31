@@ -1,6 +1,6 @@
 use crate::interpreter::IrEnvironment;
 use sntk_core::{
-    parser::{DataTypeKind, Parameter, Position},
+    parser::{DataTypeKind, Parameter, ParameterKind, Position},
     tokenizer::TokenKind,
 };
 use std::fmt;
@@ -135,10 +135,12 @@ impl fmt::Display for LiteralValue {
                     "fn({}) -> {}",
                     parameters
                         .iter()
-                        .map(|parameter| if parameter.spread {
-                            format!("spread {}", parameter.name.value)
-                        } else {
-                            parameter.name.value.to_string()
+                        .map(|parameter| {
+                            let name = parameter.name.value.clone();
+                            match parameter.kind {
+                                ParameterKind::Normal => name,
+                                ParameterKind::Spread => format!("...{}", name),
+                            }
                         })
                         .collect::<String>(),
                     data_type
