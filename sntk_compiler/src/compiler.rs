@@ -5,7 +5,7 @@ use crate::{
 use sntk_core::parser::{
     ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DataTypeKind, DeclareStatement, Expression,
     ExpressionStatement, FunctionLiteral, Identifier, IfExpression, IndexExpression, InfixExpression, LetStatement, NumberLiteral, Parameter,
-    PrefixExpression, Program, ReturnStatement, Statement, StringLiteral, TypeStatement, TypeofExpression,
+    ParameterKind, PrefixExpression, Program, ReturnStatement, Statement, StringLiteral, TypeStatement, TypeofExpression,
 };
 use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralValue};
 
@@ -156,8 +156,8 @@ impl Compiler {
                     _ => unreachable!(),
                 };
 
-                for (index, (argument, (_, spread))) in arguments.iter().zip(function_type.parameters.iter()).enumerate() {
-                    if *spread {
+                for (index, (argument, (_, kind))) in arguments.iter().zip(function_type.parameters.iter()).enumerate() {
+                    if let ParameterKind::Spread = kind {
                         compiled_arguments.push(self.compile_expression(&Expression::ArrayLiteral(ArrayLiteral {
                             elements: arguments[index..].to_vec(),
                             position: *position,
@@ -216,39 +216,42 @@ impl Compiler {
                     parameter @ Parameter {
                         name,
                         data_type,
-                        spread,
+                        kind,
                         position,
                     },
                 ) in parameters.iter().enumerate()
                 {
                     let data_type = custom_data_type(data_type, &self.customs)?;
 
-                    if *spread {
-                        if index != parameters.len() - 1 {
-                            return Err(TypeError::new(
-                                TypeErrorKind::SpreadParameterMustBeLast,
-                                Some("Spread parameter must be last".to_string()),
-                                *position,
-                            ));
+                    match kind {
+                        ParameterKind::Normal => {
+                            self.declares.set(name.value.clone(), data_type);
+                            new_parameters.push(parameter.clone());
                         }
+                        ParameterKind::Spread => {
+                            if index != parameters.len() - 1 {
+                                return Err(TypeError::new(
+                                    TypeErrorKind::SpreadParameterMustBeLast,
+                                    Some("Spread parameter must be last".to_string()),
+                                    *position,
+                                ));
+                            }
 
-                        self.declares.set(
-                            name.value.clone(),
-                            DataType::new(DataTypeKind::Array(Box::new(data_type.clone())), *position),
-                        );
+                            self.declares.set(
+                                name.value.clone(),
+                                DataType::new(DataTypeKind::Array(Box::new(data_type.clone())), *position),
+                            );
 
-                        new_parameters.push(Parameter {
-                            name: name.clone(),
-                            data_type,
-                            spread: *spread,
-                            position: *position,
-                        });
+                            new_parameters.push(Parameter {
+                                name: name.clone(),
+                                data_type,
+                                kind: kind.clone(),
+                                position: *position,
+                            });
 
-                        break;
-                    } else {
-                        self.declares.set(name.value.clone(), data_type);
-                        new_parameters.push(parameter.clone());
-                    }
+                            break;
+                        }
+                    };
                 }
                 IrExpression::Literal(LiteralValue::Function(
                     new_parameters,

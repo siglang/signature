@@ -2,7 +2,10 @@
 mod tests {
     use crate::checker::checker::{Checker, CustomTypes, DeclaredTypes};
     use sntk_core::{
-        parser::ast::{DataType, DataTypeKind, FunctionType, Position},
+        parser::{
+            ast::{DataType, DataTypeKind, FunctionType, Position},
+            ParameterKind,
+        },
         tokenizer::token::TokenKind,
     };
     use sntk_ir::instruction::{Instruction, InstructionType, IrExpression, LiteralValue};
@@ -106,8 +109,8 @@ mod tests {
                     DataTypeKind::Fn(FunctionType {
                         generics: None,
                         parameters: vec![
-                            (DataType::new(DataTypeKind::Number, POSITION), false),
-                            (DataType::new(DataTypeKind::String, POSITION), true),
+                            (DataType::new(DataTypeKind::Number, POSITION), ParameterKind::Normal),
+                            (DataType::new(DataTypeKind::String, POSITION), ParameterKind::Spread),
                         ],
                         return_type: Box::new(DataType::new(DataTypeKind::Number, POSITION)),
                     }),

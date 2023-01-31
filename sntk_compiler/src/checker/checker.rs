@@ -1,6 +1,6 @@
 use crate::{compiler::CompileResult, TypeError, TypeErrorKind};
 use sntk_core::{
-    parser::{DataType, DataTypeKind, FunctionType, Parameter, Position},
+    parser::{DataType, DataTypeKind, FunctionType, Parameter, ParameterKind, Position},
     tokenizer::TokenKind,
 };
 use sntk_ir::instruction::{InstructionType, IrExpression, LiteralValue};
@@ -144,11 +144,10 @@ impl Checker {
                     DataTypeKind::Fn(FunctionType { parameters, return_type, .. }) => {
                         let mut arguments_len = arguments.len();
 
-                        for (index, ((parameter, spread), argument)) in parameters.iter().zip(arguments.iter()).enumerate() {
+                        for (index, ((parameter, kind), argument)) in parameters.iter().zip(arguments.iter()).enumerate() {
                             let argument_type = self.get_type_from_ir_expression(argument)?;
 
-                            // if parameter is spread
-                            if *spread {
+                            if let ParameterKind::Spread = kind {
                                 let parameter = DataType::new(DataTypeKind::Array(Box::new(parameter.clone())), self.position);
                                 if parameter != argument_type {
                                     return Err(TypeError::new::<&str>(
@@ -314,7 +313,7 @@ impl Checker {
                         generics: None,
                         parameters: parameters
                             .iter()
-                            .map(|Parameter { data_type, spread, .. }| (data_type.clone(), *spread))
+                            .map(|Parameter { data_type, kind, .. }| (data_type.clone(), *kind))
                             .collect(),
                         return_type: block_return_type.clone(),
                     });
