@@ -3,8 +3,8 @@ use crate::{
     parser::{
         ArrayLiteral, AutoStatement, BlockExpression, BooleanLiteral, CallExpression, DataType, DataTypeKind, DeclareStatement, Expression,
         ExpressionStatement, FunctionLiteral, FunctionType, Generic, Identifier, IdentifierGeneric, IfExpression, IndexExpression, InfixExpression,
-        LetStatement, NumberLiteral, Parameter, ParsingError, ParsingErrorKind, Position, PrefixExpression, Priority, Program, ReturnStatement,
-        Statement, StringLiteral, StructLiteral, StructStatement, TypeStatement, TypeofExpression,
+        LetStatement, NumberLiteral, Parameter, ParameterKind, ParsingError, ParsingErrorKind, Position, PrefixExpression, Priority, Program,
+        ReturnStatement, Statement, StringLiteral, StructLiteral, StructStatement, TypeStatement, TypeofExpression,
     },
     tokenizer::{Lexer, Token, TokenKind},
 };
@@ -569,11 +569,11 @@ impl Parser {
         let mut parameters = Vec::new();
 
         while self.current_token.kind != TokenKind::RParen {
-            let is_spread = if self.current_token.kind == TokenKind::Spread {
+            let parameter_kind = if self.current_token.kind == TokenKind::Spread {
                 self.next_token();
-                true
+                ParameterKind::Spread
             } else {
-                false
+                ParameterKind::Normal
             };
 
             if let TokenKind::IDENT(identifier) = self.current_token.kind.clone() {
@@ -585,7 +585,7 @@ impl Parser {
                 parameters.push(Parameter::new(
                     Identifier::new(identifier.clone(), self.position),
                     data_type,
-                    is_spread,
+                    parameter_kind,
                     self.position,
                 ));
             } else {
@@ -723,14 +723,14 @@ impl Parser {
         let mut parameters = Vec::new();
 
         while self.current_token.kind != TokenKind::RParen {
-            let spread = if self.current_token.kind == TokenKind::Spread {
+            let kind = if self.current_token.kind == TokenKind::Spread {
                 self.next_token();
-                true
+                ParameterKind::Spread
             } else {
-                false
+                ParameterKind::Normal
             };
 
-            parameters.push((self.parse_data_type()?, spread));
+            parameters.push((self.parse_data_type()?, kind));
 
             if self.current_token.kind == TokenKind::RParen {
                 break;

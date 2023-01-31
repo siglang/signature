@@ -1,4 +1,4 @@
-use crate::{tokenizer::TokenKind, parser::ParsingError};
+use crate::{parser::ParsingError, tokenizer::TokenKind};
 use std::fmt;
 
 #[derive(Debug, Default)]
@@ -81,9 +81,7 @@ pub enum DataTypeKind {
 impl fmt::Display for DataTypeKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
-            DataTypeKind::Number => write!(f, "Number"),
-            DataTypeKind::String => write!(f, "String"),
-            DataTypeKind::Boolean => write!(f, "Boolean"),
+            DataTypeKind::Number | DataTypeKind::String | DataTypeKind::Boolean => write!(f, "{}", self),
             DataTypeKind::Array(data_type) => write!(f, "{}[]", data_type),
             DataTypeKind::Fn(function_type) => write!(f, "{}", function_type),
             DataTypeKind::Generic(generic) => write!(f, "{}", generic),
@@ -99,13 +97,13 @@ pub type IdentifierGeneric = Vec<Identifier>;
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionType {
     pub generics: Option<IdentifierGeneric>,
-    pub parameters: Vec<(DataType, bool)>, // Vec<(type, is_spread)>
+    pub parameters: Vec<(DataType, ParameterKind)>,
     pub return_type: Box<DataType>,
 }
 
 impl FunctionType {
     #[inline]
-    pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<(DataType, bool)>, return_type: DataType) -> Self {
+    pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<(DataType, ParameterKind)>, return_type: DataType) -> Self {
         FunctionType {
             generics,
             parameters,
@@ -239,17 +237,23 @@ make_struct! { StructLiteral => name: Identifier, fields: Vec<(Identifier, Expre
 pub struct Parameter {
     pub name: Identifier,
     pub data_type: DataType,
-    pub spread: bool,
+    pub kind: ParameterKind,
     pub position: Position,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum ParameterKind {
+    Normal,
+    Spread,
 }
 
 impl Parameter {
     #[inline]
-    pub fn new(name: Identifier, data_type: DataType, spread: bool, position: Position) -> Self {
+    pub fn new(name: Identifier, data_type: DataType, kind: ParameterKind, position: Position) -> Self {
         Parameter {
             name,
             data_type,
-            spread,
+            kind,
             position,
         }
     }
