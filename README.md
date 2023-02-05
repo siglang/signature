@@ -1,3 +1,11 @@
+> **Note**
+>
+> You are looking at a prototype version of the [**Signature Programming Language**](https://github.com/siglang/signature). (can be changed in the future)
+> 
+> as of `2023/02/05` Sanetaka (prototype) development and support has been discontinued.
+
+<br/>
+
 # The Sanetaka (sntk) programming language project
 
 [Syntax Documentation](SYNTAX.md) | [Contributing Guide](CONTRIBUTING.md)
