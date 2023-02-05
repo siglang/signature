@@ -85,7 +85,7 @@ impl fmt::Display for DataTypeKind {
             DataTypeKind::Array(data_type) => write!(f, "{}[]", data_type),
             DataTypeKind::Fn(function_type) => write!(f, "{}", function_type),
             DataTypeKind::Generic(generic) => write!(f, "{}", generic),
-            DataTypeKind::Custom(name) => write!(f, "{}", name),
+            DataTypeKind::Custom(identifier) => write!(f, "{}", identifier),
             DataTypeKind::Auto => write!(f, "Auto"),
             DataTypeKind::Unknown => write!(f, "Unknown"),
         }
@@ -177,43 +177,43 @@ impl fmt::Display for Position {
 }
 
 macro_rules! make_struct {
-    ($name:ident => $( $field:ident: $type:ty ),*) => {
+    ($identifier:ident => $( $field:ident: $type:ty ),*) => {
         #[derive(Debug, PartialEq, Clone)]
-        pub struct $name {
+        pub struct $identifier {
             $( pub $field: $type, )*
             pub position: Position
         }
 
-        impl $name {
+        impl $identifier {
             #[inline]
             pub fn new($( $field: $type, )* position: Position) -> Self {
-                $name { $($field,)* position: position.clone() }
+                $identifier { $($field,)* position: position.clone() }
             }
         }
     };
-    (@data_type $name:ident => $( $field:ident: $type:ty ),*) => {
+    (@data_type $identifier:ident => $( $field:ident: $type:ty ),*) => {
         #[derive(Debug, PartialEq, Clone)]
-        pub struct $name {
+        pub struct $identifier {
             $( pub $field: $type, )*
             pub data_type: DataType,
             pub position: Position
         }
 
-        impl $name {
+        impl $identifier {
             #[inline]
             pub fn new(data_type: DataType, $( $field: $type, )* position: Position) -> Self {
-                $name { $($field,)* data_type, position: position.clone() }
+                $identifier { $($field,)* data_type, position: position.clone() }
             }
         }
     }
 }
 
-make_struct! { @data_type LetStatement => name: Identifier, value: Expression }
-make_struct! { @data_type TypeStatement => name: Identifier, generics: IdentifierGeneric }
-make_struct! { @data_type DeclareStatement => name: Identifier }
+make_struct! { @data_type LetStatement => identifier: Identifier, value: Expression }
+make_struct! { @data_type TypeStatement => identifier: Identifier, generics: IdentifierGeneric }
+make_struct! { @data_type DeclareStatement => identifier: Identifier }
 
-make_struct! { AutoStatement => name: Identifier, value: Expression }
-make_struct! { StructStatement => name: Identifier, generics: IdentifierGeneric, fields: Vec<(Identifier, DataType)> }
+make_struct! { AutoStatement => identifier: Identifier, value: Expression }
+make_struct! { StructStatement => identifier: Identifier, generics: IdentifierGeneric, fields: Vec<(Identifier, DataType)> }
 make_struct! { ReturnStatement => value: Expression }
 make_struct! { ExpressionStatement => expression: Expression }
 
@@ -231,11 +231,11 @@ make_struct! { StringLiteral => value: String }
 make_struct! { BooleanLiteral => value: bool }
 make_struct! { FunctionLiteral => generics: Option<IdentifierGeneric>, parameters: Vec<Parameter>, return_type: DataType, body: BlockExpression }
 make_struct! { ArrayLiteral => elements: Vec<Expression> }
-make_struct! { StructLiteral => name: Identifier, fields: Vec<(Identifier, Expression)> }
+make_struct! { StructLiteral => identifier: Identifier, fields: Vec<(Identifier, Expression)> }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Parameter {
-    pub name: Identifier,
+    pub identifier: Identifier,
     pub data_type: DataType,
     pub kind: ParameterKind,
     pub position: Position,
@@ -249,9 +249,9 @@ pub enum ParameterKind {
 
 impl Parameter {
     #[inline]
-    pub fn new(name: Identifier, data_type: DataType, kind: ParameterKind, position: Position) -> Self {
+    pub fn new(identifier: Identifier, data_type: DataType, kind: ParameterKind, position: Position) -> Self {
         Parameter {
-            name,
+            identifier,
             data_type,
             kind,
             position,
