@@ -21,18 +21,18 @@ impl IrEnvironment {
         }
     }
 
-    pub fn get(&self, name: String) -> Option<LiteralValue> {
-        match self.values.get(&name) {
+    pub fn get(&self, identifier: String) -> Option<LiteralValue> {
+        match self.values.get(&identifier) {
             Some(value) => Some(value.clone()),
             None => match &self.parent {
-                Some(parent) => parent.get(name),
+                Some(parent) => parent.get(identifier),
                 None => None,
             },
         }
     }
 
-    pub fn set(&mut self, name: String, value: LiteralValue) {
-        self.values.insert(name, value);
+    pub fn set(&mut self, identifier: String, value: LiteralValue) {
+        self.values.insert(identifier, value);
     }
 }
 
@@ -43,27 +43,27 @@ impl fmt::Debug for IrEnvironment {
 }
 
 #[derive(Debug, Clone)]
-pub struct IrInterpreter {
-    pub instructions: Vec<Instruction>,
+pub struct IrInterpreter<'a> {
+    pub instructions: &'a Vec<Instruction>,
     pub environment: IrEnvironment,
 }
 
 pub type Result<T> = std::result::Result<T, crate::RuntimeError>;
 
-impl IrInterpreter {
+impl IrInterpreter<'_> {
     pub fn new(instructions: Vec<Instruction>) -> Self {
-        Self {
-            instructions,
-            environment: IrEnvironment::new(None),
-        }
+        Self::new_with_environment(instructions, IrEnvironment::new(None))
     }
 
     pub fn new_with_environment(instructions: Vec<Instruction>, environment: IrEnvironment) -> Self {
-        Self { instructions, environment }
+        Self {
+            instructions: Box::leak(Box::new(instructions)),
+            environment,
+        }
     }
 
     pub fn eval(&mut self) -> Result<()> {
-        for instruction in self.instructions.clone().iter() {
+        for instruction in self.instructions.iter() {
             self.eval_instruction(instruction)?;
         }
 
@@ -75,9 +75,10 @@ impl IrInterpreter {
             .instructions
             .last()
             .map(|instruction| {
-                let position = Position(instruction.position.0, instruction.position.1);
-                match instruction.instruction.clone() {
-                    InstructionType::Return(expression) => self.eval_expression(&expression, &position),
+                let Instruction { instruction, position } = instruction;
+                let position = Position(position.0, position.1);
+                match instruction {
+                    InstructionType::Return(expression) => self.eval_expression(expression, &position),
                     _ => Ok(LiteralValue::Boolean(false)),
                 }
             })
@@ -85,15 +86,16 @@ impl IrInterpreter {
     }
 
     pub fn eval_instruction(&mut self, instruction: &Instruction) -> Result<()> {
-        let position = Position(instruction.position.0, instruction.position.1);
+        let Instruction { instruction, position } = instruction;
+        let position = Position(position.0, position.1);
 
-        match instruction.instruction.clone() {
-            InstructionType::StoreName(name, expression) => {
-                let expression = self.eval_expression(&expression, &position)?;
-                self.environment.set(name, expression);
+        match instruction {
+            InstructionType::Storeidentifier(identifier, expression) => {
+                let expression = self.eval_expression(expression, &position)?;
+                self.environment.set(identifier.to_owned(), expression);
             }
             InstructionType::Expression(expression) => {
-                self.eval_expression(&expression, &position)?;
+                self.eval_expression(expression, &position)?;
             }
             InstructionType::Return(_) | InstructionType::None => {}
         }
@@ -103,9 +105,9 @@ impl IrInterpreter {
 
     pub fn eval_expression(&mut self, expression: &IrExpression, position: &Position) -> Result<LiteralValue> {
         match expression {
-            IrExpression::Identifier(name) => match self.environment.get(name.clone()) {
+            IrExpression::Identifier(identifier) => match self.environment.get(identifier.clone()) {
                 Some(value) => Ok(value),
-                None => Err(RuntimeError::new(RuntimeErrorKind::UndefinedVariable(name.to_string()), *position)),
+                None => Err(RuntimeError::new(RuntimeErrorKind::UndefinedVariable(identifier.to_string()), *position)),
             },
             IrExpression::Literal(value) => match value {
                 LiteralValue::Array(array) => {
@@ -145,12 +147,12 @@ impl IrInterpreter {
                     .collect::<std::result::Result<Vec<_>, _>>()?;
 
                 let function = match *function.clone() {
-                    IrExpression::Identifier(name) => match self.environment.get(name.clone()) {
+                    IrExpression::Identifier(identifier) => match self.environment.get(identifier.clone()) {
                         Some(value) => value,
                         None => {
-                            return match builtin_function(&name) {
+                            return match builtin_function(&identifier) {
                                 Some(function) => Ok(function(arguments.iter().collect())),
-                                None => Err(RuntimeError::new(RuntimeErrorKind::UndefinedVariable(name.to_string()), *position)),
+                                None => Err(RuntimeError::new(RuntimeErrorKind::UndefinedVariable(identifier.to_string()), *position)),
                             };
                         }
                     },
@@ -159,7 +161,7 @@ impl IrInterpreter {
 
                 let (parameters, body, mut environment) = match function {
                     LiteralValue::Function(parameters, block, _, environment) => (
-                        parameters.iter().map(|parameter| parameter.name.value.clone()).collect::<Vec<_>>(),
+                        parameters.iter().map(|parameter| parameter.identifier.value.clone()).collect::<Vec<_>>(),
                         block,
                         match environment {
                             Some(environment) => environment,

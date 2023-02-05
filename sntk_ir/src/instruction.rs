@@ -28,16 +28,16 @@ impl fmt::Display for Instruction {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum InstructionType {
-    StoreName(String, IrExpression), /* identifier, literal */
-    Return(IrExpression),            /* literal */
-    Expression(IrExpression),        /* expression */
-    None,                            /* none */
+    Storeidentifier(String, IrExpression), /* identifier, literal */
+    Return(IrExpression),                  /* literal */
+    Expression(IrExpression),              /* expression */
+    None,                                  /* none */
 }
 
 impl fmt::Display for InstructionType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::StoreName(identifier, expression) => write!(f, "store_name({}, {})", identifier, expression),
+            Self::Storeidentifier(identifier, expression) => write!(f, "store_identifier({}, {})", identifier, expression),
             Self::Return(expression) => write!(f, "return({})", expression),
             Self::Expression(expression) => write!(f, "expression({})", expression),
             Self::None => write!(f, "none"),
@@ -136,10 +136,10 @@ impl fmt::Display for LiteralValue {
                     parameters
                         .iter()
                         .map(|parameter| {
-                            let name = parameter.name.value.clone();
+                            let identifier = parameter.identifier.value.clone();
                             match parameter.kind {
-                                ParameterKind::Normal => name,
-                                ParameterKind::Spread => format!("...{}", name),
+                                ParameterKind::Normal => identifier,
+                                ParameterKind::Spread => format!("...{}", identifier),
                             }
                         })
                         .collect::<String>(),

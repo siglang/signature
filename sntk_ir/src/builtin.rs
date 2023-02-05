@@ -26,8 +26,8 @@ where
     Box::new(F::call)
 }
 
-pub fn builtin_function(name: &str) -> Option<BoxedCall> {
-    match name {
+pub fn builtin_function(identifier: &str) -> Option<BoxedCall> {
+    match identifier {
         "println" => Some(boxed_call::<Print>()),
         _ => None,
     }
