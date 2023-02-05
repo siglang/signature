@@ -21,19 +21,19 @@ impl DeclaredTypes {
         }
     }
 
-    pub fn get(&self, name: String) -> Option<DataType> {
-        match self.types.get(&name) {
+    pub fn get(&self, identifier: String) -> Option<DataType> {
+        match self.types.get(&identifier) {
             Some(value) => Some(value.clone()),
             None => match &self.parent {
-                Some(parent) => parent.get(name),
+                Some(parent) => parent.get(identifier),
                 None => None,
             },
         }
     }
 
     #[inline]
-    pub fn set(&mut self, name: String, value: DataType) {
-        self.types.insert(name, value);
+    pub fn set(&mut self, identifier: String, value: DataType) {
+        self.types.insert(identifier, value);
     }
 }
 
@@ -52,19 +52,19 @@ impl CustomTypes {
         }
     }
 
-    pub fn get(&self, name: String) -> Option<DataType> {
-        match self.types.get(&name) {
+    pub fn get(&self, identifier: String) -> Option<DataType> {
+        match self.types.get(&identifier) {
             Some(value) => Some(value.clone()),
             None => match &self.parent {
-                Some(parent) => parent.get(name),
+                Some(parent) => parent.get(identifier),
                 None => None,
             },
         }
     }
 
     #[inline]
-    pub fn set(&mut self, name: String, value: DataType) {
-        self.types.insert(name, value);
+    pub fn set(&mut self, identifier: String, value: DataType) {
+        self.types.insert(identifier, value);
     }
 }
 
@@ -87,7 +87,7 @@ impl Checker {
         })
     }
 
-    pub fn get_type_from_ir_expression(&self, expression: &IrExpression) -> CompileResult<DataType> {
+    pub fn from_ir_expression(&self, expression: &IrExpression) -> CompileResult<DataType> {
         let result = match expression.clone() {
             IrExpression::Identifier(identifier) => match self.declares.get(identifier.clone()) {
                 Some(data_type) => Ok(data_type),
@@ -97,19 +97,19 @@ impl Checker {
                     self.position,
                 )),
             },
-            IrExpression::Literal(literal) => self.get_type_from_literal_value(&literal),
-            IrExpression::Block(block) => self.get_type_from_ir_expression(match block.last() {
+            IrExpression::Literal(literal) => self.from_literal_value(&literal),
+            IrExpression::Block(block) => self.from_ir_expression(match block.last() {
                 Some(instruction) => match instruction.instruction {
-                    InstructionType::Return(ref expression) | InstructionType::StoreName(_, ref expression) => expression,
+                    InstructionType::Return(ref expression) | InstructionType::Storeidentifier(_, ref expression) => expression,
                     _ => return Ok(DataType::new(DataTypeKind::Boolean, self.position)),
                 },
                 None => return Ok(DataType::new(DataTypeKind::Boolean, self.position)),
             }),
             IrExpression::If(condition, consequence, alternative) => {
-                let condition_type = self.get_type_from_ir_expression(&condition)?;
-                let consequence_type = self.get_type_from_ir_expression(&consequence)?;
+                let condition_type = self.from_ir_expression(&condition)?;
+                let consequence_type = self.from_ir_expression(&consequence)?;
                 let alternative_type = match *alternative {
-                    Some(alternative) => self.get_type_from_ir_expression(&alternative)?,
+                    Some(alternative) => self.from_ir_expression(&alternative)?,
                     None => return Err(TypeError::new::<&str>(TypeErrorKind::IfExpressionWithoutAlternative, None, self.position)),
                 };
 
@@ -138,14 +138,14 @@ impl Checker {
                 }
             }
             IrExpression::Call(function, arguments) => {
-                let function_type = self.get_type_from_ir_expression(&function)?;
+                let function_type = self.from_ir_expression(&function)?;
 
                 match function_type.data_type {
                     DataTypeKind::Fn(FunctionType { parameters, return_type, .. }) => {
                         let mut arguments_len = arguments.len();
 
                         for (index, ((parameter, kind), argument)) in parameters.iter().zip(arguments.iter()).enumerate() {
-                            let argument_type = self.get_type_from_ir_expression(argument)?;
+                            let argument_type = self.from_ir_expression(argument)?;
 
                             if let ParameterKind::Spread = kind {
                                 let parameter = DataType::new(DataTypeKind::Array(Box::new(parameter.clone())), self.position);
@@ -190,8 +190,8 @@ impl Checker {
                 }
             }
             IrExpression::Index(left, index) => {
-                let left_type = self.get_type_from_ir_expression(&left)?;
-                let index_type = self.get_type_from_ir_expression(&index)?;
+                let left_type = self.from_ir_expression(&left)?;
+                let index_type = self.from_ir_expression(&index)?;
 
                 match left_type.data_type {
                     DataTypeKind::Array(data_type) => {
@@ -212,10 +212,10 @@ impl Checker {
                     )),
                 }
             }
-            IrExpression::Prefix(_, expression) => self.get_type_from_ir_expression(&expression),
+            IrExpression::Prefix(_, expression) => self.from_ir_expression(&expression),
             IrExpression::Infix(operator, left, right) => Ok({
-                let left_type = self.get_type_from_ir_expression(&left)?;
-                let right_type = self.get_type_from_ir_expression(&right)?;
+                let left_type = self.from_ir_expression(&left)?;
+                let right_type = self.from_ir_expression(&right)?;
 
                 DataType::new(
                     match operator {
@@ -251,7 +251,7 @@ impl Checker {
         custom_data_type(&result?, &self.customs)
     }
 
-    fn get_type_from_literal_value(&self, literal: &LiteralValue) -> CompileResult<DataType> {
+    fn from_literal_value(&self, literal: &LiteralValue) -> CompileResult<DataType> {
         Ok(DataType::new(
             match literal {
                 LiteralValue::Number(_) => Ok(DataTypeKind::Number),
@@ -262,7 +262,7 @@ impl Checker {
 
                     // check elements
                     for element in elements {
-                        let data_type = self.get_type_from_ir_expression(element)?;
+                        let data_type = self.from_ir_expression(element)?;
 
                         if element_type == DataTypeKind::Unknown {
                             element_type = data_type.data_type; // default element type
@@ -307,7 +307,7 @@ impl Checker {
                     Ok(DataTypeKind::Array(Box::new(DataType::new(element_type, self.position))))
                 }
                 LiteralValue::Function(parameters, body, return_type, _) => {
-                    let block_return_type = Box::new(self.get_type_from_ir_expression(&IrExpression::Block(body.clone()))?);
+                    let block_return_type = Box::new(self.from_ir_expression(&IrExpression::Block(body.clone()))?);
 
                     let function_type = DataTypeKind::Fn(FunctionType {
                         generics: None,
@@ -348,9 +348,9 @@ pub fn custom_data_type(data_type: &DataType, customs: &CustomTypes) -> CompileR
     let data_type_ @ DataType { data_type, position } = data_type;
 
     Ok(match &data_type {
-        DataTypeKind::Custom(name) => match customs.get(name.clone()) {
+        DataTypeKind::Custom(identifier) => match customs.get(identifier.clone()) {
             Some(custom) => custom,
-            None => return Err(TypeError::new::<&str>(TypeErrorKind::UndefinedType(name.clone()), None, *position)),
+            None => return Err(TypeError::new::<&str>(TypeErrorKind::UndefinedType(identifier.clone()), None, *position)),
         },
         DataTypeKind::Fn(FunctionType {
             generics,

@@ -50,13 +50,13 @@ impl Compiler {
     pub fn compile_statement(&mut self, statement: &Statement) -> CompileResult<Instruction> {
         Ok(match statement {
             Statement::LetStatement(LetStatement {
-                name,
+                identifier,
                 value,
                 position,
                 data_type,
             }) => {
                 let value = self.compile_expression(value)?;
-                let value_type = Checker::new(Some(data_type), &self.declares, &self.customs, *position)?.get_type_from_ir_expression(&value)?;
+                let value_type = Checker::new(Some(data_type), &self.declares, &self.customs, *position)?.from_ir_expression(&value)?;
 
                 if data_type != &value_type {
                     return Err(TypeError::new(
@@ -66,33 +66,40 @@ impl Compiler {
                     ));
                 }
 
-                self.declares.set(name.value.clone(), data_type.clone());
+                self.declares.set(identifier.value.clone(), data_type.clone());
 
-                Instruction::new(InstructionType::StoreName(name.value.clone(), value), *position)
+                Instruction::new(InstructionType::Storeidentifier(identifier.value.clone(), value), *position)
             }
-            Statement::AutoStatement(AutoStatement { name, value, position }) => {
+            Statement::AutoStatement(AutoStatement { identifier, value, position }) => {
                 let value = self.compile_expression(value)?;
 
                 self.declares.set(
-                    name.value.clone(),
-                    Checker::new(None, &self.declares, &self.customs, *position)?.get_type_from_ir_expression(&value)?,
+                    identifier.value.clone(),
+                    Checker::new(None, &self.declares, &self.customs, *position)?.from_ir_expression(&value)?,
                 );
 
-                Instruction::new(InstructionType::StoreName(name.value.clone(), value), *position)
+                Instruction::new(InstructionType::Storeidentifier(identifier.value.clone(), value), *position)
             }
             Statement::ReturnStatement(ReturnStatement { value, position }) => {
                 Instruction::new(InstructionType::Return(self.compile_expression(value)?), *position)
             }
             Statement::TypeStatement(TypeStatement {
-                name, data_type, position, ..
+                identifier,
+                data_type,
+                position,
+                ..
             }) => {
-                self.customs.set(name.value.clone(), data_type.clone());
+                self.customs.set(identifier.value.clone(), data_type.clone());
 
                 Instruction::new(InstructionType::None, *position)
             }
             Statement::StructStatement(_) => unimplemented!(),
-            Statement::DeclareStatement(DeclareStatement { name, data_type, position }) => {
-                self.declares.set(name.value.clone(), data_type.clone());
+            Statement::DeclareStatement(DeclareStatement {
+                identifier,
+                data_type,
+                position,
+            }) => {
+                self.declares.set(identifier.value.clone(), data_type.clone());
 
                 Instruction::new(InstructionType::None, *position)
             }
@@ -149,7 +156,7 @@ impl Compiler {
                 let mut compiled_arguments = Vec::new();
                 let function = self.compile_expression(function)?;
                 let function_type = match Checker::new(None, &self.declares, &self.customs, *position)?
-                    .get_type_from_ir_expression(&function)?
+                    .from_ir_expression(&function)?
                     .data_type
                 {
                     DataTypeKind::Fn(function_type) => function_type,
@@ -176,7 +183,7 @@ impl Compiler {
 
                 IrExpression::Literal(LiteralValue::String(
                     Checker::new(None, &self.declares, &self.customs, *position)?
-                        .get_type_from_ir_expression(&expression)?
+                        .from_ir_expression(&expression)?
                         .to_string(),
                 ))
             }
@@ -214,7 +221,7 @@ impl Compiler {
                 for (
                     index,
                     parameter @ Parameter {
-                        name,
+                        identifier,
                         data_type,
                         kind,
                         position,
@@ -225,7 +232,7 @@ impl Compiler {
 
                     match kind {
                         ParameterKind::Normal => {
-                            self.declares.set(name.value.clone(), data_type);
+                            self.declares.set(identifier.value.clone(), data_type);
                             new_parameters.push(parameter.clone());
                         }
                         ParameterKind::Spread => {
@@ -238,12 +245,12 @@ impl Compiler {
                             }
 
                             self.declares.set(
-                                name.value.clone(),
+                                identifier.value.clone(),
                                 DataType::new(DataTypeKind::Array(Box::new(data_type.clone())), *position),
                             );
 
                             new_parameters.push(Parameter {
-                                name: name.clone(),
+                                identifier: identifier.clone(),
                                 data_type,
                                 kind: kind.clone(),
                                 position: *position,

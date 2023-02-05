@@ -26,7 +26,7 @@ mod tests {
         assert_eq!(
             Checker::new(None, &declarations, &CustomTypes::new(None), POSITION)
                 .unwrap()
-                .get_type_from_ir_expression(&IrExpression::Identifier("a".to_string()))
+                .from_ir_expression(&IrExpression::Identifier("a".to_string()))
                 .unwrap(),
             DataType::new(DataTypeKind::Number, POSITION)
         );
@@ -45,13 +45,13 @@ mod tests {
         assert_eq!(
             Checker::new(None, &declarations, &CustomTypes::new(None), POSITION)
                 .unwrap()
-                .get_type_from_ir_expression(&IrExpression::Block(vec![
+                .from_ir_expression(&IrExpression::Block(vec![
                     Instruction::new(
-                        InstructionType::StoreName("a".to_string(), IrExpression::Literal(LiteralValue::Number(5.))),
+                        InstructionType::Storeidentifier("a".to_string(), IrExpression::Literal(LiteralValue::Number(5.))),
                         POSITION
                     ),
                     Instruction::new(
-                        InstructionType::StoreName("b".to_string(), IrExpression::Literal(LiteralValue::Number(5.))),
+                        InstructionType::Storeidentifier("b".to_string(), IrExpression::Literal(LiteralValue::Number(5.))),
                         POSITION
                     ),
                     Instruction::new(
@@ -90,7 +90,7 @@ mod tests {
         assert_eq!(
             Checker::new(None, &declarations, &CustomTypes::new(None), POSITION)
                 .unwrap()
-                .get_type_from_ir_expression(&IrExpression::If(
+                .from_ir_expression(&IrExpression::If(
                     Box::new(IrExpression::Literal(LiteralValue::Boolean(true))),
                     Box::new(consequence),
                     Box::new(Some(alternative))
@@ -123,7 +123,7 @@ mod tests {
         assert_eq!(
             Checker::new(None, &declarations, &CustomTypes::new(None), POSITION)
                 .unwrap()
-                .get_type_from_ir_expression(&IrExpression::Call(
+                .from_ir_expression(&IrExpression::Call(
                     Box::new(IrExpression::Identifier("a".to_string())),
                     vec![
                         IrExpression::Literal(LiteralValue::Number(5.)),
@@ -144,7 +144,7 @@ mod tests {
         assert_eq!(
             Checker::new(None, &DeclaredTypes::new(None), &CustomTypes::new(None), POSITION)
                 .unwrap()
-                .get_type_from_ir_expression(&IrExpression::Index(
+                .from_ir_expression(&IrExpression::Index(
                     Box::new(IrExpression::Literal(LiteralValue::Array(vec![
                         IrExpression::Literal(LiteralValue::Number(5.)),
                         IrExpression::Literal(LiteralValue::Number(10.)),
@@ -162,7 +162,7 @@ mod tests {
         assert_eq!(
             Checker::new(None, &DeclaredTypes::new(None), &CustomTypes::new(None), POSITION)
                 .unwrap()
-                .get_type_from_ir_expression(&IrExpression::Prefix(
+                .from_ir_expression(&IrExpression::Prefix(
                     TokenKind::Minus,
                     Box::new(IrExpression::Literal(LiteralValue::Number(5.)))
                 ))
@@ -176,7 +176,7 @@ mod tests {
         assert_eq!(
             Checker::new(None, &DeclaredTypes::new(None), &CustomTypes::new(None), POSITION)
                 .unwrap()
-                .get_type_from_ir_expression(&IrExpression::Infix(
+                .from_ir_expression(&IrExpression::Infix(
                     TokenKind::EQ,
                     Box::new(IrExpression::Literal(LiteralValue::Number(5.))),
                     Box::new(IrExpression::Literal(LiteralValue::Number(10.)))
@@ -191,7 +191,7 @@ mod tests {
         assert_eq!(
             Checker::new(None, &DeclaredTypes::new(None), &CustomTypes::new(None), POSITION)
                 .unwrap()
-                .get_type_from_ir_expression(&IrExpression::Literal(LiteralValue::Number(10.0)))
+                .from_ir_expression(&IrExpression::Literal(LiteralValue::Number(10.0)))
                 .unwrap(),
             DataType::new(DataTypeKind::Number, POSITION)
         );
