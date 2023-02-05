@@ -7,3 +7,4 @@ edition = "2021"
 sntk_core = { path = "../sntk_core" }
 sntk_ir = { path = "../sntk_ir" }
 sntk_compiler = { path = "../sntk_compiler" }
+clap = { version = "4.1.4", features = ["derive"] }

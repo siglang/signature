@@ -1,10 +1,8 @@
-#![allow(unused_imports)]
+use clap::Parser as _;
+pub mod arguments;
 
-use sntk_compiler::{compiler::Compiler, CompileError};
-use sntk_core::{
-    parser::parser::Parser,
-    tokenizer::{lexer::Lexer, token::TokenKind},
-};
+use sntk_compiler::compiler::Compiler;
+use sntk_core::{parser::parser::Parser, tokenizer::lexer::Lexer};
 use sntk_ir::interpreter::IrInterpreter;
 use std::time::Instant;
 
@@ -12,18 +10,18 @@ fn main() {
     let mut start = Instant::now();
 
     let source_code = r#"
-declare println = fn(number[]) -> boolean; // todo
+    declare println = fn(number[]) -> boolean; // todo
 
-type F = fn(boolean) -> number[];
+    type F = fn(boolean) -> number[];
 
-auto x = fn(a: number, b: number, spread c: number) ->
-    fn(string) -> F
-{
-    return fn(x: string) -> F =>
-            fn(y: boolean) -> number[] => c;
-};
-println(x(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)("foo")(true));
-    "#
+    auto x = fn(a: number, b: number, spread c: number) ->
+        fn(string) -> F
+    {
+        return fn(x: string) -> F =>
+                fn(y: boolean) -> number[] => c;
+    };
+    println(x(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)("foo")(true));
+        "#
     .trim_start();
 
     #[allow(unused_mut)]
@@ -54,4 +52,7 @@ println(x(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)("foo")(true));
         }
         Err(e) => println!("{e}"),
     }
+
+    let command = arguments::Cli::parse();
+    println!("{:#?}", command);
 }
