@@ -1,0 +1,10 @@
+[package]
+name = "sigc"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+parser = { path = "../parser" }
+ir_interpreter = { path = "../ir_interpreter" }
+compiler = { path = "../compiler" }
+clap = { version = "4.1.4", features = ["derive"] }
