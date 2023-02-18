@@ -1,10 +1,6 @@
-# The Sanetaka (sntk) programming language project
+# The Signature (siglang) programming language project
 
 [Syntax Documentation](SYNTAX.md) | [Contributing Guide](CONTRIBUTING.md)
-
-> **Warning**
->
-> It is still under development and is **not available yet.**
 
 # What features does it have?
 
@@ -25,7 +21,7 @@ this may not be observed. (most likely.) however, we strive to provide better fe
 -   [x] Tokenizer (Tokens + Lexer)
 -   [x] Parser (AST) **(in progress)**
     -   [ ] EEE (Evaluating an Evaluable Expression) **(in progress)**
--   [x] Compiler (Sanetaka IR) **(in progress)**
+-   [x] Compiler (Signature IR) **(in progress)**
     -   [ ] Type Checker **(in progress)**
 -   [ ] IR Interpreter **(in progress)**
 -   [ ] Plugin (e.g. Transcompiler)
@@ -46,10 +42,10 @@ this may not be observed. (most likely.) however, we strive to provide better fe
 
 ```mermaid
 graph LR
-    _[Source Code] --> |sntkc| Lexer
+    _[Source Code] --> |sigc| Lexer
     Lexer[Tokenizer / Lexer] --> Parser[Parser / AST]
-    Parser --> Compiler[Sanetaka IR / Compiler]
-    Compiler --> Run[sntk run]
+    Parser --> Compiler[Signature IR / Compiler]
+    Compiler --> Run[sigc run]
     Run --> |Run| VM[Virtual Machine / Interpreter]
     Compiler --> Plugin[plugin]
     Plugin --> Transcompile[Transcompile]

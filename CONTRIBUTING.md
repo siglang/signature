@@ -1,4 +1,4 @@
-# Sanetaka programming language contributing guide
+# Signature programming language contributing guide
 
 ## Commit
 
