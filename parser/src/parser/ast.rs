@@ -81,7 +81,7 @@ pub enum DataTypeKind {
 impl fmt::Display for DataTypeKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
-            DataTypeKind::Number | DataTypeKind::String | DataTypeKind::Boolean => write!(f, "{}", self),
+            DataTypeKind::Number | DataTypeKind::String | DataTypeKind::Boolean => write!(f, "{self:?}"),
             DataTypeKind::Array(data_type) => write!(f, "{}[]", data_type),
             DataTypeKind::Fn(function_type) => write!(f, "{}", function_type),
             DataTypeKind::Generic(generic) => write!(f, "{}", generic),

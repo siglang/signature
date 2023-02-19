@@ -21,7 +21,7 @@ fn main() {
 
     let mut start = Instant::now();
 
-    let lexer = Lexer::new(source_code.to_string());
+    let lexer = Lexer::new(source_code);
     let parsed = Parser::new(lexer).parse_program();
 
     if debug {
