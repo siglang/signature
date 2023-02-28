@@ -1,3 +1,8 @@
+> The project has been temporarily suspended from Feb 28, 2023.
+> this means development will resume in the future.
+
+<br />
+
 # The Signature (siglang) programming language project
 
 [Syntax Documentation](SYNTAX.md) | [Contributing Guide](CONTRIBUTING.md)
@@ -8,7 +13,7 @@ We will provide the following features:
 
 -   **Easy and simple, and even beginners can learn it quickly and easily.**
     -   it also has a **C-like** syntax, which makes it easy for other programmers to use the C-like syntax to learn.
--   Supports **functional programming**, **macro** (*it is similar to Rust's Macros, and will provide a powerful macro system*) and **static type system**.
+-   Supports **functional programming**, **macro** (_it is similar to Rust's Macros, and will provide a powerful macro system_) and **static type system**.
 -   **By providing an interpreter plugin**, it can transcompile to other languages. (e.g. JavaScript)
 -   **`null` does not exist.** it is in the form of Rust's `Option<T>`, a monadic type will be decalred in the standard library.
 
@@ -25,6 +30,7 @@ this may not be observed. (most likely.) however, we strive to provide better fe
     -   [ ] Type Checker **(in progress)**
 -   [ ] IR Interpreter **(in progress)**
 -   [ ] Plugin (e.g. Transcompiler)
+
     -   [ ] Plugin API
 
 -   [ ] Macro
