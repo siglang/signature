@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 parser = { path = "../parser" }
+compiler = { path = "../compiler" }
 clap = { version = "4.1.4", features = ["derive"] }

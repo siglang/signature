@@ -30,8 +30,8 @@ pub enum Statement {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
-    BlockExpression(BlockExpression),
     Identifier(Identifier),
+    BlockExpression(BlockExpression),
     PrefixExpression(PrefixExpression),
     InfixExpression(InfixExpression),
     IfExpression(IfExpression),
@@ -44,22 +44,6 @@ pub enum Expression {
     ArrayLiteral(ArrayLiteral),
     BooleanLiteral(BooleanLiteral),
     StructLiteral(StructLiteral),
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct DataType {
-    pub data_type: DataTypeKind,
-    pub position: Position,
-}
-
-impl DataType {
-    #[inline]
-    pub fn new(data_type: DataTypeKind, position: Position) -> Self {
-        Self {
-            data_type,
-            position,
-        }
-    }
 }
 
 impl fmt::Display for DataType {
@@ -98,28 +82,6 @@ impl fmt::Display for DataTypeKind {
 }
 
 pub type IdentifierGeneric = Vec<Identifier>;
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct FunctionType {
-    pub generics: Option<IdentifierGeneric>,
-    pub parameters: Vec<(DataType, ParameterKind)>,
-    pub return_type: Box<DataType>,
-}
-
-impl FunctionType {
-    #[inline]
-    pub fn new(
-        generics: Option<IdentifierGeneric>,
-        parameters: Vec<(DataType, ParameterKind)>,
-        return_type: DataType,
-    ) -> Self {
-        FunctionType {
-            generics,
-            parameters,
-            return_type: Box::new(return_type),
-        }
-    }
-}
 
 impl std::fmt::Display for FunctionType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
@@ -221,6 +183,8 @@ macro_rules! make_struct {
     }
 }
 
+make_struct! { DataType => data_type: DataTypeKind }
+
 make_struct! { @data_type LetStatement => identifier: Identifier, value: Expression }
 make_struct! { @data_type TypeStatement => identifier: Identifier, generics: IdentifierGeneric }
 make_struct! { @data_type DeclareStatement => identifier: Identifier }
@@ -246,35 +210,13 @@ make_struct! { FunctionLiteral => generics: Option<IdentifierGeneric>, parameter
 make_struct! { ArrayLiteral => elements: Vec<Expression> }
 make_struct! { StructLiteral => identifier: Identifier, fields: Vec<(Identifier, Expression)> }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Parameter {
-    pub identifier: Identifier,
-    pub data_type: DataType,
-    pub kind: ParameterKind,
-    pub position: Position,
-}
+make_struct! { Parameter => identifier: Identifier, data_type: DataType, kind: ParameterKind }
+make_struct! { FunctionType => generics: Option<IdentifierGeneric>, parameters: Vec<(DataType, ParameterKind)>, return_type: Box<DataType> }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ParameterKind {
     Normal,
     Spread,
-}
-
-impl Parameter {
-    #[inline]
-    pub fn new(
-        identifier: Identifier,
-        data_type: DataType,
-        kind: ParameterKind,
-        position: Position,
-    ) -> Self {
-        Parameter {
-            identifier,
-            data_type,
-            kind,
-            position,
-        }
-    }
 }
 
 #[derive(Debug, Eq, PartialEq, PartialOrd)]
