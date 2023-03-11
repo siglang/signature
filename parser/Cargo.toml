@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["ky0422 (Kim Jun Young)"]
 description = "Core library for Signature programming language"
 license = "MIT"
-repository = "https://github.com/ky0422/signature"
+repository = "https://github.com/siglang/signature"
 
 [dependencies]
 thiserror = "1.0.37"

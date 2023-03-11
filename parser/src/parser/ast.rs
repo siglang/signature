@@ -55,7 +55,10 @@ pub struct DataType {
 impl DataType {
     #[inline]
     pub fn new(data_type: DataTypeKind, position: Position) -> Self {
-        Self { data_type, position }
+        Self {
+            data_type,
+            position,
+        }
     }
 }
 
@@ -81,11 +84,13 @@ pub enum DataTypeKind {
 impl fmt::Display for DataTypeKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
-            DataTypeKind::Number | DataTypeKind::String | DataTypeKind::Boolean => write!(f, "{self:?}"),
-            DataTypeKind::Array(data_type) => write!(f, "{}[]", data_type),
-            DataTypeKind::Fn(function_type) => write!(f, "{}", function_type),
-            DataTypeKind::Generic(generic) => write!(f, "{}", generic),
-            DataTypeKind::Custom(identifier) => write!(f, "{}", identifier),
+            DataTypeKind::Number | DataTypeKind::String | DataTypeKind::Boolean => {
+                write!(f, "{self:?}")
+            }
+            DataTypeKind::Array(data_type) => write!(f, "{data_type}[]"),
+            DataTypeKind::Fn(function_type) => write!(f, "{function_type}"),
+            DataTypeKind::Generic(generic) => write!(f, "{generic}"),
+            DataTypeKind::Custom(identifier) => write!(f, "{identifier}"),
             DataTypeKind::Auto => write!(f, "Auto"),
             DataTypeKind::Unknown => write!(f, "Unknown"),
         }
@@ -103,7 +108,11 @@ pub struct FunctionType {
 
 impl FunctionType {
     #[inline]
-    pub fn new(generics: Option<IdentifierGeneric>, parameters: Vec<(DataType, ParameterKind)>, return_type: DataType) -> Self {
+    pub fn new(
+        generics: Option<IdentifierGeneric>,
+        parameters: Vec<(DataType, ParameterKind)>,
+        return_type: DataType,
+    ) -> Self {
         FunctionType {
             generics,
             parameters,
@@ -123,12 +132,16 @@ impl std::fmt::Display for FunctionType {
 
         let generics = match &self.generics {
             Some(generics) => {
-                let generics = generics.iter().map(|generic| generic.value.clone()).collect::<Vec<String>>().join(", ");
-                format!("<{}>", generics)
+                let generics = generics
+                    .iter()
+                    .map(|generic| generic.value.clone())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                format!("<{generics}>")
             }
             None => String::new(),
         };
-        write!(f, "fn{}({}) -> {}", generics, parameters, self.return_type)
+        write!(f, "fn{generics}({parameters}) -> {}", self.return_type)
     }
 }
 
@@ -147,10 +160,10 @@ impl std::fmt::Display for Generic {
         let generic_types = self
             .1
             .iter()
-            .map(|generic_type| generic_type.to_string())
+            .map(ToString::to_string)
             .collect::<Vec<String>>()
             .join(", ");
-        write!(f, "{}<{}>", self.0, generic_types)
+        write!(f, "{}<{generic_types}>", self.0)
     }
 }
 
@@ -249,7 +262,12 @@ pub enum ParameterKind {
 
 impl Parameter {
     #[inline]
-    pub fn new(identifier: Identifier, data_type: DataType, kind: ParameterKind, position: Position) -> Self {
+    pub fn new(
+        identifier: Identifier,
+        data_type: DataType,
+        kind: ParameterKind,
+        position: Position,
+    ) -> Self {
         Parameter {
             identifier,
             data_type,
