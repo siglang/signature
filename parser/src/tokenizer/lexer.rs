@@ -15,7 +15,10 @@ pub struct Lexer {
 impl Lexer {
     #[inline]
     pub fn new(input: String) -> Self {
-        let mut lexer = Lexer { input, ..Default::default() };
+        let mut lexer = Lexer {
+            input,
+            ..Default::default()
+        };
 
         lexer.read_char();
         lexer
@@ -113,7 +116,8 @@ impl Lexer {
             self.read_char();
             self.read_char();
 
-            while self.current_char != '\0' && (self.current_char != '*' || self.peek_char() != '/') {
+            while self.current_char != '\0' && (self.current_char != '*' || self.peek_char() != '/')
+            {
                 self.read_char();
             }
 

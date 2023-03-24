@@ -6,7 +6,7 @@ pub use parser::*;
 use std::fmt;
 use thiserror::Error;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParsingError {
     pub message: ParsingErrorKind,
     pub position: Position,
@@ -24,7 +24,7 @@ impl ParsingError {
     }
 }
 
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Error, PartialEq)]
 #[rustfmt::skip]
 pub enum ParsingErrorKind {
     #[error("Expected next token to be `{0}`, got `{1}` instead")] ExpectedNextToken(String, String),

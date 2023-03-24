@@ -1,7 +1,7 @@
 use crate::{parser::ParsingError, tokenizer::TokenKind};
 use std::fmt;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Program {
     pub statements: Vec<Statement>,
     pub errors: Vec<ParsingError>,
