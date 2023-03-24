@@ -2,6 +2,7 @@ mod arguments;
 use std::fs;
 
 use clap::Parser as _;
+use compiler::compiler::Compiler;
 use parser::{parser::Parser, tokenizer::Lexer};
 
 fn main() {
@@ -10,6 +11,7 @@ fn main() {
 
     let lexer = Lexer::new(content);
     let mut parser = Parser::new(lexer);
+    let ir = Compiler(parser.parse_program()).compile_program().unwrap();
 
-    println!("{:#?}", parser.parse_program());
+    println!("{ir:#?}");
 }
