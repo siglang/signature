@@ -1,8 +1,13 @@
 use crate::{
-    types::{IrProgram, IrStatement},
+    types::{
+        IrExpression, IrExpressionStatement, IrLetStatement, IrProgram,
+        IrReturnStatement, IrStatement,
+    },
     CompilingError, CompilingErrorKind,
 };
-use parser::parser::{Position, Program, Statement};
+use parser::parser::{
+    AutoStatement, Expression, LetStatement, Position, Program, ReturnStatement, Statement,
+};
 
 #[derive(Debug)]
 pub struct Compiler(pub Program);
@@ -35,6 +40,77 @@ impl Compiler {
     }
 
     fn compile_statement(&mut self, statement: &Statement) -> CompileResult<IrStatement> {
-        todo!()
+        Ok(match statement {
+            Statement::LetStatement(statement) => {
+                IrStatement::LetStatement(self.compile_let_statement(statement)?)
+            }
+            Statement::AutoStatement(statement) => {
+                IrStatement::LetStatement(self.compile_auto_statement(statement)?)
+            }
+            Statement::ReturnStatement(statement) => {
+                IrStatement::ReturnStatement(self.compile_return_statement(statement)?)
+            }
+            Statement::TypeStatement(_) => todo!(),
+            Statement::DeclareStatement(_) => todo!(),
+            Statement::StructStatement(_) => todo!(),
+            Statement::ExpressionStatement(statement) => {
+                IrStatement::IrExpressionStatement(IrExpressionStatement::new(
+                    self.compile_expression(&statement.expression)?,
+                    statement.position,
+                ))
+            }
+        })
+    }
+
+    fn compile_let_statement(&mut self, statement: &LetStatement) -> CompileResult<IrLetStatement> {
+        let LetStatement {
+            identifier,
+            value,
+            position,
+            ..
+        } = statement;
+
+        Ok(IrLetStatement::new(
+            identifier.clone().into(),
+            self.compile_expression(value)?,
+            *position,
+        ))
+    }
+
+    fn compile_return_statement(
+        &mut self,
+        statement: &parser::parser::ReturnStatement,
+    ) -> CompileResult<IrReturnStatement> {
+        let ReturnStatement { value, position } = statement;
+
+        Ok(IrReturnStatement::new(
+            self.compile_expression(value)?,
+            *position,
+        ))
+    }
+
+    fn compile_auto_statement(
+        &mut self,
+        statement: &AutoStatement,
+    ) -> CompileResult<IrLetStatement> {
+        let AutoStatement {
+            identifier,
+            value,
+            position,
+        } = statement;
+
+        Ok(IrLetStatement::new(
+            identifier.clone().into(),
+            self.compile_expression(value)?,
+            *position,
+        ))
+    }
+
+    fn compile_expression(&mut self, expression: &Expression) -> CompileResult<IrExpression> {
+        use Expression::*;
+        Ok(match expression {
+            Identifier(identifier) => IrExpression::Identifier(identifier.clone().into()),
+            _ => todo!(),
+        })
     }
 }

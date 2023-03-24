@@ -1,5 +1,5 @@
 use parser::{
-    parser::{ParameterKind, Position},
+    parser::{BooleanLiteral, Identifier, NumberLiteral, ParameterKind, Position, StringLiteral},
     tokenizer::TokenKind,
 };
 
@@ -62,10 +62,34 @@ make_struct! { IrInfixExpression => left: Box<IrExpression>, operator: TokenKind
 
 make_struct! { IrIdentifier => value: String }
 make_struct! { IrStringLiteral => value: String }
-make_struct! {IrNumberLiteral => value: f64 }
-make_struct! {IrBooleanLiteral => value: bool }
+make_struct! { IrNumberLiteral => value: f64 }
+make_struct! { IrBooleanLiteral => value: bool }
 make_struct! { IrFunctionLiteral => parameters: Vec<Parameter>, body: IrBlockExpression }
 make_struct! { IrArrayLiteral => elements: Vec<IrExpression> }
 make_struct! { IrStructLiteral => identifier: IrIdentifier, fields: Vec<(IrIdentifier, IrExpression)> }
 
 make_struct! { Parameter => identifier: IrIdentifier, kind: ParameterKind }
+
+impl From<Identifier> for IrIdentifier {
+    fn from(identifier: Identifier) -> Self {
+        IrIdentifier::new(identifier.value, identifier.position)
+    }
+}
+
+impl From<NumberLiteral> for IrNumberLiteral {
+    fn from(number: NumberLiteral) -> Self {
+        IrNumberLiteral::new(number.value, number.position)
+    }
+}
+
+impl From<StringLiteral> for IrStringLiteral {
+    fn from(string: StringLiteral) -> Self {
+        IrStringLiteral::new(string.value, string.position)
+    }
+}
+
+impl From<BooleanLiteral> for IrBooleanLiteral {
+    fn from(boolean: BooleanLiteral) -> Self {
+        IrBooleanLiteral::new(boolean.value, boolean.position)
+    }
+}
