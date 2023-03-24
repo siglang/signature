@@ -1,6 +1,7 @@
+pub mod compiler;
 pub mod types;
 
-use parser::parser::Position;
+use parser::parser::{ParsingError, Position};
 use std::fmt;
 use thiserror::Error;
 
@@ -25,6 +26,7 @@ impl CompilingError {
 #[derive(Debug, Clone, Error, PartialEq)]
 #[rustfmt::skip]
 pub enum CompilingErrorKind {
+    #[error("Parsing error: {0}")] ParsingError(ParsingError),
     #[error("Expected next token to be `{0}`, got `{1}` instead")] ExpectedNextToken(String, String),
     #[error("Expected next token to be a data type, got `{0}` instead")] ExpectedDataType(String),
     #[error("Expected next token to be an expression, got `{0}` instead")] ExpectedExpression(String),

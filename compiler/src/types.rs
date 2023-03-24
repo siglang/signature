@@ -1,38 +1,34 @@
-use crate::CompilingError;
 use parser::{
     parser::{ParameterKind, Position},
     tokenizer::TokenKind,
 };
 
+#[derive(Debug, PartialEq, Clone, Default)]
+pub struct IrProgram(pub Vec<IrStatement>);
+
 #[derive(Debug, PartialEq, Clone)]
-pub struct IrProgram<'a> {
-    pub statements: Vec<IrStatement<'a>>,
-    pub errors: Vec<CompilingError>,
+pub enum IrStatement {
+    LetStatement(IrLetStatement),
+    ReturnStatement(IrReturnStatement),
+    IrExpressionStatement(IrExpressionStatement),
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum IrStatement<'a> {
-    LetStatement(IrLetStatement<'a>),
-    ReturnStatement(IrReturnStatement<'a>),
-    IrExpressionStatement(IrExpressionStatement<'a>),
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum IrExpression<'a> {
-    Identifier(IrIdentifier<'a>),
-    BlockExpression(IrBlockExpression<'a>),
-    PrefixExpression(IrPrefixExpression<'a>),
-    InfixExpression(IrInfixExpression<'a>),
-    IfExpression(IrIfExpression<'a>),
-    FunctionLiteral(IrFunctionLiteral<'a>),
-    CallExpression(IrCallExpression<'a>),
-    TypeofExpression(IrTypeofExpression<'a>),
-    IndexExpression(IrIndexExpression<'a>),
-    StringLiteral(IrStringLiteral<'a>),
+pub enum IrExpression {
+    Identifier(IrIdentifier),
+    BlockExpression(IrBlockExpression),
+    PrefixExpression(IrPrefixExpression),
+    InfixExpression(IrInfixExpression),
+    IfExpression(IrIfExpression),
+    FunctionLiteral(IrFunctionLiteral),
+    CallExpression(IrCallExpression),
+    TypeofExpression(IrTypeofExpression),
+    IndexExpression(IrIndexExpression),
+    StringLiteral(IrStringLiteral),
     NumberLiteral(IrNumberLiteral),
-    ArrayLiteral(IrArrayLiteral<'a>),
+    ArrayLiteral(IrArrayLiteral),
     BooleanLiteral(IrBooleanLiteral),
-    StructLiteral(IrStructLiteral<'a>),
+    StructLiteral(IrStructLiteral),
 }
 
 macro_rules! make_struct {
@@ -46,44 +42,30 @@ macro_rules! make_struct {
         impl $identifier {
             #[inline]
             pub fn new($( $field: $type, )* position: Position) -> Self {
-                $identifier { $($field,)* position: position.clone() }
-            }
-        }
-    };
-    (<$($lt:tt),*> $identifier:ident => $( $field:ident: $type:ty ),*) => {
-        #[derive(Debug, PartialEq, Clone)]
-        pub struct $identifier<$($lt),*> {
-            $( pub $field: $type, )*
-            pub position: Position
-        }
-
-        impl<$($lt,)*> $identifier<$($lt,)*> {
-            #[inline]
-            pub fn new($( $field: $type, )* position: Position) -> Self {
-                $identifier { $($field,)* position: position.clone() }
+                $identifier {$($field,)* position: position.clone() }
             }
         }
     };
 }
 
-make_struct! { <'a> IrLetStatement => identifier: IrIdentifier<'a>, value: IrExpression<'a> }
-make_struct! { <'a> IrReturnStatement => value: IrExpression<'a> }
-make_struct! { <'a> IrExpressionStatement => expression: IrExpression<'a> }
+make_struct! { IrLetStatement => identifier: IrIdentifier, value: IrExpression }
+make_struct! { IrReturnStatement => value: IrExpression }
+make_struct! { IrExpressionStatement => expression: IrExpression }
 
-make_struct! { <'a> IrBlockExpression => statements: Vec<IrStatement<'a>> }
-make_struct! { <'a> IrIfExpression => condition: Box<IrExpression<'a>>, consequence: Box<IrBlockExpression<'a>>, alternative: Option<Box<IrBlockExpression<'a>>> }
-make_struct! { <'a> IrCallExpression => function: Box<IrExpression<'a>>, arguments: Vec<IrExpression<'a>> }
-make_struct! { <'a> IrTypeofExpression => expression: Box<IrExpression<'a>> }
-make_struct! { <'a> IrIndexExpression => left: Box<IrExpression<'a>>, index: Box<IrExpression<'a>> }
-make_struct! { <'a> IrPrefixExpression => operator: TokenKind, right: Box<IrExpression<'a>> }
-make_struct! { <'a> IrInfixExpression => left: Box<IrExpression<'a>>, operator: TokenKind, right: Box<IrExpression<'a>> }
+make_struct! { IrBlockExpression => statements: Vec<IrStatement> }
+make_struct! { IrIfExpression => condition: Box<IrExpression>, consequence: Box<IrBlockExpression>, alternative: Option<Box<IrBlockExpression>> }
+make_struct! { IrCallExpression => function: Box<IrExpression>, arguments: Vec<IrExpression> }
+make_struct! { IrTypeofExpression => expression: Box<IrExpression> }
+make_struct! { IrIndexExpression => left: Box<IrExpression>, index: Box<IrExpression> }
+make_struct! { IrPrefixExpression => operator: TokenKind, right: Box<IrExpression> }
+make_struct! { IrInfixExpression => left: Box<IrExpression>, operator: TokenKind, right: Box<IrExpression> }
 
-make_struct! { <'a> IrIdentifier => value: &'a str }
-make_struct! { <'a> IrStringLiteral => value: &'a str }
-make_struct! { IrNumberLiteral => value: f64 }
-make_struct! { IrBooleanLiteral => value: bool }
-make_struct! { <'a> IrFunctionLiteral => parameters: Vec<Parameter<'a>>, body: IrBlockExpression<'a> }
-make_struct! { <'a> IrArrayLiteral => elements: Vec<IrExpression<'a>> }
-make_struct! { <'a> IrStructLiteral => identifier: IrIdentifier<'a>, fields: Vec<(IrIdentifier<'a>, IrExpression<'a>)> }
+make_struct! { IrIdentifier => value: String }
+make_struct! { IrStringLiteral => value: String }
+make_struct! {IrNumberLiteral => value: f64 }
+make_struct! {IrBooleanLiteral => value: bool }
+make_struct! { IrFunctionLiteral => parameters: Vec<Parameter>, body: IrBlockExpression }
+make_struct! { IrArrayLiteral => elements: Vec<IrExpression> }
+make_struct! { IrStructLiteral => identifier: IrIdentifier, fields: Vec<(IrIdentifier, IrExpression)> }
 
-make_struct! { <'a> Parameter => identifier: IrIdentifier<'a>, kind: ParameterKind }
+make_struct! { Parameter => identifier: IrIdentifier, kind: ParameterKind }
