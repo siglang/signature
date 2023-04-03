@@ -1,7 +1,7 @@
 pub mod compiler;
 pub mod types;
 
-use parser::parser::{ParsingError, Position};
+use parser::{ast::Position, ParsingError};
 use std::fmt;
 use thiserror::Error;
 

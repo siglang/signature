@@ -1,7 +1,4 @@
-use parser::{
-    parser::{BooleanLiteral, Identifier, NumberLiteral, ParameterKind, Position, StringLiteral},
-    tokenizer::TokenKind,
-};
+use parser::{ast::*, tokenizer::TokenKind};
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct IrProgram(pub Vec<IrStatement>);

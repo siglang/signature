@@ -1,13 +1,11 @@
 use crate::{
     types::{
-        IrExpression, IrExpressionStatement, IrLetStatement, IrProgram,
-        IrReturnStatement, IrStatement,
+        IrExpression, IrExpressionStatement, IrLetStatement, IrProgram, IrReturnStatement,
+        IrStatement,
     },
     CompilingError, CompilingErrorKind,
 };
-use parser::parser::{
-    AutoStatement, Expression, LetStatement, Position, Program, ReturnStatement, Statement,
-};
+use parser::ast::*;
 
 #[derive(Debug)]
 pub struct Compiler(pub Program);
@@ -79,7 +77,7 @@ impl Compiler {
 
     fn compile_return_statement(
         &mut self,
-        statement: &parser::parser::ReturnStatement,
+        statement: &ReturnStatement,
     ) -> CompileResult<IrReturnStatement> {
         let ReturnStatement { value, position } = statement;
 
@@ -107,9 +105,15 @@ impl Compiler {
     }
 
     fn compile_expression(&mut self, expression: &Expression) -> CompileResult<IrExpression> {
-        use Expression::*;
         Ok(match expression {
-            Identifier(identifier) => IrExpression::Identifier(identifier.clone().into()),
+            Expression::Literal(literal) => self.compile_literal(literal)?,
+            _ => todo!(),
+        })
+    }
+
+    fn compile_literal(&mut self, expression: &Literal) -> CompileResult<IrExpression> {
+        Ok(match expression {
+            Literal::Identifier(identifier) => IrExpression::Identifier(identifier.clone().into()),
             _ => todo!(),
         })
     }
