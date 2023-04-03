@@ -1,9 +1,9 @@
 use crate::{
-    parser::Position,
+    ast::Position,
     tokenizer::{Token, TokenKind},
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Lexer<'a> {
     pub input: &'a str,
     pub position: usize,

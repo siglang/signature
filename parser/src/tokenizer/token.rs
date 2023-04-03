@@ -1,4 +1,4 @@
-use crate::parser::Position;
+use crate::ast::Position;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -47,22 +47,16 @@ impl From<String> for TokenKind {
 
 impl fmt::Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.stringify())
-    }
-}
-
-impl TokenKind {
-    pub fn stringify(&self) -> String {
         macro_rules! to_s {
-                ($( $x:ident )*) => {
-                    match &self {
-                        $( TokenKind::$x(x) => x.to_string(), )*
-                        _ => format!("{:?}", self)
-                    }
+            ($( $x:ident )*) => {
+                match &self {
+                    $( TokenKind::$x(x) => x.to_string(), )*
+                    _ => format!("{:?}", self)
                 }
             }
+        }
 
-        to_s! { IDENT String Number Boolean }
+        write!(f, "{}", to_s! { IDENT String Number Boolean })
     }
 }
 
@@ -74,7 +68,7 @@ pub struct Token {
 
 impl Default for Token {
     fn default() -> Self {
-        Token::new(TokenKind::ILLEGAL(String::from("")), Position(0, 0))
+        Token::new(TokenKind::ILLEGAL(String::new()), Position(0, 0))
     }
 }
 

@@ -3,7 +3,7 @@ use std::fs;
 
 use clap::Parser as _;
 use compiler::compiler::Compiler;
-use parser::{parser::Parser, tokenizer::Lexer};
+use parser::{Parser, tokenizer::Lexer};
 
 fn main() {
     let args = arguments::Cli::parse();
