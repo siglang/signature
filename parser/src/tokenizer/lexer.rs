@@ -4,17 +4,17 @@ use crate::{
 };
 
 #[derive(Debug, Default)]
-pub struct Lexer {
-    pub input: String,
+pub struct Lexer<'a> {
+    pub input: &'a str,
     pub position: usize,
     pub read_position: usize,
     pub current_char: char,
     pub current_position: Position,
 }
 
-impl Lexer {
+impl<'a> Lexer<'a> {
     #[inline]
-    pub fn new(input: String) -> Self {
+    pub fn new(input: &'a str) -> Self {
         let mut lexer = Lexer {
             input,
             ..Default::default()

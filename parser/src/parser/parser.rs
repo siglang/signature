@@ -14,23 +14,23 @@ use crate::{
 pub type ParseResult<T> = Result<T, ParsingError>;
 
 #[derive(Debug, Default)]
-pub struct Parser {
-    pub lexer: Lexer,
+pub struct Parser<'a> {
+    pub lexer: Lexer<'a>,
     pub current_token: Token,
     pub peek_token: Token,
     pub position: Position,
     pub errors: Vec<ParsingError>,
 }
 
-impl From<String> for Parser {
-    fn from(x: String) -> Self {
+impl<'a> From<&'a str> for Parser<'a> {
+    fn from(x: &'a str) -> Self {
         Parser::new(Lexer::new(x))
     }
 }
 
-impl Parser {
+impl<'a> Parser<'a> {
     #[inline]
-    pub fn new(lexer: Lexer) -> Self {
+    pub fn new(lexer: Lexer<'a>) -> Self {
         Parser {
             lexer,
             ..Default::default()
