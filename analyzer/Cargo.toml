@@ -1,0 +1,12 @@
+[package]
+name = "analyzer"
+version = "0.0.0"
+edition = "2021"
+authors = ["ky0422 (Kim Jun Young)"]
+description = "Semantic Analyzer for Signature programming language"
+license = "MIT"
+repository = "https://github.com/siglang/signature"
+
+[dependencies]
+thiserror = "1.0.37"
+parser = { path = "../parser" }
