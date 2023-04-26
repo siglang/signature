@@ -1,9 +1,9 @@
 mod arguments;
 use std::fs;
 
+use analyzer::analyzer::Analyzer;
 use clap::Parser as _;
-use compiler::compiler::Compiler;
-use parser::{Parser, tokenizer::Lexer};
+use parser::{tokenizer::Lexer, Parser};
 
 fn main() {
     let args = arguments::Cli::parse();
@@ -11,7 +11,17 @@ fn main() {
 
     let lexer = Lexer::new(content.as_str());
     let mut parser = Parser::new(lexer);
-    let ir = Compiler(parser.parse_program()).compile_program().unwrap();
+    let ast = parser.parse_program();
 
-    println!("{ir:#?}");
+    // for debugging
+    if !ast.errors.is_empty() {
+        for error in ast.errors {
+            println!("{}", error);
+        }
+        return;
+    }
+
+    let analyzed_ast = Analyzer::new(ast).analyze();
+
+    println!("{analyzed_ast:#?}");
 }
