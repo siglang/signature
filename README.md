@@ -6,19 +6,16 @@
 
 ## Frontend
 
-1. **Lexical Analyzer**
+1. **Lexical Analyzer** (Source Code >> Tokens)
     - Lexer (Tokenization)
-2. **Syntax Analysis**
+2. **Syntax Analysis** (Tokens >> AST)
     - Parser (Parsing)
-3. **Semantic Analysis**
-    - `AST >> IR` Compiler, Type Checker (IR Compiling)
-4. **Code Generation**
-    - `IR >> ByteCode` Compiler (ByteCode Compiling)
+3. **Semantic Analysis** (AST >> AST)
+    - Analyzer (Semantic Analysis), Type Checker (Type Checking)
+4. **Code Generation** (AST >> IR)
+    - `AST >> ByteCode` Code Generator (ByteCode Generating)
 
 ## Backend (ByteCode)
-
-1. Optimizer
-2. Virtual Machine
 
 Not included in this repository.
 
@@ -27,6 +24,5 @@ see [`siglang/bytecode`](https://github.com/siglang/bytecode) for the bytecode s
 # Progress Status
 
 -   [x] Lexer, Parser (AST Structure) [[source]](./parser/)
--   [ ] IR Compiler (IR Structure)
--   [ ] Type Checker (in IR Compiler)
--   [ ] ByteCode Compiler
+-   [ ] Semantic Analyzer (Type Checker)
+-   [ ] ByteCode Generator
