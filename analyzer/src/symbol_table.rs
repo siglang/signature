@@ -5,11 +5,19 @@ use std::collections::HashMap;
 pub struct SymbolEntry {
     pub data_type: DataType,
     pub attributes: SymbolAttributes,
+    pub kind: SymbolKind,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SymbolAttributes {
     pub function_return_type: Option<DataType>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SymbolKind {
+    Variable,
+    Struct,
+    Named,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
