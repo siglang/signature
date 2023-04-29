@@ -5,10 +5,6 @@ use parser::ast::{DataType, DataTypeKind, Expression, Literal};
 pub struct TypeChecker(pub SymbolTable);
 
 impl TypeChecker {
-    pub fn new(symbol_table: SymbolTable) -> Self {
-        Self(symbol_table)
-    }
-
     pub fn typeof_expression(&self, expression: &Expression) -> SemanticResult<DataType> {
         match expression {
             Expression::Literal(literal) => self.typeof_literal(literal),
