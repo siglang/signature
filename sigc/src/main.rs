@@ -18,10 +18,12 @@ fn main() {
         for error in ast.errors {
             println!("{}", error);
         }
-        return;
+    } else {
+        #[allow(unused_variables)]
+        let result = Analyzer::new(ast).analyze().unwrap_or_else(|error| {
+            println!("{}", error);
+            std::process::exit(1);
+        });
+        // println!("{result:#?}");
     }
-
-    let analyzed_ast = Analyzer::new(ast).analyze();
-
-    println!("{analyzed_ast:#?}");
 }
