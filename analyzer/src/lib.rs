@@ -1,5 +1,6 @@
 pub mod analyzer;
 pub mod symbol_table;
+pub mod type_checker;
 
 use parser::ast::Position;
 use std::fmt;
@@ -26,5 +27,7 @@ impl SemanticError {
 #[derive(Debug, Clone, Error, PartialEq)]
 #[rustfmt::skip]
 pub enum SemanticErrorKind {
-    
+    #[error("Type mismatch: `{0}` is not `{1}`")] TypeMismatch(String, String),
 }
+
+pub type SemanticResult<T> = Result<T, SemanticError>;

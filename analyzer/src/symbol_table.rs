@@ -8,9 +8,26 @@ pub struct SymbolEntry {
     pub kind: SymbolKind,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl SymbolEntry {
+    pub fn new(data_type: DataType, attributes: SymbolAttributes, kind: SymbolKind) -> Self {
+        Self {
+            data_type,
+            attributes,
+            kind,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct SymbolAttributes {
-    pub function_return_type: Option<DataType>,
+    pub is_spread: Option<bool>,
+}
+
+impl SymbolAttributes {
+    pub fn is_spread(mut self, is_spread: bool) -> Self {
+        self.is_spread = Some(is_spread);
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

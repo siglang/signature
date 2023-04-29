@@ -1,6 +1,10 @@
 #![allow(unused_variables)]
 
-use crate::symbol_table::SymbolTable;
+use crate::{
+    symbol_table::{SymbolAttributes, SymbolEntry, SymbolKind, SymbolTable},
+    type_checker::TypeChecker,
+    SemanticError, SemanticErrorKind, SemanticResult,
+};
 use parser::ast::{
     AutoStatement, DeclareStatement, ExpressionStatement, LetStatement, Program, ReturnStatement,
     Statement, StructStatement, TypeStatement,
@@ -20,15 +24,15 @@ impl Analyzer {
         }
     }
 
-    pub fn analyze(&mut self) -> Program {
+    pub fn analyze(&mut self) -> SemanticResult<Program> {
         for statement in self.program.statements.clone() {
-            self.analyze_statement(&statement);
+            self.analyze_statement(&statement)?;
         }
 
-        self.program.clone()
+        Ok(self.program.clone())
     }
 
-    fn analyze_statement(&mut self, statement: &Statement) {
+    fn analyze_statement(&mut self, statement: &Statement) -> SemanticResult<()> {
         match statement {
             Statement::LetStatement(statement) => self.analyze_let_statement(statement),
             Statement::AutoStatement(statement) => self.analyze_auto_statement(statement),
@@ -40,31 +44,55 @@ impl Analyzer {
         }
     }
 
-    fn analyze_let_statement(&mut self, let_statement: &LetStatement) {
+    fn analyze_let_statement(&mut self, statement: &LetStatement) -> SemanticResult<()> {
+        let type_checker = TypeChecker(self.symbol_table.clone());
+
+        let expression_type = type_checker.typeof_expression(&statement.value)?;
+        let type_annotation = type_checker.typeof_data_type(&statement.data_type)?;
+
+        if expression_type != statement.data_type {
+            return Err(SemanticError::new(
+                SemanticErrorKind::TypeMismatch(
+                    expression_type.to_string(),
+                    type_annotation.to_string(),
+                ),
+                statement.position,
+            ));
+        }
+
+        self.symbol_table.insert(
+            &statement.identifier.value,
+            SymbolEntry::new(
+                statement.data_type.clone(),
+                SymbolAttributes::default(),
+                SymbolKind::Variable,
+            ),
+        );
+
+        Ok(())
+    }
+
+    fn analyze_auto_statement(&mut self, statement: &AutoStatement) -> SemanticResult<()> {
         todo!()
     }
 
-    fn analyze_auto_statement(&mut self, auto_statement: &AutoStatement) {
+    fn analyze_return_statement(&mut self, statement: &ReturnStatement) -> SemanticResult<()> {
         todo!()
     }
 
-    fn analyze_return_statement(&mut self, return_statement: &ReturnStatement) {
+    fn analyze_type_statement(&mut self, statement: &TypeStatement) -> SemanticResult<()> {
         todo!()
     }
 
-    fn analyze_type_statement(&mut self, type_statement: &TypeStatement) {
+    fn analyze_declare_statement(&mut self, statement: &DeclareStatement) -> SemanticResult<()> {
         todo!()
     }
 
-    fn analyze_declare_statement(&mut self, declare_statement: &DeclareStatement) {
+    fn analyze_struct_statement(&mut self, statement: &StructStatement) -> SemanticResult<()> {
         todo!()
     }
 
-    fn analyze_struct_statement(&mut self, struct_statement: &StructStatement) {
-        todo!()
-    }
-
-    fn analyze_expression(&mut self, expression: &ExpressionStatement) {
+    fn analyze_expression(&mut self, expression: &ExpressionStatement) -> SemanticResult<()> {
         todo!()
     }
 }
