@@ -73,7 +73,20 @@ impl Analyzer {
     }
 
     fn analyze_auto_statement(&mut self, statement: &AutoStatement) -> SemanticResult<()> {
-        todo!()
+        let type_checker = TypeChecker(self.symbol_table.clone());
+
+        let expression_type = type_checker.typeof_expression(&statement.value)?;
+
+        self.symbol_table.insert(
+            &statement.identifier.value,
+            SymbolEntry::new(
+                expression_type.clone(),
+                SymbolAttributes::default(),
+                SymbolKind::Variable,
+            ),
+        );
+
+        Ok(())
     }
 
     fn analyze_return_statement(&mut self, statement: &ReturnStatement) -> SemanticResult<()> {
