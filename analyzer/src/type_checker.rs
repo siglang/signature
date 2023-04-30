@@ -1,4 +1,4 @@
-use crate::{symbol_table::SymbolTable, SemanticResult};
+use crate::{symbol_table::SymbolTable, SemanticError, SemanticErrorKind, SemanticResult};
 use parser::ast::{DataType, DataTypeKind, Expression, Literal};
 
 #[derive(Debug)]
@@ -14,6 +14,17 @@ impl TypeChecker {
 
     pub fn typeof_literal(&self, literal: &Literal) -> SemanticResult<DataType> {
         Ok(match literal {
+            Literal::Identifier(identifier) => self
+                .0
+                .lookup(&identifier.value)
+                .ok_or_else(|| {
+                    SemanticError::new(
+                        SemanticErrorKind::IdentifierNotDefined(identifier.value.clone()),
+                        identifier.position,
+                    )
+                })?
+                .data_type
+                .clone(),
             Literal::NumberLiteral(literal) => {
                 DataType::new(DataTypeKind::Number, literal.position)
             }

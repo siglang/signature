@@ -80,7 +80,7 @@ impl Analyzer {
         self.symbol_table.insert(
             &statement.identifier.value,
             SymbolEntry::new(
-                expression_type.clone(),
+                expression_type,
                 SymbolAttributes::default(),
                 SymbolKind::Variable,
             ),

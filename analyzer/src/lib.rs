@@ -28,6 +28,7 @@ impl SemanticError {
 #[rustfmt::skip]
 pub enum SemanticErrorKind {
     #[error("Type mismatch: `{0}` is not `{1}`")] TypeMismatch(String, String),
+    #[error("Identifier `{0}` is not defined")] IdentifierNotDefined(String),
 }
 
 pub type SemanticResult<T> = Result<T, SemanticError>;
