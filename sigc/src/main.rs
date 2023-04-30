@@ -16,14 +16,10 @@ fn main() {
     // for debugging
     if !ast.errors.is_empty() {
         for error in ast.errors {
-            println!("{}", error);
+            println!("{error}");
         }
     } else {
-        #[allow(unused_variables)]
-        let result = Analyzer::new(ast).analyze().unwrap_or_else(|error| {
-            println!("{}", error);
-            std::process::exit(1);
-        });
-        // println!("{result:#?}");
+        Analyzer::new(ast).analyze().unwrap();
+        // println!("{ast:#?}");
     }
 }
