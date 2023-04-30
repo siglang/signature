@@ -24,12 +24,16 @@ impl Analyzer {
         }
     }
 
-    pub fn analyze(&mut self) -> SemanticResult<Program> {
+    fn type_checker(&self) -> TypeChecker {
+        TypeChecker(self.symbol_table.clone())
+    }
+
+    pub fn analyze(&mut self) -> SemanticResult<()> {
         for statement in self.program.statements.clone() {
             self.analyze_statement(&statement)?;
         }
 
-        Ok(self.program.clone())
+        Ok(())
     }
 
     fn analyze_statement(&mut self, statement: &Statement) -> SemanticResult<()> {
@@ -45,7 +49,7 @@ impl Analyzer {
     }
 
     fn analyze_let_statement(&mut self, statement: &LetStatement) -> SemanticResult<()> {
-        let type_checker = TypeChecker(self.symbol_table.clone());
+        let type_checker = self.type_checker();
         let expression_type = type_checker.typeof_expression(&statement.value)?;
         let type_annotation = type_checker.typeof_data_type(&statement.data_type)?;
 
@@ -79,7 +83,7 @@ impl Analyzer {
     }
 
     fn analyze_auto_statement(&mut self, statement: &AutoStatement) -> SemanticResult<()> {
-        let type_checker = TypeChecker(self.symbol_table.clone());
+        let type_checker = self.type_checker();
         let expression_type = type_checker.typeof_expression(&statement.value)?;
 
         self.symbol_table
@@ -106,25 +110,39 @@ impl Analyzer {
     }
 
     fn analyze_type_statement(&mut self, statement: &TypeStatement) -> SemanticResult<()> {
-        let type_checker = TypeChecker(self.symbol_table.clone());
+        let type_checker = self.type_checker();
         let ttype = type_checker.typeof_data_type(&statement.data_type)?;
 
-        self.symbol_table.insert(
-            &statement.identifier.value,
-            SymbolEntry::new(ttype, SymbolAttributes::default(), SymbolKind::Named),
-        );
+        self.symbol_table
+            .insert(
+                &statement.identifier.value,
+                SymbolEntry::new(ttype, SymbolAttributes::default(), SymbolKind::Named),
+            )
+            .ok_or_else(|| {
+                SemanticError::new(
+                    SemanticErrorKind::TypeAliasAlreadyDefined(statement.identifier.value.clone()),
+                    statement.position,
+                )
+            })?;
 
         Ok(())
     }
 
     fn analyze_declare_statement(&mut self, statement: &DeclareStatement) -> SemanticResult<()> {
-        let type_checker = TypeChecker(self.symbol_table.clone());
+        let type_checker = self.type_checker();
         let ttype = type_checker.typeof_data_type(&statement.data_type)?;
 
-        self.symbol_table.insert(
-            &statement.identifier.value,
-            SymbolEntry::new(ttype, SymbolAttributes::default(), SymbolKind::Variable),
-        );
+        self.symbol_table
+            .insert(
+                &statement.identifier.value,
+                SymbolEntry::new(ttype, SymbolAttributes::default(), SymbolKind::Variable),
+            )
+            .ok_or_else(|| {
+                SemanticError::new(
+                    SemanticErrorKind::IdentifierAlreadyDefined(statement.identifier.value.clone()),
+                    statement.position,
+                )
+            })?;
 
         Ok(())
     }

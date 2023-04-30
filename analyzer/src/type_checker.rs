@@ -50,7 +50,7 @@ impl TypeChecker {
                 .lookup(&identifier)
                 .ok_or_else(|| {
                     SemanticError::new(
-                        SemanticErrorKind::IdentifierNotDefined(identifier),
+                        SemanticErrorKind::TypeAliasNotDefined(identifier),
                         data_type.position,
                     )
                 })?
