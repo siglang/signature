@@ -59,14 +59,21 @@ impl Analyzer {
             ));
         }
 
-        self.symbol_table.insert(
-            &statement.identifier.value,
-            SymbolEntry::new(
-                statement.data_type.clone(),
-                SymbolAttributes::default(),
-                SymbolKind::Variable,
-            ),
-        );
+        self.symbol_table
+            .insert(
+                &statement.identifier.value,
+                SymbolEntry::new(
+                    statement.data_type.clone(),
+                    SymbolAttributes::default(),
+                    SymbolKind::Variable,
+                ),
+            )
+            .ok_or_else(|| {
+                SemanticError::new(
+                    SemanticErrorKind::IdentifierAlreadyDefined(statement.identifier.value.clone()),
+                    statement.position,
+                )
+            })?;
 
         Ok(())
     }
@@ -75,14 +82,21 @@ impl Analyzer {
         let type_checker = TypeChecker(self.symbol_table.clone());
         let expression_type = type_checker.typeof_expression(&statement.value)?;
 
-        self.symbol_table.insert(
-            &statement.identifier.value,
-            SymbolEntry::new(
-                expression_type,
-                SymbolAttributes::default(),
-                SymbolKind::Variable,
-            ),
-        );
+        self.symbol_table
+            .insert(
+                &statement.identifier.value,
+                SymbolEntry::new(
+                    expression_type,
+                    SymbolAttributes::default(),
+                    SymbolKind::Variable,
+                ),
+            )
+            .ok_or_else(|| {
+                SemanticError::new(
+                    SemanticErrorKind::IdentifierAlreadyDefined(statement.identifier.value.clone()),
+                    statement.position,
+                )
+            })?;
 
         Ok(())
     }

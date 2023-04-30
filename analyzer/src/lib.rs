@@ -29,6 +29,7 @@ impl SemanticError {
 pub enum SemanticErrorKind {
     #[error("Type mismatch: `{0}` is not `{1}`")] TypeMismatch(String, String),
     #[error("Identifier `{0}` is not defined")] IdentifierNotDefined(String),
+    #[error("Identifier `{0}` is already defined")] IdentifierAlreadyDefined(String),
 }
 
 pub type SemanticResult<T> = Result<T, SemanticError>;
