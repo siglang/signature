@@ -33,11 +33,11 @@ impl SymbolAttributes {
 #[derive(Debug, Clone, PartialEq)]
 pub enum SymbolKind {
     Variable,
-    Struct,
     Named,
+    // Struct - todo
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SymbolTable {
     pub entries: HashMap<String, SymbolEntry>,
     pub parent: Option<Box<SymbolTable>>,
@@ -51,8 +51,13 @@ impl SymbolTable {
         }
     }
 
-    pub fn insert(&mut self, name: &str, entry: SymbolEntry) {
+    pub fn insert(&mut self, name: &str, entry: SymbolEntry) -> Option<()> {
+        if self.entries.contains_key(name) {
+            return None;
+        }
+
         self.entries.insert(name.to_string(), entry);
+        Some(())
     }
 
     pub fn lookup(&self, name: &str) -> Option<&SymbolEntry> {
@@ -67,5 +72,15 @@ impl SymbolTable {
                 .as_mut()
                 .and_then(|parent| parent.lookup_mut(name))
         })
+    }
+
+    pub fn variable(&self, name: &str) -> Option<&SymbolEntry> {
+        self.lookup(name)
+            .filter(|entry| entry.kind == SymbolKind::Variable)
+    }
+
+    pub fn named(&self, name: &str) -> Option<&SymbolEntry> {
+        self.lookup(name)
+            .filter(|entry| entry.kind == SymbolKind::Named)
     }
 }

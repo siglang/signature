@@ -20,7 +20,7 @@ impl Analyzer {
     pub fn new(program: Program) -> Self {
         Self {
             program,
-            symbol_table: SymbolTable::default(),
+            symbol_table: SymbolTable::new(None),
         }
     }
 
