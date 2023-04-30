@@ -109,7 +109,7 @@ impl Analyzer {
 
         self.symbol_table.insert(
             &statement.identifier.value,
-            SymbolEntry::new(ttype, SymbolAttributes::default(), SymbolKind::Named),
+            SymbolEntry::new(ttype, SymbolAttributes::default(), SymbolKind::Variable),
         );
 
         Ok(())

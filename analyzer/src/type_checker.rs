@@ -18,7 +18,7 @@ impl TypeChecker {
         Ok(match literal {
             Literal::Identifier(identifier) => self
                 .0
-                .lookup(&identifier.value)
+                .variable(&identifier.value)
                 .ok_or_else(|| {
                     SemanticError::new(
                         SemanticErrorKind::IdentifierNotDefined(identifier.value.clone()),
