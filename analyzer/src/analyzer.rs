@@ -46,11 +46,10 @@ impl Analyzer {
 
     fn analyze_let_statement(&mut self, statement: &LetStatement) -> SemanticResult<()> {
         let type_checker = TypeChecker(self.symbol_table.clone());
-
         let expression_type = type_checker.typeof_expression(&statement.value)?;
         let type_annotation = type_checker.typeof_data_type(&statement.data_type)?;
 
-        if expression_type != statement.data_type {
+        if expression_type != type_annotation {
             return Err(SemanticError::new(
                 SemanticErrorKind::TypeMismatch(
                     expression_type.to_string(),
@@ -74,7 +73,6 @@ impl Analyzer {
 
     fn analyze_auto_statement(&mut self, statement: &AutoStatement) -> SemanticResult<()> {
         let type_checker = TypeChecker(self.symbol_table.clone());
-
         let expression_type = type_checker.typeof_expression(&statement.value)?;
 
         self.symbol_table.insert(
@@ -94,11 +92,27 @@ impl Analyzer {
     }
 
     fn analyze_type_statement(&mut self, statement: &TypeStatement) -> SemanticResult<()> {
-        todo!()
+        let type_checker = TypeChecker(self.symbol_table.clone());
+        let ttype = type_checker.typeof_data_type(&statement.data_type)?;
+
+        self.symbol_table.insert(
+            &statement.identifier.value,
+            SymbolEntry::new(ttype, SymbolAttributes::default(), SymbolKind::Named),
+        );
+
+        Ok(())
     }
 
     fn analyze_declare_statement(&mut self, statement: &DeclareStatement) -> SemanticResult<()> {
-        todo!()
+        let type_checker = TypeChecker(self.symbol_table.clone());
+        let ttype = type_checker.typeof_data_type(&statement.data_type)?;
+
+        self.symbol_table.insert(
+            &statement.identifier.value,
+            SymbolEntry::new(ttype, SymbolAttributes::default(), SymbolKind::Named),
+        );
+
+        Ok(())
     }
 
     fn analyze_struct_statement(&mut self, statement: &StructStatement) -> SemanticResult<()> {
