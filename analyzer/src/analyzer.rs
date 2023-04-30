@@ -6,8 +6,8 @@ use crate::{
     SemanticError, SemanticErrorKind, SemanticResult,
 };
 use parser::ast::{
-    AutoStatement, DeclareStatement, ExpressionStatement, LetStatement, Program, ReturnStatement,
-    Statement, StructStatement, TypeStatement,
+    AutoStatement, DeclareStatement, Expression, ExpressionStatement, LetStatement, Literal,
+    Program, ReturnStatement, Statement, StructStatement, TypeStatement,
 };
 
 #[derive(Debug, Clone)]
@@ -152,6 +152,13 @@ impl Analyzer {
     }
 
     fn analyze_expression(&mut self, expression: &ExpressionStatement) -> SemanticResult<()> {
+        match &expression.expression {
+            Expression::Literal(literal) => self.analyze_literal(&literal),
+            _ => todo!(),
+        }
+    }
+
+    fn analyze_literal(&mut self, literal: &Literal) -> SemanticResult<()> {
         todo!()
     }
 }
