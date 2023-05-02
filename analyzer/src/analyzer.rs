@@ -161,9 +161,6 @@ impl Analyzer {
     }
 
     fn analyze_expression(&mut self, expression: &Expression) -> SemanticResult<DataType> {
-        let symbol_table = SymbolTable::new(Some(self.symbol_table.clone()));
-        let type_checker = TypeChecker(symbol_table);
-
-        type_checker.typeof_expression(&expression)
+        self.type_checker().typeof_expression(expression)
     }
 }
