@@ -6,8 +6,8 @@ use crate::{
     SemanticError, SemanticErrorKind, SemanticResult,
 };
 use parser::ast::{
-    AutoStatement, DeclareStatement, Expression, ExpressionStatement, LetStatement, Literal,
-    Program, ReturnStatement, Statement, StructStatement, TypeStatement,
+    AutoStatement, DataType, DeclareStatement, Expression, LetStatement, Program, ReturnStatement,
+    Statement, StructStatement, TypeStatement,
 };
 
 #[derive(Debug, Clone)]
@@ -21,6 +21,13 @@ impl Analyzer {
         Self {
             program,
             symbol_table: SymbolTable::new(None),
+        }
+    }
+
+    pub fn new_with_symbol_table(program: Program, symbol_table: SymbolTable) -> Self {
+        Self {
+            program,
+            symbol_table,
         }
     }
 
@@ -44,14 +51,19 @@ impl Analyzer {
             Statement::TypeStatement(statement) => self.analyze_type_statement(statement),
             Statement::DeclareStatement(statement) => self.analyze_declare_statement(statement),
             Statement::StructStatement(statement) => self.analyze_struct_statement(statement),
-            Statement::ExpressionStatement(expression) => self.analyze_expression(expression),
+            Statement::ExpressionStatement(expression) => {
+                let debug = self.analyze_expression(&expression.expression)?;
+
+                println!("{:?}", debug);
+
+                Ok(())
+            }
         }
     }
 
     fn analyze_let_statement(&mut self, statement: &LetStatement) -> SemanticResult<()> {
-        let type_checker = self.type_checker();
-        let expression_type = type_checker.typeof_expression(&statement.value)?;
-        let type_annotation = type_checker.typeof_data_type(&statement.data_type)?;
+        let expression_type = self.analyze_expression(&statement.value)?;
+        let type_annotation = self.type_checker().typeof_data_type(&statement.data_type)?;
 
         if expression_type != type_annotation {
             return Err(SemanticError::new(
@@ -83,8 +95,7 @@ impl Analyzer {
     }
 
     fn analyze_auto_statement(&mut self, statement: &AutoStatement) -> SemanticResult<()> {
-        let type_checker = self.type_checker();
-        let expression_type = type_checker.typeof_expression(&statement.value)?;
+        let expression_type = self.analyze_expression(&statement.value)?;
 
         self.symbol_table
             .insert(
@@ -110,8 +121,7 @@ impl Analyzer {
     }
 
     fn analyze_type_statement(&mut self, statement: &TypeStatement) -> SemanticResult<()> {
-        let type_checker = self.type_checker();
-        let ttype = type_checker.typeof_data_type(&statement.data_type)?;
+        let ttype = self.type_checker().typeof_data_type(&statement.data_type)?;
 
         self.symbol_table
             .insert(
@@ -129,8 +139,7 @@ impl Analyzer {
     }
 
     fn analyze_declare_statement(&mut self, statement: &DeclareStatement) -> SemanticResult<()> {
-        let type_checker = self.type_checker();
-        let ttype = type_checker.typeof_data_type(&statement.data_type)?;
+        let ttype = self.type_checker().typeof_data_type(&statement.data_type)?;
 
         self.symbol_table
             .insert(
@@ -151,14 +160,10 @@ impl Analyzer {
         todo!()
     }
 
-    fn analyze_expression(&mut self, expression: &ExpressionStatement) -> SemanticResult<()> {
-        match &expression.expression {
-            Expression::Literal(literal) => self.analyze_literal(&literal),
-            _ => todo!(),
-        }
-    }
+    fn analyze_expression(&mut self, expression: &Expression) -> SemanticResult<DataType> {
+        let symbol_table = SymbolTable::new(Some(self.symbol_table.clone()));
+        let type_checker = TypeChecker(symbol_table);
 
-    fn analyze_literal(&mut self, literal: &Literal) -> SemanticResult<()> {
-        todo!()
+        type_checker.typeof_expression(&expression)
     }
 }

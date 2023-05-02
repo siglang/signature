@@ -5,10 +5,17 @@ use parser::ast::{DataType, DataTypeKind, Expression, Literal};
 pub struct TypeChecker(pub SymbolTable);
 
 impl TypeChecker {
+    #[allow(unused_variables)]
     pub fn typeof_expression(&self, expression: &Expression) -> SemanticResult<DataType> {
         let ttype = match expression {
+            Expression::BlockExpression(block) => todo!(),
+            Expression::PrefixExpression(prefix) => todo!(),
+            Expression::InfixExpression(infix) => todo!(),
+            Expression::IfExpression(if_expression) => todo!(),
+            Expression::CallExpression(call) => todo!(),
+            Expression::TypeofExpression(typeof_expression) => todo!(),
+            Expression::IndexExpression(index) => todo!(),
             Expression::Literal(literal) => self.typeof_literal(literal),
-            _ => unimplemented!(),
         };
 
         ttype.map(|ttype| self.typeof_data_type(&ttype))?
