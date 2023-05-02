@@ -422,7 +422,7 @@ impl<'a> Parser<'a> {
             TokenKind::LBrace => Some(Ok(Expression::BlockExpression(
                 self.parse_block_expression()?,
             ))),
-            TokenKind::RBracket => Some(Ok(Expression::Literal(Literal::ArrayLiteral(
+            TokenKind::LBracket => Some(Ok(Expression::Literal(Literal::ArrayLiteral(
                 self.parse_array_literal()?,
             )))),
             TokenKind::Function => Some(Ok(Expression::Literal(Literal::FunctionLiteral(
