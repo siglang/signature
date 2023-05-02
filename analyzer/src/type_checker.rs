@@ -54,7 +54,7 @@ impl TypeChecker {
             DataTypeKind::Boolean => DataType::new(DataTypeKind::Boolean, data_type.position),
             DataTypeKind::Custom(identifier) => self
                 .0
-                .lookup(&identifier)
+                .named(&identifier)
                 .ok_or_else(|| {
                     SemanticError::new(
                         SemanticErrorKind::TypeAliasNotDefined(identifier),
