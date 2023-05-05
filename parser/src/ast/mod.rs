@@ -26,7 +26,7 @@ impl Program {
 
 impl fmt::Display for DataType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "{}", self.data_type)
+        write!(f, "{}", self.kind)
     }
 }
 
@@ -129,14 +129,14 @@ impl fmt::Display for Position {
 }
 #[derive(Debug, PartialEq, Clone)]
 pub struct DataType {
-    pub data_type: DataTypeKind,
+    pub kind: DataTypeKind,
     pub position: Position,
 }
 
 impl DataType {
     pub fn new(data_type: DataTypeKind, position: Position) -> Self {
         Self {
-            data_type,
+            kind: data_type,
             position,
         }
     }

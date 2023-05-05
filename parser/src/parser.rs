@@ -809,7 +809,7 @@ impl<'a> Parser<'a> {
         self.next_token();
 
         result.map(|data_type| DataType {
-            data_type,
+            kind: data_type,
             position,
         })
     }
@@ -852,7 +852,7 @@ impl<'a> Parser<'a> {
 
             data_type = data_type.map(|data_type| {
                 DataTypeKind::Array(Box::new(DataType {
-                    data_type,
+                    kind: data_type,
                     position: self.position,
                 }))
             });
@@ -903,7 +903,7 @@ impl<'a> Parser<'a> {
             generics,
             parameters,
             return_type: Box::new(DataType {
-                data_type: return_type,
+                kind: return_type,
                 position: self.position,
             }),
             position: self.position,
@@ -932,7 +932,7 @@ impl<'a> Parser<'a> {
 
         Ok(Generic::new(
             DataType {
-                data_type: DataTypeKind::Custom(ident),
+                kind: DataTypeKind::Custom(ident),
                 position: self.position,
             },
             generics,
