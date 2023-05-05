@@ -3,7 +3,7 @@
 use crate::{
     symbol_table::{SymbolAttributes, SymbolEntry, SymbolKind, SymbolTable},
     type_checker::TypeChecker,
-    SemanticError, SemanticErrorKind, SemanticResult,
+    SemanticError, SemanticResult,
 };
 use parser::ast::{
     AutoStatement, DataType, DeclareStatement, Expression, LetStatement, Program, ReturnStatement,
@@ -66,11 +66,9 @@ impl Analyzer {
         let type_annotation = self.type_checker().typeof_data_type(&statement.data_type)?;
 
         if expression_type != type_annotation {
-            return Err(SemanticError::new(
-                SemanticErrorKind::TypeMismatch(
-                    expression_type.to_string(),
-                    type_annotation.to_string(),
-                ),
+            return Err(SemanticError::type_mismatch(
+                expression_type.to_string(),
+                type_annotation.to_string(),
                 statement.position,
             ));
         }
@@ -85,8 +83,8 @@ impl Analyzer {
                 ),
             )
             .ok_or_else(|| {
-                SemanticError::new(
-                    SemanticErrorKind::IdentifierAlreadyDefined(statement.identifier.value.clone()),
+                SemanticError::identifier_already_defined(
+                    statement.identifier.value.clone(),
                     statement.position,
                 )
             })?;
@@ -107,8 +105,8 @@ impl Analyzer {
                 ),
             )
             .ok_or_else(|| {
-                SemanticError::new(
-                    SemanticErrorKind::IdentifierAlreadyDefined(statement.identifier.value.clone()),
+                SemanticError::identifier_already_defined(
+                    statement.identifier.value.clone(),
                     statement.position,
                 )
             })?;
@@ -129,8 +127,8 @@ impl Analyzer {
                 SymbolEntry::new(ttype, SymbolAttributes::default(), SymbolKind::Named),
             )
             .ok_or_else(|| {
-                SemanticError::new(
-                    SemanticErrorKind::TypeAliasAlreadyDefined(statement.identifier.value.clone()),
+                SemanticError::type_alias_already_defined(
+                    statement.identifier.value.clone(),
                     statement.position,
                 )
             })?;
@@ -147,8 +145,8 @@ impl Analyzer {
                 SymbolEntry::new(ttype, SymbolAttributes::default(), SymbolKind::Variable),
             )
             .ok_or_else(|| {
-                SemanticError::new(
-                    SemanticErrorKind::IdentifierAlreadyDefined(statement.identifier.value.clone()),
+                SemanticError::identifier_already_defined(
+                    statement.identifier.value.clone(),
                     statement.position,
                 )
             })?;
