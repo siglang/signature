@@ -1,11 +1,35 @@
 use crate::{
+    ast::*,
     identifier,
-    ast::*, ParsingError, ParsingErrorKind, Position,
     tokenizer::{Lexer, Token, TokenKind},
+    ParsingError, ParsingErrorKind, Position,
 };
 
 pub type ParseResult<T> = Result<T, ParsingError>;
 
+/// # Parser
+///
+/// The parser is responsible for parsing the tokens from the lexer into an AST.
+///
+/// ### Example
+///
+/// ```rs
+/// use parser::{tokenizer::Lexer, Parser};
+///
+/// let lexer = Lexer::new("let x: number = 5;");
+/// let mut parser = Parser::new(lexer);
+/// let ast = parser.parse_program();
+///
+/// match parser.parse_program() {
+///     Ok(ast) => {
+///         println!("{ast:#?}");
+///     }
+///     Err(errors) => {
+///         for error in errors {
+///             println!("{error}");
+///         }
+///     }
+/// }
 #[derive(Debug, Default)]
 pub struct Parser<'a> {
     pub lexer: Lexer<'a>,
@@ -22,7 +46,9 @@ impl<'a> From<&'a str> for Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    #[inline]
+    /// Creates a new `Parser` from a lexer.
+    ///
+    /// except for the `lexer` field, all other fields are specified by `Default::default()`.
     pub fn new(lexer: Lexer<'a>) -> Self {
         Parser {
             lexer,
@@ -50,7 +76,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    #[inline]
     fn peek_token(&self, token_type: &TokenKind) -> bool {
         self.peek_token.kind == *token_type
     }
@@ -78,7 +103,10 @@ impl<'a> Parser<'a> {
         self.get_priority(&self.current_token.kind)
     }
 
-    pub fn parse_program(&mut self) -> Program {
+    /// Parses the tokens from the lexer into an AST.
+    ///
+    /// if there are any errors, they will be returned as a `Vec<ParsingError>`.
+    pub fn parse_program(&mut self) -> Result<Program, Vec<ParsingError>> {
         self.next_token();
         self.next_token();
 
@@ -86,20 +114,18 @@ impl<'a> Parser<'a> {
 
         while self.current_token.kind != TokenKind::EOF {
             match self.parse_statement() {
-                Ok(statement) => program.statements.push(statement),
+                Ok(statement) => program.push(statement),
                 Err(error) => self.errors.push(error),
             }
 
             self.next_token();
         }
 
-        program.errors = self.errors.clone();
-
         if !self.errors.is_empty() {
-            program.statements = Vec::new();
+            Err(self.errors.clone())
+        } else {
+            Ok(program)
         }
-
-        program
     }
 
     fn parse_statement(&mut self) -> ParseResult<Statement> {

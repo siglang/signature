@@ -5,24 +5,9 @@ pub mod statement;
 pub use expression::*;
 pub use literal::*;
 pub use statement::*;
-
-use crate::ParsingError;
 use std::fmt;
 
-#[derive(Debug, Default, Clone)]
-pub struct Program {
-    pub statements: Vec<Statement>,
-    pub errors: Vec<ParsingError>,
-}
-
-impl Program {
-    pub fn new(statements: Vec<Statement>) -> Self {
-        Self {
-            statements,
-            errors: Vec::new(),
-        }
-    }
-}
+pub type Program = Vec<Statement>;
 
 impl fmt::Display for DataType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {

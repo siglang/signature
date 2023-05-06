@@ -36,7 +36,7 @@ impl Analyzer {
     }
 
     pub fn analyze(&mut self) -> SemanticResult<()> {
-        for statement in self.program.statements.clone() {
+        for statement in self.program.clone() {
             self.analyze_statement(&statement)?;
         }
 

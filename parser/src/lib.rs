@@ -1,7 +1,7 @@
-pub mod helpers;
-pub mod tokenizer;
 pub mod ast;
+pub mod helpers;
 pub mod parser;
+pub mod tokenizer;
 
 pub use parser::*;
 
@@ -35,4 +35,3 @@ pub enum ParsingErrorKind {
     #[error("Expected next token to be an expression, got `{0}` instead")] ExpectedExpression(String),
     #[error("Unexpected token `{0}`")] UnexpectedToken(String),
 }
-
