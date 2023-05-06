@@ -2,6 +2,8 @@ pub mod analyzer;
 pub mod symbol_table;
 pub mod type_checker;
 
+pub use analyzer::*;
+
 use parser::ast::Position;
 use std::fmt;
 use thiserror::Error;

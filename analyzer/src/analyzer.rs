@@ -10,6 +10,20 @@ use parser::ast::{
     Statement, StructStatement, TypeStatement,
 };
 
+/// # Analyzer
+///
+/// The analyzer is responsible for analyzing the AST, type checking and checking for semantic errors.
+///
+/// ## Example
+///
+/// ```rust
+/// use analyzer::Analyzer;
+///
+/// match Analyzer::new(program).analyze() {
+///    Ok(_) => println!("No semantic errors found!"),
+///    Err(error) => println!("Semantic error: {error}")
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Analyzer {
     pub program: Program,
@@ -17,6 +31,7 @@ pub struct Analyzer {
 }
 
 impl Analyzer {
+    /// Creates a new analyzer with an empty symbol table.
     pub fn new(program: Program) -> Self {
         Self {
             program,
@@ -24,6 +39,7 @@ impl Analyzer {
         }
     }
 
+    /// Creates a new analyzer with the given symbol table.
     pub fn new_with_symbol_table(program: Program, symbol_table: SymbolTable) -> Self {
         Self {
             program,
@@ -35,6 +51,7 @@ impl Analyzer {
         TypeChecker(self.symbol_table.clone())
     }
 
+    /// Analyzes the program and returns a `SemanticResult`.
     pub fn analyze(&mut self) -> SemanticResult<()> {
         for statement in self.program.clone() {
             self.analyze_statement(&statement)?;

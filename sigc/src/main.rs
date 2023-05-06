@@ -1,7 +1,7 @@
 mod arguments;
 use std::fs;
 
-use analyzer::analyzer::Analyzer;
+use analyzer::Analyzer;
 use clap::Parser as _;
 use parser::{tokenizer::Lexer, Parser};
 
