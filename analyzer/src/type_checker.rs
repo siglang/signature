@@ -132,3 +132,95 @@ impl TypeChecker {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::symbol_table;
+    use parser::ast::{
+        DataType, DataTypeKind, Expression, InfixExpression, Literal, NumberLiteral, Position,
+        StringLiteral,
+    };
+
+    #[test]
+    fn test_typeof_infix_expression() {
+        let expression = Expression::InfixExpression(InfixExpression {
+            left: Box::new(Expression::Literal(Literal::NumberLiteral(NumberLiteral {
+                value: 1.0,
+                position: Position::default(),
+            }))),
+            operator: TokenKind::Plus,
+            right: Box::new(Expression::Literal(Literal::NumberLiteral(NumberLiteral {
+                value: 2.0,
+                position: Position::default(),
+            }))),
+            position: Position::default(),
+        });
+
+        let ttype = TypeChecker(SymbolTable::new(None))
+            .typeof_expression(&expression)
+            .unwrap();
+
+        assert_eq!(
+            ttype,
+            DataType::new(DataTypeKind::Number, Position::default())
+        );
+    }
+
+    #[test]
+    fn test_typeof_literal() {
+        let expression = Expression::Literal(Literal::StringLiteral(StringLiteral {
+            value: String::from("x"),
+            position: Position::default(),
+        }));
+
+        let ttype = TypeChecker(SymbolTable::new(None))
+            .typeof_expression(&expression)
+            .unwrap();
+
+        assert_eq!(
+            ttype,
+            DataType::new(DataTypeKind::String, Position::default())
+        );
+    }
+
+    #[test]
+    fn test_typeof_literal_2() {
+        let symbol_table = symbol_table! {
+            x => Variable, Number;
+        };
+
+        let expression = Expression::Literal(Literal::Identifier(parser::ast::Identifier {
+            value: String::from("x"),
+            position: Position::default(),
+        }));
+
+        let ttype = TypeChecker(symbol_table)
+            .typeof_expression(&expression)
+            .unwrap();
+
+        assert_eq!(
+            ttype,
+            DataType::new(DataTypeKind::Number, Position::default())
+        );
+    }
+
+    #[test]
+    fn test_typeof_data_type() {
+        let symbol_table = symbol_table! {
+            x => Variable, Number;
+            X => Named, String;
+        };
+
+        let data_type = DataType::new(DataTypeKind::Custom(String::from("X")), Position::default());
+
+        let ttype = TypeChecker(symbol_table)
+            .typeof_data_type(&data_type)
+            .unwrap();
+
+        assert_eq!(
+            ttype,
+            DataType::new(DataTypeKind::String, Position::default())
+        );
+    }
+}

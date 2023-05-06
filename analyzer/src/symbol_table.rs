@@ -89,10 +89,10 @@ impl SymbolTable {
 #[macro_export]
 macro_rules! symbol_entry {
     ($data_type:ident, $kind:ident) => {
-        SymbolEntry::new(
-            DataType::new(DataTypeKind::$data_type, Position(0, 0)),
-            SymbolAttributes::default(),
-            SymbolKind::$kind,
+        $crate::symbol_table::SymbolEntry::new(
+            DataType::new(DataTypeKind::$data_type, Position::default()),
+            $crate::symbol_table::SymbolAttributes::default(),
+            $crate::symbol_table::SymbolKind::$kind,
         )
     };
 }
@@ -100,18 +100,32 @@ macro_rules! symbol_entry {
 /// for testing purposes
 #[macro_export]
 macro_rules! symbol_table {
-    ($parent:expr; $( $name:ident => $kind:ident, $data_type:ident; )*) => {
+    (@option $parent:expr; $( $name:ident => $kind:ident, $data_type:ident; )*) => {
         {
             let mut symbol_table = SymbolTable::new($parent);
 
             $(
                 symbol_table.insert(
                     stringify!($name),
-                    symbol_entry!($data_type, $kind),
+                    $crate::symbol_entry!($data_type, $kind),
                 );
             )*
 
             symbol_table
+        }
+    };
+    ($( $name:ident => $kind:ident, $data_type:ident; )*) => {
+        $crate::symbol_table! {
+            @option
+            None;
+            $( $name => $kind, $data_type; )*
+        }
+    };
+    ($parent:expr; $( $name:ident => $kind:ident, $data_type:ident; )*) => {
+        $crate::symbol_table! {
+            @option
+            Some($parent);
+            $( $name => $kind, $data_type; )*
         }
     }
 }
@@ -208,7 +222,7 @@ mod tests {
         assert_eq!(
             entry,
             SymbolEntry::new(
-                DataType::new(DataTypeKind::Number, Position(0, 0)),
+                DataType::new(DataTypeKind::Number, Position::default()),
                 SymbolAttributes::default(),
                 SymbolKind::Variable,
             )
@@ -218,10 +232,9 @@ mod tests {
     #[test]
     fn test_symbol_table_macro() {
         let symbol_table = symbol_table! {
-            Some(symbol_table! {
-                None;
+            symbol_table! {
                 x => Variable, Number;
-            });
+            };
             y => Named, String;
             z => Variable, Boolean;
         };
