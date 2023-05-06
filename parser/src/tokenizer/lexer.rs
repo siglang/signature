@@ -3,6 +3,22 @@ use crate::{
     tokenizer::{Token, TokenKind},
 };
 
+/// # Lexer
+///
+/// The lexer is responsible for tokenizing the input.
+///
+/// ## Example
+///
+/// ```rust
+/// use parser::tokenizer::Lexer;
+///
+/// let input = "let x: number = 5;";
+/// let lexer = Lexer::new(input);
+///
+/// for token in lexer {
+///     println!("{token:?}");
+/// }
+/// ```
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Lexer<'a> {
     pub input: &'a str,
@@ -13,7 +29,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    #[inline]
+    /// Creates a new lexer from the given input.
     pub fn new(input: &'a str) -> Self {
         let mut lexer = Lexer {
             input,
@@ -24,7 +40,7 @@ impl<'a> Lexer<'a> {
         lexer
     }
 
-    pub fn read_char(&mut self) {
+    fn read_char(&mut self) {
         if self.read_position >= self.input.len() {
             self.current_char = '\0';
         } else {
@@ -37,7 +53,7 @@ impl<'a> Lexer<'a> {
         self.current_position.1 += 1;
     }
 
-    pub fn peek_char(&self) -> char {
+    fn peek_char(&self) -> char {
         if self.read_position >= self.input.len() {
             '\0'
         } else {
@@ -45,7 +61,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn skip_whitespace(&mut self) {
+    fn skip_whitespace(&mut self) {
         while self.current_char.is_whitespace() {
             if self.current_char == '\n' {
                 self.current_position.0 += 1;
@@ -56,7 +72,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn read_identifier(&mut self) -> String {
+    fn read_identifier(&mut self) -> String {
         let position = self.position;
         while self.current_char.is_alphanumeric() || self.current_char == '_' {
             self.read_char();
@@ -82,7 +98,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn read_number(&mut self) -> f64 {
+    fn read_number(&mut self) -> f64 {
         let position = self.position;
         let mut has_dot = false;
 
@@ -101,7 +117,7 @@ impl<'a> Lexer<'a> {
         self.input[position..self.position].parse().unwrap_or(0.)
     }
 
-    pub fn read_string(&mut self) -> String {
+    fn read_string(&mut self) -> String {
         let position = self.position + 1;
         while self.peek_char() != '"' && self.current_char != '\0' {
             self.read_char();
@@ -111,7 +127,7 @@ impl<'a> Lexer<'a> {
         self.input[position..self.position].to_string()
     }
 
-    pub fn read_comment(&mut self) {
+    fn read_comment(&mut self) {
         if self.current_char == '/' && self.peek_char() == '*' {
             self.read_char();
             self.read_char();
@@ -125,7 +141,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn read_inline_comment(&mut self) {
+    fn read_inline_comment(&mut self) {
         if self.current_char == '/' && self.peek_char() == '/' {
             self.read_char();
             self.read_char();
@@ -224,6 +240,20 @@ impl<'a> Lexer<'a> {
                 self.read_char();
                 token
             }
+        }
+    }
+}
+
+impl Iterator for Lexer<'_> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let token = self.next_token();
+
+        if token.kind == TokenKind::EOF {
+            None
+        } else {
+            Some(token)
         }
     }
 }

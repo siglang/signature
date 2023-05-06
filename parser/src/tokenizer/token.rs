@@ -79,11 +79,7 @@ impl std::fmt::Display for Token {
 }
 
 impl Token {
-    #[inline]
-    pub fn new(token_type: TokenKind, position: Position) -> Self {
-        Token {
-            kind: token_type,
-            position,
-        }
+    pub fn new(kind: TokenKind, position: Position) -> Self {
+        Token { kind, position }
     }
 }
