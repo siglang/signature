@@ -47,8 +47,6 @@ impl<'a> From<&'a str> for Parser<'a> {
 
 impl<'a> Parser<'a> {
     /// Creates a new `Parser` from a lexer.
-    ///
-    /// except for the `lexer` field, all other fields are specified by `Default::default()`.
     pub fn new(lexer: Lexer<'a>) -> Self {
         Parser {
             lexer,
@@ -577,20 +575,6 @@ impl<'a> Parser<'a> {
             };
         }
 
-        match left_expression.clone()? {
-            Expression::InfixExpression(infix) => {
-                if let Some(e) = self.eval_infix_expression(&infix) {
-                    return e;
-                };
-            }
-            Expression::PrefixExpression(prefix) => {
-                if let Some(e) = self.eval_prefix_expression(&prefix) {
-                    return e;
-                };
-            }
-            _ => {}
-        };
-
         left_expression
     }
 
@@ -987,101 +971,5 @@ impl<'a> Parser<'a> {
         }
 
         Ok(generics)
-    }
-
-    fn eval_expression(&mut self, expression: &Expression) -> Option<ParseResult<Expression>> {
-        match expression {
-            Expression::InfixExpression(infix) => self.eval_infix_expression(infix),
-            Expression::PrefixExpression(prefix) => self.eval_prefix_expression(prefix),
-            e => Some(Ok(e.clone())),
-        }
-    }
-
-    // TODO
-    fn eval_infix_expression(
-        &mut self,
-        infix: &InfixExpression,
-    ) -> Option<ParseResult<Expression>> {
-        self.eval_infix_expression_opt(infix)
-    }
-
-    // TODO
-    fn eval_infix_expression_opt(
-        &mut self,
-        infix: &InfixExpression,
-    ) -> Option<ParseResult<Expression>> {
-        let InfixExpression {
-            left,
-            operator,
-            right,
-            ..
-        } = infix;
-
-        macro_rules! f64_ops {
-            ($op:tt) => {{
-                if let (
-                    Some(Ok(Expression::Literal(Literal::NumberLiteral(NumberLiteral { value: left, .. })))),
-                    Some(Ok(Expression::Literal(Literal::NumberLiteral(NumberLiteral { value: right, .. })))),
-                ) = (self.eval_expression(left), self.eval_expression(right))
-                {
-                    return Some(Ok(Expression::Literal(Literal::NumberLiteral(
-                        NumberLiteral {
-                            value: left $op right,
-                            position: self.position,
-                        }
-                    ))));
-                }
-
-                return None;
-            }}
-        }
-
-        match operator {
-            TokenKind::Plus => f64_ops! { + },
-            TokenKind::Minus => f64_ops! { - },
-            TokenKind::Asterisk => f64_ops! { * },
-            TokenKind::Slash => f64_ops! { / },
-            TokenKind::Percent => f64_ops! { % },
-            _ => None,
-        }
-    }
-
-    fn eval_prefix_expression(
-        &mut self,
-        prefix: &PrefixExpression,
-    ) -> Option<ParseResult<Expression>> {
-        let PrefixExpression {
-            operator,
-            right,
-            position,
-        } = prefix;
-
-        match operator {
-            TokenKind::Minus => {
-                if let Expression::Literal(Literal::NumberLiteral(right)) = *right.clone() {
-                    return Some(Ok(Expression::Literal(Literal::NumberLiteral(
-                        NumberLiteral {
-                            value: -right.value,
-                            position: *position,
-                        },
-                    ))));
-                }
-
-                None
-            }
-            TokenKind::Bang => {
-                if let Expression::Literal(Literal::BooleanLiteral(right)) = *right.clone() {
-                    return Some(Ok(Expression::Literal(Literal::BooleanLiteral(
-                        BooleanLiteral {
-                            value: !right.value,
-                            position: *position,
-                        },
-                    ))));
-                }
-
-                None
-            }
-            _ => None,
-        }
     }
 }
