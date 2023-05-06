@@ -84,3 +84,166 @@ impl SymbolTable {
             .filter(|entry| entry.kind == SymbolKind::Named)
     }
 }
+
+/// for testing purposes
+#[macro_export]
+macro_rules! symbol_entry {
+    ($data_type:ident, $kind:ident) => {
+        SymbolEntry::new(
+            DataType::new(DataTypeKind::$data_type, Position(0, 0)),
+            SymbolAttributes::default(),
+            SymbolKind::$kind,
+        )
+    };
+}
+
+/// for testing purposes
+#[macro_export]
+macro_rules! symbol_table {
+    ($parent:expr; $( $name:ident => $kind:ident, $data_type:ident; )*) => {
+        {
+            let mut symbol_table = SymbolTable::new($parent);
+
+            $(
+                symbol_table.insert(
+                    stringify!($name),
+                    symbol_entry!($data_type, $kind),
+                );
+            )*
+
+            symbol_table
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use parser::ast::{DataTypeKind, Position};
+
+    #[test]
+    fn test_insert() {
+        let mut symbol_table = SymbolTable::new(None);
+
+        let entry = symbol_entry!(Number, Variable);
+        symbol_table.insert("x", entry.clone()).unwrap();
+
+        assert_eq!(symbol_table.entries.get("x"), Some(&entry));
+    }
+
+    #[test]
+    fn test_insert_2() {
+        let mut symbol_table = SymbolTable::new(None);
+
+        symbol_table
+            .insert("x", symbol_entry!(Number, Variable))
+            .unwrap();
+
+        assert_eq!(
+            symbol_table.insert("x", symbol_entry!(Number, Variable)),
+            None
+        );
+    }
+
+    #[test]
+    fn test_lookup() {
+        let mut parent = SymbolTable::new(None);
+        parent.insert("x", symbol_entry!(Number, Variable)).unwrap();
+
+        let mut symbol_table = SymbolTable::new(Some(parent));
+        symbol_table
+            .insert("y", symbol_entry!(Number, Variable))
+            .unwrap();
+
+        let entry = symbol_entry!(String, Variable);
+        symbol_table.insert("x", entry.clone()).unwrap();
+
+        assert_eq!(symbol_table.lookup("x"), Some(&entry));
+    }
+
+    #[test]
+    fn test_variable() {
+        let mut symbol_table = SymbolTable::new(None);
+        symbol_table
+            .insert("x", symbol_entry!(Number, Named))
+            .unwrap();
+
+        assert_eq!(symbol_table.variable("x"), None);
+    }
+
+    #[test]
+    fn test_variable_2() {
+        let mut symbol_table = SymbolTable::new(None);
+
+        let entry = symbol_entry!(Number, Variable);
+        symbol_table.insert("x", entry.clone()).unwrap();
+
+        assert_eq!(symbol_table.variable("x"), Some(&entry));
+    }
+
+    #[test]
+    fn test_named() {
+        let mut symbol_table = SymbolTable::new(None);
+        symbol_table
+            .insert("x", symbol_entry!(Number, Variable))
+            .unwrap();
+
+        assert_eq!(symbol_table.named("x"), None);
+    }
+
+    #[test]
+    fn test_named_2() {
+        let mut symbol_table = SymbolTable::new(None);
+
+        let entry = symbol_entry!(Number, Named);
+        symbol_table.insert("x", entry.clone()).unwrap();
+
+        assert_eq!(symbol_table.named("x"), Some(&entry));
+    }
+
+    #[test]
+    fn test_symbol_entry_macro() {
+        let entry = symbol_entry!(Number, Variable);
+
+        assert_eq!(
+            entry,
+            SymbolEntry::new(
+                DataType::new(DataTypeKind::Number, Position(0, 0)),
+                SymbolAttributes::default(),
+                SymbolKind::Variable,
+            )
+        );
+    }
+
+    #[test]
+    fn test_symbol_table_macro() {
+        let symbol_table = symbol_table! {
+            Some(symbol_table! {
+                None;
+                x => Variable, Number;
+            });
+            y => Named, String;
+            z => Variable, Boolean;
+        };
+
+        assert_eq!(
+            symbol_table,
+            SymbolTable {
+                entries: {
+                    let mut entries = HashMap::new();
+                    entries.insert("y".to_string(), symbol_entry!(String, Named));
+                    entries.insert("z".to_string(), symbol_entry!(Boolean, Variable));
+                    entries
+                },
+                parent: Some(Box::new(SymbolTable {
+                    entries: {
+                        let mut entries = HashMap::new();
+                        entries.insert("x".to_string(), symbol_entry!(Number, Variable));
+                        entries
+                    },
+                    parent: None,
+                })),
+            }
+        );
+    }
+}
