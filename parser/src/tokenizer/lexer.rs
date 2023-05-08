@@ -33,6 +33,7 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         let mut lexer = Lexer {
             input,
+            current_position: Position(1, 0),
             ..Default::default()
         };
 
@@ -78,24 +79,7 @@ impl<'a> Lexer<'a> {
             self.read_char();
         }
 
-        let result = self.input[position..self.position].to_string();
-
-        macro_rules! replace_all {
-            ($s:expr, $($t:expr => $r:expr),*) => {{
-                let mut s = String::from($s);
-                $( s = s.replace($t, $r); )*
-                s
-            }};
-        }
-
-        replace_all! {
-            result,
-            "\\r" => "\r",
-            "\\t" => "\t",
-            "\\n" => "\n",
-            "\\\"" => "\"",
-            "\\\\" => "\\"
-        }
+        self.input[position..self.position].to_string()
     }
 
     fn read_number(&mut self) -> f64 {
@@ -114,7 +98,9 @@ impl<'a> Lexer<'a> {
             self.read_char();
         }
 
-        self.input[position..self.position].parse().unwrap_or(0.)
+        self.input[position..self.position]
+            .parse()
+            .unwrap_or_else(|_| unimplemented!())
     }
 
     fn read_string(&mut self) -> String {

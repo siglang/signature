@@ -58,7 +58,7 @@ impl<'a> Parser<'a> {
         self.current_token = self.peek_token.clone();
         self.peek_token = self.lexer.next_token();
 
-        self.position = Position::new(self.current_token.position.0, self.current_token.position.1);
+        self.position = Position(self.current_token.position.0, self.current_token.position.1);
     }
 
     fn expect_token(&mut self, token_type: &TokenKind) -> ParseResult<()> {

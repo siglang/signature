@@ -94,13 +94,6 @@ impl std::fmt::Display for Generic {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Position(pub usize, pub usize);
 
-impl Position {
-    #[inline]
-    pub fn new(line: usize, column: usize) -> Self {
-        Position(line, column)
-    }
-}
-
 impl PartialEq for Position {
     fn eq(&self, _: &Self) -> bool {
         true
