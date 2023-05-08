@@ -1,6 +1,6 @@
-use crate::{symbol_table::SymbolTable, SemanticError, SemanticResult};
+use crate::{symbol_table::SymbolTable, Analyzer, SemanticError, SemanticResult};
 use parser::{
-    ast::{DataType, DataTypeKind, Expression, InfixExpression, Literal},
+    ast::{BlockExpression, DataType, DataTypeKind, Expression, InfixExpression, Literal},
     tokenizer::TokenKind,
 };
 
@@ -11,7 +11,7 @@ impl TypeChecker {
     #[allow(unused_variables)]
     pub fn typeof_expression(&self, expression: &Expression) -> SemanticResult<DataType> {
         let ttype = match expression {
-            Expression::BlockExpression(block) => todo!(),
+            Expression::BlockExpression(block) => self.typeof_block_expression(block),
             Expression::PrefixExpression(prefix) => todo!(),
             Expression::InfixExpression(infix) => self.typeof_infix_expression(infix),
             Expression::IfExpression(if_expression) => todo!(),
@@ -22,6 +22,14 @@ impl TypeChecker {
         };
 
         ttype.map(|ttype| self.typeof_data_type(&ttype))?
+    }
+
+    fn typeof_block_expression(&self, block: &BlockExpression) -> SemanticResult<DataType> {
+        let symbol_table = SymbolTable::new(Some(self.0.clone()));
+        let analyzer =
+            Analyzer::new_with_symbol_table(block.statements.clone(), symbol_table).analyze()?;
+
+        Ok(DataType::new(analyzer, block.position))
     }
 
     fn typeof_infix_expression(&self, infix: &InfixExpression) -> SemanticResult<DataType> {
