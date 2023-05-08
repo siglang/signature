@@ -500,8 +500,9 @@ impl<'a> Parser<'a> {
                     left: Box::new(left_expression?),
                     operator: self.current_token.kind.clone(),
                     right: {
+                        let priority = self.current_priority();
                         self.next_token();
-                        Box::new(self.parse_expression(&self.current_priority())?)
+                        Box::new(self.parse_expression(&priority)?)
                     },
                     position: self.position,
                 })),
