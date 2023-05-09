@@ -1,7 +1,7 @@
 mod arguments;
 use std::fs;
 
-use analyzer::Analyzer;
+use analyzer::analyzer::Analyzer;
 use clap::Parser as _;
 use parser::{tokenizer::Lexer, Parser};
 
@@ -14,7 +14,9 @@ fn main() {
 
     match parser.parse_program() {
         Ok(ast) => {
-            Analyzer::new(ast).analyze().unwrap();
+            // println!("AST: {:#?}", ast);
+            let rettype = Analyzer::new(ast).analyze().unwrap();
+            println!("Return type: {rettype:?}");
         }
         Err(errors) => {
             for error in errors {
