@@ -12,7 +12,7 @@ impl TypeChecker {
     pub fn typeof_expression(&self, expression: &Expression) -> SemanticResult<DataType> {
         let ttype = match expression {
             Expression::BlockExpression(block) => self.typeof_block_expression(block),
-            Expression::PrefixExpression(prefix) => todo!(),
+            Expression::PrefixExpression(prefix) => self.typeof_prefix_expression(prefix),
             Expression::InfixExpression(infix) => self.typeof_infix_expression(infix),
             Expression::IfExpression(if_expression) => todo!(),
             Expression::CallExpression(call) => todo!(),
@@ -30,6 +30,43 @@ impl TypeChecker {
             Analyzer::new_with_symbol_table(block.statements.clone(), symbol_table).analyze()?;
 
         Ok(DataType::new(analyzer, block.position))
+    }
+
+    fn typeof_prefix_expression(
+        &self,
+        prefix: &parser::ast::PrefixExpression,
+    ) -> SemanticResult<DataType> {
+        let right = self.typeof_expression(&prefix.right)?;
+
+        /*
+            !T => boolean
+            [-|!]T => number
+        */
+        match prefix.operator {
+            TokenKind::Bang => {
+                if right.kind != DataTypeKind::Boolean {
+                    Err(SemanticError::operator_not_supported(
+                        prefix.operator.clone(),
+                        right.kind,
+                        prefix.position,
+                    ))
+                } else {
+                    Ok(DataType::new(DataTypeKind::Boolean, prefix.position))
+                }
+            }
+            TokenKind::Minus | TokenKind::Plus => {
+                if right.kind != DataTypeKind::Number {
+                    Err(SemanticError::operator_not_supported(
+                        prefix.operator.clone(),
+                        right.kind,
+                        prefix.position,
+                    ))
+                } else {
+                    Ok(DataType::new(DataTypeKind::Number, prefix.position))
+                }
+            }
+            _ => unreachable!(),
+        }
     }
 
     fn typeof_infix_expression(&self, infix: &InfixExpression) -> SemanticResult<DataType> {
