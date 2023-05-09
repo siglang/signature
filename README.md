@@ -24,5 +24,5 @@ see [`siglang/bytecode`](https://github.com/siglang/bytecode) for the bytecode s
 # Progress Status
 
 -   [x] Lexer, Parser (AST Structure) [[source]](./parser/)
--   [ ] Semantic Analyzer (Type Checker)
+-   [ ] Semantic Analyzer (Type Checker) [[source]](./analyzer/)
 -   [ ] ByteCode Generator
