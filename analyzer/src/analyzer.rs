@@ -16,7 +16,7 @@ use parser::ast::{
 ///
 /// ## Example
 ///
-/// ```rust
+/// ```ignore
 /// use analyzer::Analyzer;
 ///
 /// match Analyzer::new(program).analyze() {

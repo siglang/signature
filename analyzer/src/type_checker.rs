@@ -1,4 +1,4 @@
-use crate::{symbol_table::SymbolTable, Analyzer, SemanticError, SemanticResult};
+use crate::{analyzer::Analyzer, symbol_table::SymbolTable, SemanticError, SemanticResult};
 use parser::{
     ast::{BlockExpression, DataType, DataTypeKind, Expression, InfixExpression, Literal},
     tokenizer::TokenKind,
@@ -144,11 +144,54 @@ impl TypeChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::symbol_table;
+    use crate::{symbol_entry, symbol_table};
     use parser::ast::{
         DataType, DataTypeKind, Expression, InfixExpression, Literal, NumberLiteral, Position,
-        StringLiteral,
+        ReturnStatement, Statement, StringLiteral,
     };
+
+    #[test]
+    fn test_typeof_block_expression() {
+        let parent = {
+            let mut symbol_table = SymbolTable::new(None);
+            symbol_table
+                .insert("x", symbol_entry!(Number, Variable))
+                .unwrap();
+            symbol_table
+        };
+
+        let symbol_table = SymbolTable::new(Some(parent));
+
+        let expression = Expression::BlockExpression(BlockExpression {
+            statements: vec![Statement::ReturnStatement(ReturnStatement {
+                value: Expression::InfixExpression(InfixExpression {
+                    left: Box::new(Expression::Literal(Literal::Identifier(
+                        parser::ast::Identifier {
+                            value: String::from("x"),
+                            position: Position::default(),
+                        },
+                    ))),
+                    operator: TokenKind::Plus,
+                    right: Box::new(Expression::Literal(Literal::NumberLiteral(NumberLiteral {
+                        value: 1.0,
+                        position: Position::default(),
+                    }))),
+                    position: Position::default(),
+                }),
+                position: Position::default(),
+            })],
+            position: Position::default(),
+        });
+
+        let ttype = TypeChecker(symbol_table)
+            .typeof_expression(&expression)
+            .unwrap();
+
+        assert_eq!(
+            ttype,
+            DataType::new(DataTypeKind::Number, Position::default())
+        );
+    }
 
     #[test]
     fn test_typeof_infix_expression() {
