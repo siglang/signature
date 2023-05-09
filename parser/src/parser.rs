@@ -414,7 +414,7 @@ impl<'a> Parser<'a> {
                     position: self.position,
                 },
             )))),
-            TokenKind::Bang | TokenKind::Minus => {
+            TokenKind::Bang | TokenKind::Minus | TokenKind::Plus => {
                 let operator = self.current_token.kind.clone();
 
                 self.next_token();
