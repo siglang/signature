@@ -83,6 +83,10 @@ impl SemanticError {
             position,
         )
     }
+
+    pub fn type_annotation_needed(position: Position) -> Self {
+        Self::new(SemanticErrorKind::TypeAnnotationNeeded, position)
+    }
 }
 
 #[derive(Debug, Clone, Error, PartialEq)]
@@ -94,6 +98,7 @@ pub enum SemanticErrorKind {
     #[error("Identifier `{0}` is already defined")] IdentifierAlreadyDefined(String),
     #[error("Type alias `{0}` is already defined")] TypeAliasAlreadyDefined(String),
     #[error("Operator `{0}` is not supported for type `{1}`")] OperatorNotSupported(String, String),
+    #[error("Type annotation needed")] TypeAnnotationNeeded,
 }
 
 pub type SemanticResult<T> = Result<T, SemanticError>;

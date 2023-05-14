@@ -51,7 +51,11 @@ impl Analyzer {
     }
 
     fn type_checker(&self) -> TypeChecker {
-        TypeChecker(self.symbol_table.clone())
+        TypeChecker::new(self.symbol_table.clone())
+    }
+
+    fn type_checker_with_provided_type(&self, ttype: DataTypeKind) -> TypeChecker {
+        TypeChecker::new_with_provided_type(self.symbol_table.clone(), ttype)
     }
 
     fn set_return_type(&mut self, ttype: DataTypeKind, position: Position) -> SemanticResult<()> {
@@ -99,8 +103,11 @@ impl Analyzer {
     }
 
     fn analyze_let_statement(&mut self, statement: &LetStatement) -> SemanticResult<()> {
-        let expression_type = self.analyze_expression(&statement.value)?;
         let type_annotation = self.type_checker().typeof_data_type(&statement.data_type)?;
+        let expression_type = self.analyze_expression_with_provided_type(
+            &statement.value,
+            type_annotation.clone().kind,
+        )?;
 
         if expression_type != type_annotation {
             return Err(SemanticError::type_mismatch(
@@ -200,5 +207,14 @@ impl Analyzer {
 
     fn analyze_expression(&mut self, expression: &Expression) -> SemanticResult<DataType> {
         self.type_checker().typeof_expression(expression)
+    }
+
+    fn analyze_expression_with_provided_type(
+        &mut self,
+        expression: &Expression,
+        ttype: DataTypeKind,
+    ) -> SemanticResult<DataType> {
+        self.type_checker_with_provided_type(ttype)
+            .typeof_expression(expression)
     }
 }

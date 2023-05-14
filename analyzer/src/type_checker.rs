@@ -1,13 +1,36 @@
 use crate::{analyzer::Analyzer, symbol_table::SymbolTable, SemanticError, SemanticResult};
 use parser::{
-    ast::{BlockExpression, DataType, DataTypeKind, Expression, InfixExpression, Literal},
+    ast::{
+        ArrayLiteral, BlockExpression, DataType, DataTypeKind, Expression, Identifier,
+        InfixExpression, Literal, PrefixExpression,
+    },
     tokenizer::TokenKind,
 };
 
 #[derive(Debug)]
-pub struct TypeChecker(pub SymbolTable);
+pub struct TypeChecker {
+    pub symbol_table: SymbolTable,
+    /// Used when providing a type externally, e.g. `let arr: number[] = [];`
+    pub provided_type: Option<DataTypeKind>,
+}
 
 impl TypeChecker {
+    /// Creates a new type checker with the given symbol table.
+    pub fn new(symbol_table: SymbolTable) -> Self {
+        Self {
+            symbol_table,
+            provided_type: None,
+        }
+    }
+
+    /// Creates a new type checker with the given symbol table and external type.
+    pub fn new_with_provided_type(symbol_table: SymbolTable, provided_type: DataTypeKind) -> Self {
+        Self {
+            symbol_table,
+            provided_type: Some(provided_type),
+        }
+    }
+
     #[allow(unused_variables)]
     pub fn typeof_expression(&self, expression: &Expression) -> SemanticResult<DataType> {
         let ttype = match expression {
@@ -25,17 +48,14 @@ impl TypeChecker {
     }
 
     fn typeof_block_expression(&self, block: &BlockExpression) -> SemanticResult<DataType> {
-        let symbol_table = SymbolTable::new(Some(self.0.clone()));
+        let symbol_table = SymbolTable::new(Some(self.symbol_table.clone()));
         let analyzer =
             Analyzer::new_with_symbol_table(block.statements.clone(), symbol_table).analyze()?;
 
         Ok(DataType::new(analyzer, block.position))
     }
 
-    fn typeof_prefix_expression(
-        &self,
-        prefix: &parser::ast::PrefixExpression,
-    ) -> SemanticResult<DataType> {
+    fn typeof_prefix_expression(&self, prefix: &PrefixExpression) -> SemanticResult<DataType> {
         let right = self.typeof_expression(&prefix.right)?;
 
         /*
@@ -136,17 +156,7 @@ impl TypeChecker {
 
     pub fn typeof_literal(&self, literal: &Literal) -> SemanticResult<DataType> {
         Ok(match literal {
-            Literal::Identifier(identifier) => self
-                .0
-                .variable(&identifier.value)
-                .ok_or_else(|| {
-                    SemanticError::identifier_not_defined(
-                        identifier.value.clone(),
-                        identifier.position,
-                    )
-                })?
-                .data_type
-                .clone(),
+            Literal::Identifier(identifier) => self.typeof_identifier_literal(identifier)?,
             Literal::NumberLiteral(literal) => {
                 DataType::new(DataTypeKind::Number, literal.position)
             }
@@ -156,24 +166,75 @@ impl TypeChecker {
             Literal::BooleanLiteral(literal) => {
                 DataType::new(DataTypeKind::Boolean, literal.position)
             }
+            Literal::ArrayLiteral(literal) => self.typeof_array_literal(literal)?,
             _ => unimplemented!(),
         })
     }
 
+    fn typeof_identifier_literal(&self, identifier: &Identifier) -> SemanticResult<DataType> {
+        Ok(self
+            .symbol_table
+            .variable(&identifier.value)
+            .ok_or_else(|| {
+                SemanticError::identifier_not_defined(identifier.value.clone(), identifier.position)
+            })?
+            .data_type
+            .clone())
+    }
+
+    fn typeof_array_literal(&self, literal: &ArrayLiteral) -> SemanticResult<DataType> {
+        let mut data_type: Option<DataType> = None;
+
+        for expression in &literal.elements {
+            let ttype = self.typeof_expression(expression)?;
+
+            if let Some(data_type) = data_type.clone() {
+                if data_type != ttype {
+                    return Err(SemanticError::type_mismatch(
+                        data_type.kind,
+                        ttype.kind,
+                        literal.position,
+                    ));
+                }
+            } else {
+                data_type = Some(ttype);
+            }
+        }
+
+        match data_type {
+            Some(data_type) => Ok(DataType::new(
+                DataTypeKind::Array(Box::new(data_type)),
+                literal.position,
+            )),
+            None => self
+                .provided_type
+                .clone()
+                .ok_or_else(|| SemanticError::type_annotation_needed(literal.position))
+                .map(|ttype| DataType::new(ttype, literal.position)),
+        }
+    }
+
     pub fn typeof_data_type(&self, data_type: &DataType) -> SemanticResult<DataType> {
         Ok(match data_type.kind.clone() {
-            DataTypeKind::Number => DataType::new(DataTypeKind::Number, data_type.position),
-            DataTypeKind::String => DataType::new(DataTypeKind::String, data_type.position),
-            DataTypeKind::Boolean => DataType::new(DataTypeKind::Boolean, data_type.position),
             DataTypeKind::Custom(identifier) => self
-                .0
+                .symbol_table
                 .named(&identifier)
                 .ok_or_else(|| {
                     SemanticError::type_alias_not_defined(identifier, data_type.position)
                 })?
                 .data_type
                 .clone(),
-            _ => unimplemented!(),
+            DataTypeKind::Array(data_type) => DataType::new(
+                DataTypeKind::Array(Box::new(self.typeof_data_type(&data_type)?)),
+                data_type.position,
+            ),
+            DataTypeKind::Auto
+            | DataTypeKind::Unknown
+            | DataTypeKind::Generic(_)
+            | DataTypeKind::Fn(_) => {
+                unimplemented!()
+            }
+            _ => data_type.clone(),
         })
     }
 }
@@ -183,8 +244,8 @@ mod tests {
     use super::*;
     use crate::{symbol_entry, symbol_table};
     use parser::ast::{
-        DataType, DataTypeKind, Expression, InfixExpression, Literal, NumberLiteral, Position,
-        ReturnStatement, Statement, StringLiteral,
+        DataType, DataTypeKind, Expression, Identifier, InfixExpression, Literal, NumberLiteral,
+        Position, ReturnStatement, Statement, StringLiteral,
     };
 
     #[test]
@@ -202,12 +263,10 @@ mod tests {
         let expression = Expression::BlockExpression(BlockExpression {
             statements: vec![Statement::ReturnStatement(ReturnStatement {
                 value: Expression::InfixExpression(InfixExpression {
-                    left: Box::new(Expression::Literal(Literal::Identifier(
-                        parser::ast::Identifier {
-                            value: String::from("x"),
-                            position: Position::default(),
-                        },
-                    ))),
+                    left: Box::new(Expression::Literal(Literal::Identifier(Identifier {
+                        value: String::from("x"),
+                        position: Position::default(),
+                    }))),
                     operator: TokenKind::Plus,
                     right: Box::new(Expression::Literal(Literal::NumberLiteral(NumberLiteral {
                         value: 1.0,
@@ -220,7 +279,7 @@ mod tests {
             position: Position::default(),
         });
 
-        let ttype = TypeChecker(symbol_table)
+        let ttype = TypeChecker::new(symbol_table)
             .typeof_expression(&expression)
             .unwrap();
 
@@ -245,7 +304,7 @@ mod tests {
             position: Position::default(),
         });
 
-        let ttype = TypeChecker(SymbolTable::new(None))
+        let ttype = TypeChecker::new(SymbolTable::new(None))
             .typeof_expression(&expression)
             .unwrap();
 
@@ -262,7 +321,7 @@ mod tests {
             position: Position::default(),
         }));
 
-        let ttype = TypeChecker(SymbolTable::new(None))
+        let ttype = TypeChecker::new(SymbolTable::new(None))
             .typeof_expression(&expression)
             .unwrap();
 
@@ -278,18 +337,50 @@ mod tests {
             x => Variable, Number;
         };
 
-        let expression = Expression::Literal(Literal::Identifier(parser::ast::Identifier {
+        let expression = Expression::Literal(Literal::Identifier(Identifier {
             value: String::from("x"),
             position: Position::default(),
         }));
 
-        let ttype = TypeChecker(symbol_table)
+        let ttype = TypeChecker::new(symbol_table)
             .typeof_expression(&expression)
             .unwrap();
 
         assert_eq!(
             ttype,
             DataType::new(DataTypeKind::Number, Position::default())
+        );
+    }
+
+    #[test]
+    fn test_typeof_array_literal() {
+        let expression = Expression::Literal(Literal::ArrayLiteral(ArrayLiteral {
+            elements: vec![
+                Expression::Literal(Literal::NumberLiteral(NumberLiteral {
+                    value: 1.0,
+                    position: Position::default(),
+                })),
+                Expression::Literal(Literal::NumberLiteral(NumberLiteral {
+                    value: 2.0,
+                    position: Position::default(),
+                })),
+            ],
+            position: Position::default(),
+        }));
+
+        let ttype = TypeChecker::new(SymbolTable::new(None))
+            .typeof_expression(&expression)
+            .unwrap();
+
+        assert_eq!(
+            ttype,
+            DataType::new(
+                DataTypeKind::Array(Box::new(DataType::new(
+                    DataTypeKind::Number,
+                    Position::default()
+                ))),
+                Position::default()
+            )
         );
     }
 
@@ -302,7 +393,7 @@ mod tests {
 
         let data_type = DataType::new(DataTypeKind::Custom(String::from("X")), Position::default());
 
-        let ttype = TypeChecker(symbol_table)
+        let ttype = TypeChecker::new(symbol_table)
             .typeof_data_type(&data_type)
             .unwrap();
 
