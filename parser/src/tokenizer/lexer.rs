@@ -120,6 +120,11 @@ impl<'a> Lexer<'a> {
 
             while self.current_char != '\0' && (self.current_char != '*' || self.peek_char() != '/')
             {
+                if self.current_char == '\n' {
+                    self.current_position.0 += 1;
+                    self.current_position.1 = 0;
+                }
+
                 self.read_char();
             }
 
