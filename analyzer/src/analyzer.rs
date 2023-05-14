@@ -6,8 +6,8 @@ use crate::{
     SemanticError, SemanticResult,
 };
 use parser::ast::{
-    AutoStatement, DataType, DataTypeKind, DeclareStatement, Expression, LetStatement, Program,
-    ReturnStatement, Statement, StructStatement, TypeStatement,
+    AutoStatement, DataType, DataTypeKind, DeclareStatement, Expression, LetStatement, Position,
+    Program, ReturnStatement, Statement, StructStatement, TypeStatement,
 };
 
 /// # Analyzer
@@ -52,6 +52,23 @@ impl Analyzer {
 
     fn type_checker(&self) -> TypeChecker {
         TypeChecker(self.symbol_table.clone())
+    }
+
+    fn set_return_type(&mut self, ttype: DataTypeKind, position: Position) -> SemanticResult<()> {
+        match self.return_type {
+            DataTypeKind::Unknown => self.return_type = ttype,
+            _ => {
+                if self.return_type != ttype {
+                    return Err(SemanticError::type_mismatch(
+                        self.return_type.clone(),
+                        ttype,
+                        position,
+                    ));
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Analyzes the program and returns a `SemanticResult` with return type of the program.
@@ -136,19 +153,7 @@ impl Analyzer {
 
     fn analyze_return_statement(&mut self, statement: &ReturnStatement) -> SemanticResult<()> {
         let expression_type = self.analyze_expression(&statement.value)?;
-
-        match self.return_type {
-            DataTypeKind::Unknown => self.return_type = expression_type.kind,
-            _ => {
-                if self.return_type != expression_type.kind {
-                    return Err(SemanticError::type_mismatch(
-                        self.return_type.clone(),
-                        expression_type.kind,
-                        statement.position,
-                    ));
-                }
-            }
-        }
+        self.set_return_type(expression_type.kind, statement.position)?;
 
         Ok(())
     }
