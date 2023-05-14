@@ -15,8 +15,10 @@ fn main() {
     match parser.parse_program() {
         Ok(ast) => {
             // println!("AST: {:#?}", ast);
-            let rettype = Analyzer::new(ast).analyze().unwrap();
-            println!("Return type: {rettype:?}");
+            match Analyzer::new(ast).analyze() {
+                Ok(ret) => println!("Return type: {ret}"),
+                Err(error) => println!("{error}"),
+            }
         }
         Err(errors) => {
             for error in errors {
