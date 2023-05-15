@@ -16,7 +16,7 @@ fn main() {
         Ok(ast) => {
             // println!("AST: {:#?}", ast);
             match Analyzer::new(ast).analyze() {
-                Ok(ret) => println!("Return type: {ret}"),
+                Ok(ret) => println!("Return type: {ret:?}"),
                 Err(error) => println!("{error}"),
             }
         }

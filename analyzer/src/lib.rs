@@ -1,6 +1,5 @@
 pub mod analyzer;
 pub mod symbol_table;
-pub mod type_checker;
 
 use parser::ast::Position;
 use std::fmt;
