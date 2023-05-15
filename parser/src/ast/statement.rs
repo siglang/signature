@@ -5,6 +5,7 @@ pub enum Statement {
     LetStatement(LetStatement),
     AutoStatement(AutoStatement),
     ReturnStatement(ReturnStatement),
+    ReturnExpressionStatement(ReturnExpressionStatement),
     TypeStatement(TypeStatement),
     DeclareStatement(DeclareStatement),
     StructStatement(StructStatement),
@@ -51,6 +52,12 @@ pub struct StructStatement {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReturnStatement {
+    pub value: Expression,
+    pub position: Position,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ReturnExpressionStatement {
     pub value: Expression,
     pub position: Position,
 }

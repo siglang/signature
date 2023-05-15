@@ -40,6 +40,13 @@
 -   `ReturnStatement`
     -   `return`[^keyword] [`Expression`](#expression)`;`
 
+<br />
+
+### `ReturnExpressionStatement`
+
+-   `ReturnExpressionStatement`
+    -   [`Expression`](#expression)
+
 ---
 
 ## `expression`

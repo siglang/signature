@@ -11,6 +11,7 @@ pub enum Expression {
     TypeofExpression(TypeofExpression),
     IndexExpression(IndexExpression),
     Literal(Literal),
+    Debug(Box<Expression>),
 }
 
 #[derive(Debug, PartialEq, Clone)]

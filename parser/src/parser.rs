@@ -33,10 +33,11 @@ pub type ParseResult<T> = Result<T, ParsingError>;
 #[derive(Debug, Default)]
 pub struct Parser<'a> {
     pub lexer: Lexer<'a>,
-    pub current_token: Token,
-    pub peek_token: Token,
-    pub position: Position,
     pub errors: Vec<ParsingError>,
+    current_token: Token,
+    peek_token: Token,
+    position: Position,
+    previous_statement: Option<Statement>,
 }
 
 impl<'a> From<&'a str> for Parser<'a> {
@@ -127,15 +128,25 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_statement(&mut self) -> ParseResult<Statement> {
-        Ok(match self.current_token.kind {
+        if let Some(Statement::ReturnExpressionStatement(_)) = self.previous_statement {
+            return Err(ParsingError::new(
+                ParsingErrorKind::UnexpectedToken(self.current_token.kind.to_string()),
+                self.position,
+            ));
+        }
+
+        let statement = match self.current_token.kind {
             TokenKind::Let => Statement::LetStatement(self.parse_let_statement()?),
             TokenKind::Auto => Statement::AutoStatement(self.parse_auto_statement()?),
             TokenKind::Return => Statement::ReturnStatement(self.parse_return_statement()?),
             TokenKind::Type => Statement::TypeStatement(self.parse_type_statement()?),
             TokenKind::Declare => Statement::DeclareStatement(self.parse_declare_statement()?),
             TokenKind::Struct => Statement::StructStatement(self.parse_struct_statement()?),
-            _ => Statement::ExpressionStatement(self.parse_expression_statement()?),
-        })
+            _ => self.parse_expression_statement()?,
+        };
+
+        self.previous_statement = Some(statement.clone());
+        Ok(statement)
     }
 
     fn parse_let_statement(&mut self) -> ParseResult<LetStatement> {
@@ -367,23 +378,22 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_expression_statement(&mut self) -> ParseResult<ExpressionStatement> {
+    fn parse_expression_statement(&mut self) -> ParseResult<Statement> {
         let expression = self.parse_expression(&Priority::Lowest)?;
 
         if self.peek_token(&TokenKind::Semicolon) {
             self.next_token();
 
-            Ok(ExpressionStatement {
+            Ok(Statement::ExpressionStatement(ExpressionStatement {
                 expression,
                 position: self.position,
-            })
+            }))
         } else {
-            Err(ParsingError::new(
-                ParsingErrorKind::ExpectedNextToken(
-                    TokenKind::Semicolon.to_string(),
-                    self.current_token.kind.to_string(),
-                ),
-                self.position,
+            Ok(Statement::ReturnExpressionStatement(
+                ReturnExpressionStatement {
+                    value: expression,
+                    position: self.position,
+                },
             ))
         }
     }
@@ -463,6 +473,13 @@ impl<'a> Parser<'a> {
                     expression: Box::new(self.parse_expression(&Priority::Lowest)?),
                     position: self.position,
                 })))
+            }
+            TokenKind::Debug => {
+                self.next_token();
+
+                Some(Ok(Expression::Debug(Box::new(
+                    self.parse_expression(&Priority::Lowest)?,
+                ))))
             }
             _ => None,
         };

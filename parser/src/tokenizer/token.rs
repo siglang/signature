@@ -18,7 +18,9 @@ pub enum TokenKind {
 
     Let, Auto, If, Else, Return, Function, Type, Declare, Struct, Typeof, Spread,
 
-    NumberType, StringType, BooleanType
+    NumberType, StringType, BooleanType,
+
+    Debug
 }
 
 impl From<String> for TokenKind {
@@ -40,6 +42,7 @@ impl From<String> for TokenKind {
             "number" => TokenKind::NumberType,
             "string" => TokenKind::StringType,
             "boolean" => TokenKind::BooleanType,
+            "debug" => TokenKind::Debug,
             s => TokenKind::IDENT(s.to_string()),
         }
     }
