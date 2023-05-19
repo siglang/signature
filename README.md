@@ -10,7 +10,7 @@
     - Lexer (Tokenization)
 2. **Syntax Analysis** (Tokens >> AST)
     - Parser (Parsing)
-3. **Semantic Analysis** (AST >> AST)
+3. **Semantic Analysis**
     - Analyzer (Semantic Analysis), Type Checker (Type Checking)
 4. **Code Generation** (AST >> IR)
     - `AST >> ByteCode` Code Generator (ByteCode Generating)
