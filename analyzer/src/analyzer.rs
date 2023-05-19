@@ -316,8 +316,8 @@ impl Analyzer {
             Expression::TypeofExpression(typeof_expression) => todo!(),
             Expression::IndexExpression(index) => todo!(),
             Expression::Literal(literal) => self.typeof_literal(literal, provided_type),
-            Expression::Debug(expression) => {
-                println!("DEBUG: {:?}", expression);
+            Expression::Debug(expression, position) => {
+                println!("[A:DEBUG:{position}]: {expression:?}");
                 self.typeof_expression(expression)
             }
         };
