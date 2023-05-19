@@ -7,3 +7,4 @@ edition = "2021"
 parser = { path = "../parser" }
 analyzer = { path = "../analyzer" }
 clap = { version = "4.1.4", features = ["derive"] }
+thiserror = "1.0.37"

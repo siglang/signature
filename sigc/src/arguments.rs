@@ -10,6 +10,8 @@ pub struct Cli {
     pub debug: bool,
     #[arg(short, long, help = "Use verbose output")]
     pub verbose: bool,
+    #[arg(short, long, help = "Evaluate the source file")]
+    pub eval: bool,
     #[arg(short, long, value_name = "FILE", help = "Use a custom config file")]
     pub config: Option<PathBuf>,
 }
