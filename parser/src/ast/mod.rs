@@ -102,7 +102,7 @@ impl PartialEq for Position {
 
 impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "[{}:{}]", self.0, self.1)
+        write!(f, "{}:{}", self.0, self.1)
     }
 }
 #[derive(Debug, PartialEq, Clone)]
@@ -121,25 +121,11 @@ impl DataType {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Parameter {
-    pub identifier: Identifier,
-    pub data_type: DataType,
-    pub kind: ParameterKind,
-    pub position: Position,
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub struct FunctionType {
     pub generics: Option<IdentifierGeneric>,
     pub parameters: Vec<(DataType, ParameterKind)>,
     pub return_type: Box<DataType>,
     pub position: Position,
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum ParameterKind {
-    Normal,
-    Spread,
 }
 
 #[derive(Debug, Eq, PartialEq, PartialOrd)]

@@ -477,9 +477,10 @@ impl<'a> Parser<'a> {
             TokenKind::Debug => {
                 self.next_token();
 
-                Some(Ok(Expression::Debug(Box::new(
-                    self.parse_expression(&Priority::Lowest)?,
-                ))))
+                Some(Ok(Expression::Debug(
+                    Box::new(self.parse_expression(&Priority::Lowest)?),
+                    self.position,
+                )))
             }
             _ => None,
         };

@@ -1,4 +1,4 @@
-use super::{BlockExpression, DataType, Expression, IdentifierGeneric, Parameter, Position};
+use super::{BlockExpression, DataType, Expression, IdentifierGeneric, Position};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
@@ -42,6 +42,20 @@ pub struct FunctionLiteral {
     pub generics: Option<IdentifierGeneric>,
     pub return_type: DataType,
     pub position: Position,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Parameter {
+    pub identifier: Identifier,
+    pub data_type: DataType,
+    pub kind: ParameterKind,
+    pub position: Position,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum ParameterKind {
+    Normal,
+    Spread,
 }
 
 #[derive(Debug, PartialEq, Clone)]
