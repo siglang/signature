@@ -2,3 +2,4 @@
 
 -   [fibonacci](./fibonacci.sl) (not working yet)
 -   [fn](./fn.sl) (not working yet)
+-   [return](./return.sl)
