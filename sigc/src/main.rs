@@ -3,7 +3,7 @@ mod evaluator;
 
 use analyzer::analyzer::Analyzer;
 use clap::Parser as _;
-use evaluator::evaluator::Evaluator;
+use evaluator::Evaluator;
 use parser::{tokenizer::Lexer, Parser};
 use std::fs;
 
