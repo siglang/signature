@@ -424,9 +424,8 @@ impl<'a> Parser<'a> {
                     position: self.position,
                 },
             )))),
-            TokenKind::Bang | TokenKind::Minus | TokenKind::Plus => {
-                let operator = self.current_token.kind.clone();
-
+            TokenKind::Bang | TokenKind::Minus => {
+                let operator: PrefixOperator = self.current_token.kind.clone().into();
                 self.next_token();
 
                 Some(Ok(Expression::PrefixExpression(PrefixExpression {
@@ -514,16 +513,20 @@ impl<'a> Parser<'a> {
                 | TokenKind::LT
                 | TokenKind::GT
                 | TokenKind::LTE
-                | TokenKind::GTE => Ok(Expression::InfixExpression(InfixExpression {
-                    left: Box::new(left_expression?),
-                    operator: self.current_token.kind.clone(),
-                    right: {
-                        let priority = self.current_priority();
-                        self.next_token();
-                        Box::new(self.parse_expression(&priority)?)
-                    },
-                    position: self.position,
-                })),
+                | TokenKind::GTE => {
+                    let operator: InfixOperator = self.current_token.kind.clone().into();
+
+                    let priority = self.current_priority();
+                    self.next_token();
+                    let right = Box::new(self.parse_expression(&priority)?);
+
+                    Ok(Expression::InfixExpression(InfixExpression {
+                        left: Box::new(left_expression?),
+                        operator,
+                        right,
+                        position: self.position,
+                    }))
+                }
                 TokenKind::LParen => {
                     self.next_token();
 
