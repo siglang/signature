@@ -4,14 +4,11 @@ use crate::{
     symbol_table::{SymbolAttributes, SymbolEntry, SymbolKind, SymbolTable},
     SemanticError, SemanticResult,
 };
-use parser::{
-    ast::{
-        ArrayLiteral, AutoStatement, BlockExpression, DataType, DataTypeKind, DeclareStatement,
-        Expression, Identifier, InfixExpression, LetStatement, Literal, Position, PrefixExpression,
-        Program, ReturnExpressionStatement, ReturnStatement, Statement, StructStatement,
-        TypeStatement,
-    },
-    tokenizer::TokenKind,
+use parser::ast::{
+    ArrayLiteral, AutoStatement, BlockExpression, DataType, DataTypeKind, DeclareStatement,
+    Expression, Identifier, InfixExpression, InfixOperator, LetStatement, Literal, Position,
+    PrefixExpression, PrefixOperator, Program, ReturnExpressionStatement, ReturnStatement,
+    Statement, StructStatement, TypeStatement,
 };
 
 /// `Return` - returns a value from top-level function scope.
@@ -345,7 +342,7 @@ impl Analyzer {
             [-|!]T => number
         */
         match prefix.operator {
-            TokenKind::Bang => {
+            PrefixOperator::Not => {
                 if right.kind != DataTypeKind::Boolean {
                     Err(SemanticError::operator_not_supported(
                         prefix.operator.clone(),
@@ -356,7 +353,7 @@ impl Analyzer {
                     Ok(DataType::new(DataTypeKind::Boolean, prefix.position))
                 }
             }
-            TokenKind::Minus | TokenKind::Plus => {
+            PrefixOperator::Minus => {
                 if right.kind != DataTypeKind::Number {
                     Err(SemanticError::operator_not_supported(
                         prefix.operator.clone(),
@@ -367,7 +364,6 @@ impl Analyzer {
                     Ok(DataType::new(DataTypeKind::Number, prefix.position))
                 }
             }
-            _ => unreachable!(),
         }
     }
 
@@ -381,7 +377,7 @@ impl Analyzer {
             T [==|!=|<|>|<=|>=] T => boolean
         */
         match infix.operator {
-            TokenKind::Plus => match left.kind {
+            InfixOperator::Plus => match left.kind {
                 DataTypeKind::Number | DataTypeKind::String => {
                     if left.kind == right.kind {
                         Ok(DataType::new(left.kind, infix.position))
@@ -399,7 +395,10 @@ impl Analyzer {
                     infix.position,
                 )),
             },
-            TokenKind::Minus | TokenKind::Asterisk | TokenKind::Slash | TokenKind::Percent => {
+            InfixOperator::Minus
+            | InfixOperator::Asterisk
+            | InfixOperator::Slash
+            | InfixOperator::Percent => {
                 if left.kind != DataTypeKind::Number {
                     Err(SemanticError::operator_not_supported(
                         infix.operator.clone(),
@@ -416,12 +415,12 @@ impl Analyzer {
                     Ok(DataType::new(DataTypeKind::Number, infix.position))
                 }
             }
-            TokenKind::EQ
-            | TokenKind::NEQ
-            | TokenKind::LT
-            | TokenKind::LTE
-            | TokenKind::GT
-            | TokenKind::GTE => {
+            InfixOperator::EQ
+            | InfixOperator::NEQ
+            | InfixOperator::LT
+            | InfixOperator::LTE
+            | InfixOperator::GT
+            | InfixOperator::GTE => {
                 if left.kind != right.kind {
                     Err(SemanticError::type_mismatch(
                         left.kind,
@@ -432,7 +431,7 @@ impl Analyzer {
                     Ok(DataType::new(DataTypeKind::Boolean, infix.position))
                 }
             }
-            _ => unreachable!(),
+            InfixOperator::Dot => todo!(),
         }
     }
 
@@ -555,7 +554,7 @@ mod type_tests {
                         value: String::from("x"),
                         position: Position::default(),
                     }))),
-                    operator: TokenKind::Plus,
+                    operator: InfixOperator::Plus,
                     right: Box::new(Expression::Literal(Literal::NumberLiteral(NumberLiteral {
                         value: 1.0,
                         position: Position::default(),
@@ -584,7 +583,7 @@ mod type_tests {
                 value: 1.0,
                 position: Position::default(),
             }))),
-            operator: TokenKind::Plus,
+            operator: InfixOperator::Plus,
             right: Box::new(Expression::Literal(Literal::NumberLiteral(NumberLiteral {
                 value: 2.0,
                 position: Position::default(),
