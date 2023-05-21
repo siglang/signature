@@ -1,2 +1,2 @@
 let colors: string[] = []; // OK
-auto arr = []; // Type annotation needed
+let arr = []; // Type annotation needed

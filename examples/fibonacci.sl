@@ -1,6 +1,6 @@
 declare println = fn(number[]) -> boolean;
 
-auto fib = fn(n: number) -> number {
+let fib = fn(n: number) -> number {
     if (n <= 1) {
         return n;
     } else {

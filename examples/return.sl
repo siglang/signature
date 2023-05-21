@@ -1,5 +1,4 @@
-
-auto x = {
+let x = {
     let y: number = {
         let z: number = {
             5
