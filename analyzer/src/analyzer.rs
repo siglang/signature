@@ -176,7 +176,11 @@ impl Analyzer {
         self.symbol_table
             .insert(
                 &statement.identifier.value,
-                SymbolEntry::new(data_type, SymbolAttributes::default(), SymbolKind::Variable),
+                SymbolEntry::new(
+                    data_type,
+                    SymbolAttributes::default().mutable(statement.is_mutable),
+                    SymbolKind::Variable,
+                ),
             )
             .ok_or_else(|| {
                 SemanticError::identifier_already_defined(
@@ -294,6 +298,12 @@ impl Analyzer {
             Expression::IndexExpression(index) => todo!(),
             Expression::Literal(literal) => self.typeof_literal(literal, provided_type),
             Expression::Debug(expression, position) => {
+                if let Expression::Literal(Literal::Identifier(identifier)) = expression.as_ref() {
+                    if let Some(symbol) = self.symbol_table.lookup(&identifier.value) {
+                        println!("[A:DEBUG:{position}]: {symbol:#?}");
+                    }
+                }
+
                 println!("[A:DEBUG:{position}]: {expression:?}");
                 self.typeof_expression(expression)
             }

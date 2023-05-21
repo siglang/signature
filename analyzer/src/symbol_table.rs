@@ -21,11 +21,17 @@ impl SymbolEntry {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SymbolAttributes {
     pub is_spread: Option<bool>,
+    pub is_mutable: Option<bool>,
 }
 
 impl SymbolAttributes {
-    pub fn is_spread(mut self, is_spread: bool) -> Self {
+    pub fn spread(mut self, is_spread: bool) -> Self {
         self.is_spread = Some(is_spread);
+        self
+    }
+
+    pub fn mutable(mut self, is_mutable: bool) -> Self {
+        self.is_mutable = Some(is_mutable);
         self
     }
 }
