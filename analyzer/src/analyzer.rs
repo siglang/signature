@@ -152,28 +152,31 @@ impl Analyzer {
     }
 
     fn analyze_let_statement(&mut self, statement: &LetStatement) -> SemanticResult<()> {
-        let type_annotation = self.typeof_data_type(&statement.data_type)?;
-        let expression_type = self.analyze_expression_with_provided_type(
-            &statement.value,
-            type_annotation.clone().kind,
-        )?;
+        let data_type = match statement.data_type.clone() {
+            Some(data_type) => {
+                let type_annotation = self.typeof_data_type(&data_type)?;
+                let expression_type = self.analyze_expression_with_provided_type(
+                    &statement.value,
+                    type_annotation.clone().kind,
+                )?;
 
-        if expression_type != type_annotation {
-            return Err(SemanticError::type_mismatch(
-                expression_type,
-                type_annotation,
-                statement.position,
-            ));
-        }
+                if expression_type != type_annotation {
+                    return Err(SemanticError::type_mismatch(
+                        expression_type,
+                        type_annotation,
+                        statement.position,
+                    ));
+                }
+
+                type_annotation
+            }
+            None => self.analyze_expression(&statement.value)?,
+        };
 
         self.symbol_table
             .insert(
                 &statement.identifier.value,
-                SymbolEntry::new(
-                    statement.data_type.clone(),
-                    SymbolAttributes::default(),
-                    SymbolKind::Variable,
-                ),
+                SymbolEntry::new(data_type, SymbolAttributes::default(), SymbolKind::Variable),
             )
             .ok_or_else(|| {
                 SemanticError::identifier_already_defined(

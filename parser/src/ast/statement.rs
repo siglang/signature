@@ -15,7 +15,7 @@ pub enum Statement {
 pub struct LetStatement {
     pub identifier: Identifier,
     pub value: Expression,
-    pub data_type: DataType,
+    pub data_type: Option<DataType>,
     pub position: Position,
 }
 

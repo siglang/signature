@@ -157,9 +157,12 @@ impl<'a> Parser<'a> {
         };
         self.next_token();
 
-        self.expect_token(&TokenKind::Colon)?;
-
-        let data_type = self.parse_data_type()?;
+        let data_type = if self.current_token.kind == TokenKind::Colon {
+            self.next_token();
+            Some(self.parse_data_type()?)
+        } else {
+            None
+        };
 
         self.expect_token(&TokenKind::Assign)?;
 
