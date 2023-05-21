@@ -3,7 +3,6 @@ use super::{DataType, Expression, Identifier, IdentifierGeneric, Position};
 #[derive(Debug, PartialEq, Clone)]
 pub enum Statement {
     LetStatement(LetStatement),
-    AutoStatement(AutoStatement),
     ReturnStatement(ReturnStatement),
     ReturnExpressionStatement(ReturnExpressionStatement),
     TypeStatement(TypeStatement),
@@ -32,13 +31,6 @@ pub struct TypeStatement {
 pub struct DeclareStatement {
     pub identifier: Identifier,
     pub data_type: DataType,
-    pub position: Position,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct AutoStatement {
-    pub identifier: Identifier,
-    pub value: Expression,
     pub position: Position,
 }
 

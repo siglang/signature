@@ -137,7 +137,6 @@ impl<'a> Parser<'a> {
 
         let statement = match self.current_token.kind {
             TokenKind::Let => Statement::LetStatement(self.parse_let_statement()?),
-            TokenKind::Auto => Statement::AutoStatement(self.parse_auto_statement()?),
             TokenKind::Return => Statement::ReturnStatement(self.parse_return_statement()?),
             TokenKind::Type => Statement::TypeStatement(self.parse_type_statement()?),
             TokenKind::Declare => Statement::DeclareStatement(self.parse_declare_statement()?),
@@ -171,43 +170,6 @@ impl<'a> Parser<'a> {
                 Ok(LetStatement {
                     identifier: ident,
                     data_type,
-                    value: expression,
-                    position: self.position,
-                })
-            } else {
-                Err(ParsingError::new(
-                    ParsingErrorKind::ExpectedNextToken(
-                        TokenKind::Semicolon.to_string(),
-                        self.current_token.kind.to_string(),
-                    ),
-                    self.position,
-                ))
-            };
-        }
-
-        Err(ParsingError::new(
-            ParsingErrorKind::UnexpectedToken(self.current_token.kind.to_string()),
-            self.position,
-        ))
-    }
-
-    fn parse_auto_statement(&mut self) -> ParseResult<AutoStatement> {
-        self.next_token();
-
-        let ident = Identifier {
-            value: identifier! { self },
-            position: self.position,
-        };
-        self.next_token();
-
-        self.expect_token(&TokenKind::Assign)?;
-
-        if let Ok(expression) = self.parse_expression(&Priority::Lowest) {
-            return if self.peek_token(&TokenKind::Semicolon) {
-                self.next_token();
-
-                Ok(AutoStatement {
-                    identifier: ident,
                     value: expression,
                     position: self.position,
                 })
