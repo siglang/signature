@@ -5,10 +5,10 @@ use crate::{
     SemanticError, SemanticResult,
 };
 use parser::ast::{
-    ArrayLiteral, AutoStatement, BlockExpression, DataType, DataTypeKind, DeclareStatement,
-    Expression, Identifier, InfixExpression, InfixOperator, LetStatement, Literal, Position,
-    PrefixExpression, PrefixOperator, Program, ReturnExpressionStatement, ReturnStatement,
-    Statement, StructStatement, TypeStatement,
+    ArrayLiteral, BlockExpression, DataType, DataTypeKind, DeclareStatement, Expression,
+    Identifier, InfixExpression, InfixOperator, LetStatement, Literal, Position, PrefixExpression,
+    PrefixOperator, Program, ReturnExpressionStatement, ReturnStatement, Statement,
+    StructStatement, TypeStatement,
 };
 
 /// `Return` - returns a value from top-level function scope.
@@ -137,7 +137,6 @@ impl Analyzer {
     fn analyze_statement(&mut self, statement: &Statement) -> SemanticResult<()> {
         match statement {
             Statement::LetStatement(statement) => self.analyze_let_statement(statement),
-            Statement::AutoStatement(statement) => self.analyze_auto_statement(statement),
             Statement::ReturnStatement(statement) => self.analyze_return_statement(statement),
             Statement::ReturnExpressionStatement(statement) => {
                 self.analyze_return_expression_statement(statement)
@@ -172,28 +171,6 @@ impl Analyzer {
                 &statement.identifier.value,
                 SymbolEntry::new(
                     statement.data_type.clone(),
-                    SymbolAttributes::default(),
-                    SymbolKind::Variable,
-                ),
-            )
-            .ok_or_else(|| {
-                SemanticError::identifier_already_defined(
-                    statement.identifier.value.clone(),
-                    statement.position,
-                )
-            })?;
-
-        Ok(())
-    }
-
-    fn analyze_auto_statement(&mut self, statement: &AutoStatement) -> SemanticResult<()> {
-        let expression_type = self.analyze_expression(&statement.value)?;
-
-        self.symbol_table
-            .insert(
-                &statement.identifier.value,
-                SymbolEntry::new(
-                    expression_type,
                     SymbolAttributes::default(),
                     SymbolKind::Variable,
                 ),
@@ -515,10 +492,7 @@ impl Analyzer {
                 DataTypeKind::Array(Box::new(self.typeof_data_type(&data_type)?)),
                 data_type.position,
             ),
-            DataTypeKind::Auto
-            | DataTypeKind::Unknown
-            | DataTypeKind::Generic(_)
-            | DataTypeKind::Fn(_) => {
+            DataTypeKind::Unknown | DataTypeKind::Generic(_) | DataTypeKind::Fn(_) => {
                 unimplemented!()
             }
             _ => data_type.clone(),
