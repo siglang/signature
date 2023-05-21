@@ -10,7 +10,7 @@
 ### `LetStatement`
 
 -   `LetStatement`
-    -   `let`[^keyword] [`Identifier`](#identifier)`:` [`Type`](#types)[^type] `=` [`Expression`](#expression)`;`
+    -   `let`[^keyword] [`Identifier`](#identifier)`:` [`Type`](#types)[^type][^optional] `=` [`Expression`](#expression)`;`
 
 <br />
 
