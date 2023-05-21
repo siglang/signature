@@ -16,6 +16,7 @@ pub struct LetStatement {
     pub identifier: Identifier,
     pub value: Expression,
     pub data_type: Option<DataType>,
+    pub is_mutable: bool,
     pub position: Position,
 }
 

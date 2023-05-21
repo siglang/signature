@@ -16,7 +16,7 @@ pub enum TokenKind {
 
     LT, GT, LTE, GTE, EQ, NEQ,
 
-    Let, If, Else, Return, Function, Type, Declare, Struct, Typeof, Spread,
+    Let, Mut, If, Else, Return, Function, Type, Declare, Struct, Typeof, Spread,
 
     NumberType, StringType, BooleanType,
 
@@ -27,6 +27,7 @@ impl From<String> for TokenKind {
     fn from(s: String) -> Self {
         match s.as_str() {
             "let" => TokenKind::Let,
+            "mut" => TokenKind::Mut,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,
             "return" => TokenKind::Return,

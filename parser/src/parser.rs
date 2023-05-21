@@ -136,7 +136,8 @@ impl<'a> Parser<'a> {
         }
 
         let statement = match self.current_token.kind {
-            TokenKind::Let => Statement::LetStatement(self.parse_let_statement()?),
+            TokenKind::Let => Statement::LetStatement(self.parse_let_statement(false)?),
+            TokenKind::Mut => Statement::LetStatement(self.parse_let_statement(true)?),
             TokenKind::Return => Statement::ReturnStatement(self.parse_return_statement()?),
             TokenKind::Type => Statement::TypeStatement(self.parse_type_statement()?),
             TokenKind::Declare => Statement::DeclareStatement(self.parse_declare_statement()?),
@@ -148,7 +149,7 @@ impl<'a> Parser<'a> {
         Ok(statement)
     }
 
-    fn parse_let_statement(&mut self) -> ParseResult<LetStatement> {
+    fn parse_let_statement(&mut self, is_mutable: bool) -> ParseResult<LetStatement> {
         self.next_token();
 
         let ident = Identifier {
@@ -172,8 +173,9 @@ impl<'a> Parser<'a> {
 
                 Ok(LetStatement {
                     identifier: ident,
-                    data_type,
                     value: expression,
+                    data_type,
+                    is_mutable,
                     position: self.position,
                 })
             } else {
