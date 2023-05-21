@@ -4,8 +4,8 @@ pub mod object;
 use enviroment::Environment;
 use object::Object;
 use parser::ast::{
-    DataType, DataTypeKind, Expression, InfixExpression, InfixOperator, LetStatement, Literal,
-    Position, PrefixExpression, PrefixOperator, Program, Statement,
+    Expression, InfixExpression, InfixOperator, LetStatement, Literal, Position, PrefixExpression,
+    PrefixOperator, Program, Statement,
 };
 use std::fmt;
 use thiserror::Error;
@@ -64,15 +64,6 @@ impl Evaluator {
     fn eval_statement(&mut self, statement: &Statement) -> EvaluateResult<()> {
         match statement {
             Statement::LetStatement(statement) => self.eval_let_statement(statement),
-            Statement::AutoStatement(statement) => {
-                let statement = statement.clone();
-                self.eval_let_statement(&LetStatement {
-                    identifier: statement.identifier,
-                    value: statement.value,
-                    data_type: DataType::new(DataTypeKind::Unknown, Position(0, 0)),
-                    position: statement.position,
-                })
-            }
             Statement::ReturnStatement(_) => todo!(),
             Statement::ReturnExpressionStatement(_) => todo!(),
             Statement::TypeStatement(_) => todo!(),

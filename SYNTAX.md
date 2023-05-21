@@ -3,7 +3,7 @@
 ## `statement`
 
 -   `Statement`
-    -   [`ExpressionStatement`](#expression)`;` | [`LetStatement`](#letstatement) | [`TypeStatement`](#typestatement) | [`StructStatement`](#structtype) | [`ReturnStatement`](#returnstatement)
+    -   [`ExpressionStatement`](#expression)`;` | [`LetStatement`](#letstatement) | [`TypeStatement`](#typestatement) | [`DeclareStatement`](#declarestatement) | [`StructStatement`](#structtype) | [`ReturnStatement`](#returnstatement) | [`ReturnExpressionStatement`](#returnexpressionstatement)
 
 <br />
 
@@ -11,13 +11,6 @@
 
 -   `LetStatement`
     -   `let`[^keyword] [`Identifier`](#identifier)`:` [`Type`](#types)[^type] `=` [`Expression`](#expression)`;`
-
-<br />
-
-### `AutoStatement`
-
--   `AutoStatement`
-    -   `auto`[^keyword] [`Identifier`](#identifier) `=` [`Expression`](#expression)`;`
 
 <br />
 
