@@ -4,8 +4,8 @@ pub mod object;
 use enviroment::Environment;
 use object::Object;
 use parser::ast::{
-    Expression, InfixExpression, InfixOperator, LetStatement, Literal, Position, PrefixExpression,
-    PrefixOperator, Program, Statement,
+    AssignmentExpression, Expression, InfixExpression, InfixOperator, LetStatement, Literal,
+    Position, PrefixExpression, PrefixOperator, Program, Statement,
 };
 use std::fmt;
 use thiserror::Error;
@@ -97,6 +97,9 @@ impl Evaluator {
         position: Position,
     ) -> EvaluateResult<Object> {
         match expression {
+            Expression::AssignmentExpression(expression) => {
+                self.eval_assignment_expression(expression)
+            }
             Expression::BlockExpression(_) => todo!(),
             Expression::PrefixExpression(expression) => self.eval_prefix_expression(expression),
             Expression::InfixExpression(expression) => self.eval_infix_expression(expression),
@@ -111,6 +114,25 @@ impl Evaluator {
                 Ok(value)
             }
         }
+    }
+
+    fn eval_assignment_expression(
+        &mut self,
+        expression: &AssignmentExpression,
+    ) -> EvaluateResult<Object> {
+        let value = self.eval_expression(&expression.value, expression.position)?;
+        let identifier = expression.identifier.value.clone();
+
+        self.environment
+            .set(&identifier, value.clone())
+            .ok_or_else(|| {
+                EvaluateError::new(
+                    EvaluateErrorKind::IdentifierNotDefined(identifier),
+                    expression.identifier.position,
+                )
+            })?;
+
+        Ok(value)
     }
 
     fn eval_prefix_expression(&mut self, expression: &PrefixExpression) -> EvaluateResult<Object> {

@@ -33,4 +33,17 @@ impl Environment {
             },
         }
     }
+
+    pub fn set(&mut self, name: &str, new: Object) -> Option<()> {
+        match self.store.get_mut(name) {
+            Some(object) => {
+                *object = new;
+                Some(())
+            }
+            None => match &mut self.parent {
+                Some(parent) => parent.set(name, new),
+                None => None,
+            },
+        }
+    }
 }
