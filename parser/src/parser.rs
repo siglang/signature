@@ -465,6 +465,22 @@ impl<'a> Parser<'a> {
             )
         })?;
 
+        if self.peek_token(&TokenKind::Assign) {
+            let identifier = Identifier {
+                value: identifier! { self },
+                position: self.position,
+            };
+            self.next_token();
+            self.next_token();
+
+            let expression = self.parse_expression(&Priority::Lowest)?;
+            return Ok(Expression::AssignmentExpression(AssignmentExpression {
+                identifier,
+                value: Box::new(expression),
+                position: self.position,
+            }));
+        }
+
         while !self.peek_token(&TokenKind::Semicolon) && priority < &self.peek_priority() {
             self.next_token();
 

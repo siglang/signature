@@ -1,9 +1,10 @@
-use super::{Literal, Position, Statement};
+use super::{Identifier, Literal, Position, Statement};
 use crate::tokenizer::TokenKind;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
+    AssignmentExpression(AssignmentExpression),
     BlockExpression(BlockExpression),
     PrefixExpression(PrefixExpression),
     InfixExpression(InfixExpression),
@@ -13,6 +14,13 @@ pub enum Expression {
     IndexExpression(IndexExpression),
     Literal(Literal),
     Debug(Box<Expression>, Position),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct AssignmentExpression {
+    pub identifier: Identifier,
+    pub value: Box<Expression>,
+    pub position: Position,
 }
 
 #[derive(Debug, PartialEq, Clone)]
