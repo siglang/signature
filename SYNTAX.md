@@ -53,14 +53,26 @@
 
 -   `Expression`
     -   ( [`Expression`](#expression) )
+    -   [`AssignmentExpression`](#assignmentexpression)
+    -   [`BlockExpression`](#blockexpression)
     -   [`InfixOperator`](#infixoperator)
     -   [`PrefixOperator`](#prefixoperator)
-    -   [`BlockExpression`](#blockexpression)
-    -   [`Identifier`](#identifier)[^ident]
     -   [`IfExpression`](#ifexpression)
     -   [`CallExpression`](#callexpression)
     -   [`IndexExpression`](#indexexpression)
     -   [`Literal`](#literal)
+
+<br />
+
+### `AssignmentExpression`
+
+-   `AssignmentExpression`
+    -   [`Identifier`](#identifier)[^ident] `=` [`Expression`](#expression)
+
+### `BlockExpression`
+
+-   `BlockExpression`
+    -   `{` [`Statement`](#statement) `}`
 
 <br />
 
@@ -75,20 +87,6 @@
 
 -   [`PrefixOperator`](#prefixoperator)[^operator] [`Expression`](#expression)
     -   `!` | `-`
-
-<br />
-
-### `BlockExpression`
-
--   `BlockExpression`
-    -   `{` [`Statement`](#statement) `}`
-
-<br />
-
-### `Identifier`
-
--   `Identifier`
-    -   `a`-`z` `A`-`Z` `0`-`9` `_`
 
 <br />
 
@@ -131,7 +129,20 @@
 ### `Literal`
 
 -   `Literal`
-    -   [`NumberLiteral`](#numberliteral) | [`StringLiteral`](#stringliteral) | [`BooleanLiteral`](#booleanliteral) | [`ArrayLiteral`](#arrayliteral) | [`FunctionLiteral`](#functionliteral) | [`StructLiteral`](#structliteral)
+    -   [`Identifier`](#identifier)[^ident]
+    -   [`NumberLiteral`](#numberliteral)
+    -   [`StringLiteral`](#stringliteral)
+    -   [`BooleanLiteral`](#booleanliteral)
+    -   [`ArrayLiteral`](#arrayliteral)
+    -   [`FunctionLiteral`](#functionliteral)
+    -   [`StructLiteral`](#structliteral)
+
+<br />
+
+### `Identifier`
+
+-   `Identifier`
+    -   `a`-`z` `A`-`Z` `0`-`9` `_`
 
 <br />
 
