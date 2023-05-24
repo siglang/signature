@@ -274,27 +274,15 @@ impl Analyzer {
         provided_type: Option<DataTypeKind>,
     ) -> SemanticResult<DataType> {
         let ttype = match expression {
-            Expression::BlockExpression(block) => {
-                let kind = self.typeof_block_expression(block)?;
-                Ok(match kind {
-                    AnalyzerReturnKind::Return(ttype) => {
-                        self.set_return_type(
-                            AnalyzerReturnKind::Return(ttype.clone()),
-                            block.position,
-                        )?;
-                        DataType::new(ttype, block.position)
-                    }
-                    AnalyzerReturnKind::ReturnExpression(ttype) => {
-                        DataType::new(ttype, block.position)
-                    }
-                    _ => DataType::new(DataTypeKind::Unknown, block.position),
-                })
+            Expression::AssignmentExpression(expression) => {
+                self.typeof_assignment_expression(expression)
             }
+            Expression::BlockExpression(block) => self.typeof_block_expression(block),
             Expression::PrefixExpression(prefix) => self.typeof_prefix_expression(prefix),
             Expression::InfixExpression(infix) => self.typeof_infix_expression(infix),
-            Expression::IfExpression(if_expression) => todo!(),
+            Expression::IfExpression(expression) => todo!(),
             Expression::CallExpression(call) => todo!(),
-            Expression::TypeofExpression(typeof_expression) => todo!(),
+            Expression::TypeofExpression(expression) => todo!(),
             Expression::IndexExpression(index) => todo!(),
             Expression::Literal(literal) => self.typeof_literal(literal, provided_type),
             Expression::Debug(expression, position) => {
@@ -312,16 +300,53 @@ impl Analyzer {
         ttype.map(|ttype| self.typeof_data_type(&ttype))?
     }
 
-    pub fn typeof_expression(&mut self, expression: &Expression) -> SemanticResult<DataType> {
-        self.typeof_expression_with_provided_type(expression, None)
+    fn typeof_assignment_expression(
+        &mut self,
+        expression: &parser::ast::AssignmentExpression,
+    ) -> SemanticResult<DataType> {
+        let identifier = &expression.identifier;
+
+        let symbol = self
+            .symbol_table
+            .lookup(&identifier.value)
+            .ok_or_else(|| {
+                SemanticError::identifier_not_defined(identifier.value.clone(), identifier.position)
+            })?
+            .clone();
+
+        if let Some(is_mutable) = symbol.attributes.is_mutable {
+            if !is_mutable {
+                return Err(SemanticError::identifier_not_mutable(
+                    identifier.value.clone(),
+                    identifier.position,
+                ));
+            }
+        }
+
+        let value = self.typeof_expression(&expression.value)?;
+        if symbol.data_type != value {
+            return Err(SemanticError::type_mismatch(
+                symbol.data_type,
+                value,
+                identifier.position,
+            ));
+        }
+
+        Ok(symbol.data_type)
     }
 
-    fn typeof_block_expression(
-        &mut self,
-        block: &BlockExpression,
-    ) -> SemanticResult<AnalyzerReturnKind> {
+    fn typeof_block_expression(&mut self, block: &BlockExpression) -> SemanticResult<DataType> {
         let symbol_table = SymbolTable::new(Some(self.symbol_table.clone()));
-        Analyzer::new_with_symbol_table(block.statements.clone(), symbol_table).analyze()
+        let kind =
+            Analyzer::new_with_symbol_table(block.statements.clone(), symbol_table).analyze()?;
+        Ok(match kind {
+            AnalyzerReturnKind::Return(ttype) => {
+                self.set_return_type(AnalyzerReturnKind::Return(ttype.clone()), block.position)?;
+                DataType::new(ttype, block.position)
+            }
+            AnalyzerReturnKind::ReturnExpression(ttype) => DataType::new(ttype, block.position),
+            _ => DataType::new(DataTypeKind::Unknown, block.position),
+        })
     }
 
     fn typeof_prefix_expression(&mut self, prefix: &PrefixExpression) -> SemanticResult<DataType> {
@@ -489,6 +514,10 @@ impl Analyzer {
                 .ok_or_else(|| SemanticError::type_annotation_needed(literal.position))
                 .map(|ttype| DataType::new(ttype, literal.position)),
         }
+    }
+
+    pub fn typeof_expression(&mut self, expression: &Expression) -> SemanticResult<DataType> {
+        self.typeof_expression_with_provided_type(expression, None)
     }
 
     pub fn typeof_data_type(&self, data_type: &DataType) -> SemanticResult<DataType> {

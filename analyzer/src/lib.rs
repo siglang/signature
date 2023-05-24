@@ -86,6 +86,16 @@ impl SemanticError {
     pub fn type_annotation_needed(position: Position) -> Self {
         Self::new(SemanticErrorKind::TypeAnnotationNeeded, position)
     }
+
+    pub fn identifier_not_mutable<T>(identifier: T, position: Position) -> Self
+    where
+        T: ToString,
+    {
+        Self::new(
+            SemanticErrorKind::CannotAssignToImmutableVariable(identifier.to_string()),
+            position,
+        )
+    }
 }
 
 #[derive(Debug, Clone, Error, PartialEq)]
@@ -98,6 +108,7 @@ pub enum SemanticErrorKind {
     #[error("Type alias `{0}` is already defined")] TypeAliasAlreadyDefined(String),
     #[error("Operator `{0}` is not supported for type `{1}`")] OperatorNotSupported(String, String),
     #[error("Type annotation needed")] TypeAnnotationNeeded,
+    #[error("Cannot assign to immutable variable `{0}`")] CannotAssignToImmutableVariable(String),
 }
 
 pub type SemanticResult<T> = Result<T, SemanticError>;
