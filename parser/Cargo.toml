@@ -8,4 +8,3 @@ license = "MIT"
 repository = "https://github.com/siglang/signature"
 
 [dependencies]
-thiserror = "1.0.37"
