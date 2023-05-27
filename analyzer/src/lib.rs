@@ -2,19 +2,11 @@ pub mod analyzer;
 pub mod symbol_table;
 
 use parser::ast::Position;
-use std::fmt;
-use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SemanticError {
     pub message: SemanticErrorKind,
     pub position: Position,
-}
-
-impl fmt::Display for SemanticError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.position, self.message)
-    }
 }
 
 impl SemanticError {
@@ -98,17 +90,17 @@ impl SemanticError {
     }
 }
 
-#[derive(Debug, Clone, Error, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[rustfmt::skip]
 pub enum SemanticErrorKind {
-    #[error("Type mismatch: `{0}` is not `{1}`")] TypeMismatch(String, String),
-    #[error("Identifier `{0}` is not defined")] IdentifierNotDefined(String),
-    #[error("Type alias `{0}` is not defined")] TypeAliasNotDefined(String),
-    #[error("Identifier `{0}` is already defined")] IdentifierAlreadyDefined(String),
-    #[error("Type alias `{0}` is already defined")] TypeAliasAlreadyDefined(String),
-    #[error("Operator `{0}` is not supported for type `{1}`")] OperatorNotSupported(String, String),
-    #[error("Type annotation needed")] TypeAnnotationNeeded,
-    #[error("Cannot assign to immutable variable `{0}`")] CannotAssignToImmutableVariable(String),
+    TypeMismatch(String, String),
+    IdentifierNotDefined(String),
+    TypeAliasNotDefined(String),
+    IdentifierAlreadyDefined(String),
+    TypeAliasAlreadyDefined(String),
+    OperatorNotSupported(String, String),
+    TypeAnnotationNeeded,
+    CannotAssignToImmutableVariable(String),
 }
 
 pub type SemanticResult<T> = Result<T, SemanticError>;
