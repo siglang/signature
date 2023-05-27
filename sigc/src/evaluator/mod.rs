@@ -7,34 +7,29 @@ use parser::ast::{
     AssignmentExpression, Expression, InfixExpression, InfixOperator, LetStatement, Literal,
     Position, PrefixExpression, PrefixOperator, Program, Statement,
 };
-use std::fmt;
-use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvaluateError {
-    pub kind: EvaluateErrorKind,
+    pub message: EvaluateErrorKind,
     pub position: Position,
-}
-
-impl fmt::Display for EvaluateError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.position, self.kind)
-    }
 }
 
 impl EvaluateError {
     pub fn new(kind: EvaluateErrorKind, position: Position) -> Self {
-        Self { kind, position }
+        Self {
+            message: kind,
+            position,
+        }
     }
 }
 
-#[derive(Debug, Clone, Error, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[rustfmt::skip]
 pub enum EvaluateErrorKind {
-    #[error("Identifier `{0}` already defined")] IdentifierAlreadyDefined(String),
-    #[error("Identifier `{0}` not defined")] IdentifierNotDefined(String),
-    #[error("Cannot operate `{0}` operator on `{1}``")] InvalidOperator1(String, String),
-    #[error("Cannot operate `{0}` operator on `{1}` and `{2}`")] InvalidOperator2(String, String, String),
+    IdentifierAlreadyDefined(String),
+    IdentifierNotDefined(String),
+    InvalidOperator1(String, String),
+    InvalidOperator2(String, String, String),
 }
 
 pub type EvaluateResult<T> = Result<T, EvaluateError>;

@@ -7,4 +7,7 @@ edition = "2021"
 parser = { path = "../parser" }
 analyzer = { path = "../analyzer" }
 clap = { version = "4.1.4", features = ["derive"] }
-thiserror = "1.0.37"
+lazy_static = "1.4.0"
+
+[build-dependencies]
+serde_json = "1.0.64"

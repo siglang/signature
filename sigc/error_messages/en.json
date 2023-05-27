@@ -1,0 +1,58 @@
+{
+    "ExpectedNextToken": {
+        "message": "Expected next token to be `{0}`, got `{1}` instead",
+        "code": 1000
+    },
+    "ExpectedDataType": {
+        "message": "Expected next token to be a data type, got `{0}` instead",
+        "code": 1001
+    },
+    "ExpectedExpression": {
+        "message": "Expected next token to be an expression, got `{0}` instead",
+        "code": 1002
+    },
+    "UnexpectedToken": {
+        "message": "Unexpected token `{0}`",
+        "code": 1003
+    },
+    "TypeMismatch": {
+        "message": "Type mismatch: `{0}` is not `{1}`",
+        "code": 2000
+    },
+    "IdentifierNotDefined": {
+        "message": "Identifier `{0}` is not defined",
+        "code": 2001
+    },
+    "TypeAliasNotDefined": {
+        "message": "Type alias `{0}` is not defined",
+        "code": 2002
+    },
+    "IdentifierAlreadyDefined": {
+        "message": "Identifier `{0}` is already defined",
+        "code": 2003
+    },
+    "TypeAliasAlreadyDefined": {
+        "message": "Type alias `{0}` is already defined",
+        "code": 2004
+    },
+    "OperatorNotSupported": {
+        "message": "Operator `{0}` is not supported for type `{1}`",
+        "code": 2005
+    },
+    "TypeAnnotationNeeded": {
+        "message": "Type annotation needed",
+        "code": 2006
+    },
+    "CannotAssignToImmutableVariable": {
+        "message": "Cannot assign to immutable variable `{0}`",
+        "code": 2007
+    },
+    "InvalidOperator1": {
+        "message": "Cannot operate `{0}` operator on `{1}`",
+        "code": 3000
+    },
+    "InvalidOperator2": {
+        "message": "Cannot operate `{0}` operator on `{1}` and `{2}`",
+        "code": 3001
+    }
+}
