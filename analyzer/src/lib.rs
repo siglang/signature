@@ -5,13 +5,13 @@ use parser::ast::Position;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SemanticError {
-    pub message: SemanticErrorKind,
+    pub kind: SemanticErrorKind,
     pub position: Position,
 }
 
 impl SemanticError {
-    pub fn new(message: SemanticErrorKind, position: Position) -> Self {
-        Self { message, position }
+    pub fn new(kind: SemanticErrorKind, position: Position) -> Self {
+        Self { kind, position }
     }
 
     pub fn type_mismatch<T>(left: T, right: T, position: Position) -> Self

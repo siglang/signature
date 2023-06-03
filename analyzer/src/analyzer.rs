@@ -11,7 +11,7 @@ use parser::ast::{
     StructStatement, TypeStatement,
 };
 
-/// `Return` - returns a value from top-level function scope.
+/// `Early return`
 ///
 /// ```ignore
 /// fn() -> number {
@@ -27,7 +27,7 @@ use parser::ast::{
 /// }; // 5
 /// ```
 ///
-/// `ReturnExpression` - returns a value from a scope.
+/// `Return expression`
 ///
 /// ```ignore
 /// fn() -> number {
@@ -44,8 +44,8 @@ use parser::ast::{
 /// ```
 #[derive(Debug, Clone)]
 pub enum AnalyzerReturnKind {
-    Return(DataTypeKind),
-    ReturnExpression(DataTypeKind),
+    EarlyReturn(DataTypeKind),
+    Expression(DataTypeKind),
     Unknown,
 }
 
@@ -97,17 +97,16 @@ impl Analyzer {
         match self.return_type {
             AnalyzerReturnKind::Unknown => self.return_type = ttype,
             _ => {
-                if let AnalyzerReturnKind::ReturnExpression(return_type) = self.return_type.clone()
-                {
-                    if let AnalyzerReturnKind::ReturnExpression(ttype) = ttype.clone() {
+                if let AnalyzerReturnKind::Expression(return_type) = self.return_type.clone() {
+                    if let AnalyzerReturnKind::Expression(ttype) = ttype.clone() {
                         if return_type != ttype {
                             return Err(SemanticError::type_mismatch(return_type, ttype, position));
                         }
                     }
                 }
 
-                if let AnalyzerReturnKind::Return(return_type) = self.return_type.clone() {
-                    if let AnalyzerReturnKind::Return(ttype) = ttype {
+                if let AnalyzerReturnKind::EarlyReturn(return_type) = self.return_type.clone() {
+                    if let AnalyzerReturnKind::EarlyReturn(ttype) = ttype {
                         if return_type != ttype {
                             return Err(SemanticError::type_mismatch(return_type, ttype, position));
                         }
@@ -125,8 +124,8 @@ impl Analyzer {
             self.analyze_statement(&statement)?;
 
             match self.return_type {
-                AnalyzerReturnKind::Return(_) => return Ok(self.return_type.clone()),
-                AnalyzerReturnKind::ReturnExpression(_) => break,
+                AnalyzerReturnKind::EarlyReturn(_) => return Ok(self.return_type.clone()),
+                AnalyzerReturnKind::Expression(_) => break,
                 _ => {}
             }
         }
@@ -154,7 +153,7 @@ impl Analyzer {
     fn analyze_let_statement(&mut self, statement: &LetStatement) -> SemanticResult<()> {
         let data_type = match statement.data_type.clone() {
             Some(data_type) => {
-                let type_annotation = self.typeof_data_type(&data_type)?;
+                let type_annotation = self.analyze_data_type(&data_type)?;
                 let expression_type = self.analyze_expression_with_provided_type(
                     &statement.value,
                     type_annotation.clone().kind,
@@ -195,7 +194,7 @@ impl Analyzer {
     fn analyze_return_statement(&mut self, statement: &ReturnStatement) -> SemanticResult<()> {
         let expression_type = self.analyze_expression(&statement.value)?;
         self.set_return_type(
-            AnalyzerReturnKind::Return(expression_type.kind),
+            AnalyzerReturnKind::EarlyReturn(expression_type.kind),
             statement.position,
         )?;
 
@@ -208,7 +207,7 @@ impl Analyzer {
     ) -> SemanticResult<()> {
         let expression_type = self.analyze_expression(&statement.value)?;
         self.set_return_type(
-            AnalyzerReturnKind::ReturnExpression(expression_type.kind),
+            AnalyzerReturnKind::Expression(expression_type.kind),
             statement.position,
         )?;
 
@@ -216,7 +215,7 @@ impl Analyzer {
     }
 
     fn analyze_type_statement(&mut self, statement: &TypeStatement) -> SemanticResult<()> {
-        let ttype = self.typeof_data_type(&statement.data_type)?;
+        let ttype = self.analyze_data_type(&statement.data_type)?;
 
         self.symbol_table
             .insert(
@@ -234,7 +233,7 @@ impl Analyzer {
     }
 
     fn analyze_declare_statement(&mut self, statement: &DeclareStatement) -> SemanticResult<()> {
-        let ttype = self.typeof_data_type(&statement.data_type)?;
+        let ttype = self.analyze_data_type(&statement.data_type)?;
 
         self.symbol_table
             .insert(
@@ -297,7 +296,7 @@ impl Analyzer {
             }
         };
 
-        ttype.map(|ttype| self.typeof_data_type(&ttype))?
+        ttype.map(|ttype| self.analyze_data_type(&ttype))?
     }
 
     fn typeof_assignment_expression(
@@ -340,12 +339,15 @@ impl Analyzer {
         let kind =
             Analyzer::new_with_symbol_table(block.statements.clone(), symbol_table).analyze()?;
         Ok(match kind {
-            AnalyzerReturnKind::Return(ttype) => {
-                self.set_return_type(AnalyzerReturnKind::Return(ttype.clone()), block.position)?;
+            AnalyzerReturnKind::EarlyReturn(ttype) => {
+                self.set_return_type(
+                    AnalyzerReturnKind::EarlyReturn(ttype.clone()),
+                    block.position,
+                )?;
                 DataType::new(ttype, block.position)
             }
-            AnalyzerReturnKind::ReturnExpression(ttype) => DataType::new(ttype, block.position),
-            _ => DataType::new(DataTypeKind::Unknown, block.position),
+            AnalyzerReturnKind::Expression(ttype) => DataType::new(ttype, block.position),
+            _ => DataType::new(DataTypeKind::Void, block.position),
         })
     }
 
@@ -520,7 +522,7 @@ impl Analyzer {
         self.typeof_expression_with_provided_type(expression, None)
     }
 
-    pub fn typeof_data_type(&self, data_type: &DataType) -> SemanticResult<DataType> {
+    pub fn analyze_data_type(&self, data_type: &DataType) -> SemanticResult<DataType> {
         Ok(match data_type.kind.clone() {
             DataTypeKind::Custom(identifier) => self
                 .symbol_table
@@ -531,10 +533,10 @@ impl Analyzer {
                 .data_type
                 .clone(),
             DataTypeKind::Array(data_type) => DataType::new(
-                DataTypeKind::Array(Box::new(self.typeof_data_type(&data_type)?)),
+                DataTypeKind::Array(Box::new(self.analyze_data_type(&data_type)?)),
                 data_type.position,
             ),
-            DataTypeKind::Unknown | DataTypeKind::Generic(_) | DataTypeKind::Fn(_) => {
+            DataTypeKind::Generic(_) | DataTypeKind::Fn(_) => {
                 unimplemented!()
             }
             _ => data_type.clone(),
@@ -697,7 +699,7 @@ mod type_tests {
         let data_type = DataType::new(DataTypeKind::Custom(String::from("X")), Position::default());
 
         let ttype = Analyzer::new_with_symbol_table(Program::new(), symbol_table)
-            .typeof_data_type(&data_type)
+            .analyze_data_type(&data_type)
             .unwrap();
 
         assert_eq!(
