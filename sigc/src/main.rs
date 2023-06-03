@@ -78,7 +78,7 @@ impl From<ParsingError> for Error {
     fn from(error: ParsingError) -> Self {
         use parser::ParsingErrorKind::*;
 
-        let message = match error.message {
+        let message = match error.kind {
             ExpectedNextToken(a, b) => replace(EXPECTED_NEXT_TOKEN.clone(), &[&a, &b]),
             ExpectedDataType(a) => replace(EXPECTED_DATA_TYPE.clone(), &[&a]),
             ExpectedExpression(a) => replace(EXPECTED_EXPRESSION.clone(), &[&a]),
@@ -96,7 +96,7 @@ impl From<SemanticError> for Error {
     fn from(error: SemanticError) -> Self {
         use analyzer::SemanticErrorKind::*;
 
-        let message = match error.message {
+        let message = match error.kind {
             TypeMismatch(a, b) => replace(TYPE_MISMATCH.clone(), &[&a, &b]),
             IdentifierNotDefined(a) => replace(IDENTIFIER_NOT_DEFINED.clone(), &[&a]),
             TypeAliasNotDefined(a) => replace(TYPE_ALIAS_NOT_DEFINED.clone(), &[&a]),
@@ -120,7 +120,7 @@ impl From<EvaluateError> for Error {
     fn from(error: EvaluateError) -> Self {
         use evaluator::EvaluateErrorKind::*;
 
-        let message = match error.message {
+        let message = match error.kind {
             IdentifierAlreadyDefined(a) => replace(IDENTIFIER_ALREADY_DEFINED.clone(), &[&a]),
             IdentifierNotDefined(a) => replace(IDENTIFIER_NOT_DEFINED.clone(), &[&a]),
             InvalidOperator1(a, b) => replace(INVALID_OPERATOR1.clone(), &[&a, &b]),

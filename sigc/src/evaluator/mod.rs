@@ -10,16 +10,13 @@ use parser::ast::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvaluateError {
-    pub message: EvaluateErrorKind,
+    pub kind: EvaluateErrorKind,
     pub position: Position,
 }
 
 impl EvaluateError {
     pub fn new(kind: EvaluateErrorKind, position: Position) -> Self {
-        Self {
-            message: kind,
-            position,
-        }
+        Self { kind, position }
     }
 }
 
