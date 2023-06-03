@@ -70,7 +70,7 @@ pub enum PrefixOperator {
     Not,
 }
 
-impl From<TokenKind> for PrefixOperator {
+impl From<TokenKind<'_>> for PrefixOperator {
     fn from(token_kind: TokenKind) -> Self {
         match token_kind {
             TokenKind::Minus => Self::Minus,
@@ -113,7 +113,7 @@ pub enum InfixOperator {
     LTE,      // A <= B
 }
 
-impl From<TokenKind> for InfixOperator {
+impl From<TokenKind<'_>> for InfixOperator {
     fn from(token_kind: TokenKind) -> Self {
         match token_kind {
             TokenKind::Dot => Self::Dot,

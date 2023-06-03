@@ -73,13 +73,13 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn read_identifier(&mut self) -> String {
+    fn read_identifier(&mut self) -> &'a str {
         let position = self.position;
         while self.current_char.is_alphanumeric() || self.current_char == '_' {
             self.read_char();
         }
 
-        self.input[position..self.position].to_string()
+        &self.input[position..self.position]
     }
 
     fn read_number(&mut self) -> f64 {
@@ -103,14 +103,14 @@ impl<'a> Lexer<'a> {
             .unwrap_or_else(|_| unimplemented!())
     }
 
-    fn read_string(&mut self) -> String {
+    fn read_string(&mut self) -> &'a str {
         let position = self.position + 1;
         while self.peek_char() != '"' && self.current_char != '\0' {
             self.read_char();
         }
 
         self.read_char();
-        self.input[position..self.position].to_string()
+        &self.input[position..self.position]
     }
 
     fn read_comment(&mut self) {
@@ -129,11 +129,7 @@ impl<'a> Lexer<'a> {
             }
 
             self.read_char();
-        }
-    }
-
-    fn read_inline_comment(&mut self) {
-        if self.current_char == '/' && self.peek_char() == '/' {
+        } else if self.current_char == '/' && self.peek_char() == '/' {
             self.read_char();
             self.read_char();
 
@@ -145,7 +141,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn next_token(&mut self) -> Token {
+    pub fn next_token(&mut self) -> Token<'a> {
         use super::token::TokenKind::*;
 
         self.skip_whitespace();
@@ -156,7 +152,7 @@ impl<'a> Lexer<'a> {
 
                 match self.current_char {
                     $( $token => Token::new($token_type, position), )*
-                    token => Token::new(TokenKind::ILLEGAL(token.to_string()), position)
+                    token => Token::new(TokenKind::ILLEGAL(token), position)
                 }
             }}
         }
@@ -210,7 +206,7 @@ impl<'a> Lexer<'a> {
 
                 return self.next_token();
             }; next!(@no_read '/' => {
-                self.read_inline_comment();
+                self.read_comment();
 
                 return self.next_token();
             }; Slash)),
@@ -235,8 +231,8 @@ impl<'a> Lexer<'a> {
     }
 }
 
-impl Iterator for Lexer<'_> {
-    type Item = Token;
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let token = self.next_token();

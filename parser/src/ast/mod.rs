@@ -24,7 +24,7 @@ pub enum DataTypeKind {
     Fn(FunctionType),
     Generic(Generic),
     Custom(String),
-    Unknown,
+    Void,
 }
 
 impl fmt::Display for DataTypeKind {
@@ -37,7 +37,7 @@ impl fmt::Display for DataTypeKind {
             DataTypeKind::Fn(function_type) => write!(f, "{function_type}"),
             DataTypeKind::Generic(generic) => write!(f, "{generic}"),
             DataTypeKind::Custom(identifier) => write!(f, "{identifier}"),
-            DataTypeKind::Unknown => write!(f, "Unknown"),
+            DataTypeKind::Void => write!(f, "Void"),
         }
     }
 }

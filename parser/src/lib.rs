@@ -10,13 +10,13 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsingError {
-    pub message: ParsingErrorKind,
+    pub kind: ParsingErrorKind,
     pub position: Position,
 }
 
 impl ParsingError {
-    pub fn new(message: ParsingErrorKind, position: Position) -> Self {
-        Self { message, position }
+    pub fn new(kind: ParsingErrorKind, position: Position) -> Self {
+        Self { kind, position }
     }
 
     pub fn expected_next_token<T>(expected: T, got: T, position: Position) -> Self
@@ -98,8 +98,8 @@ pub type ParseResult<T> = Result<T, ParsingError>;
 pub struct Parser<'a> {
     pub lexer: Lexer<'a>,
     pub errors: Vec<ParsingError>,
-    current_token: Token,
-    peek_token: Token,
+    current_token: Token<'a>,
+    peek_token: Token<'a>,
     position: Position,
     previous_statement: Option<Statement>,
 }
@@ -425,7 +425,7 @@ impl<'a> Parser<'a> {
         let left_expression = match self.current_token.kind.clone() {
             TokenKind::IDENT(value) => {
                 Some(Ok(Expression::Literal(Literal::Identifier(Identifier {
-                    value,
+                    value: value.to_string(),
                     position: self.position,
                 }))))
             }
@@ -437,7 +437,7 @@ impl<'a> Parser<'a> {
             )))),
             TokenKind::String(value) => Some(Ok(Expression::Literal(Literal::StringLiteral(
                 StringLiteral {
-                    value,
+                    value: value.to_string(),
                     position: self.position,
                 },
             )))),
@@ -772,7 +772,7 @@ impl<'a> Parser<'a> {
                 });
             } else {
                 return Err(ParsingError::expected_next_token(
-                    TokenKind::IDENT(String::new()).to_string(),
+                    TokenKind::IDENT("").to_string(),
                     self.current_token.kind.to_string(),
                     self.position,
                 ));
