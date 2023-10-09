@@ -1,3 +1,7 @@
+> **Note**
+> 
+> This project has ended. the journey continued on [that project](https://github.com/ky0422/swua).
+
 # The Signature (siglang) programming language project
 
 [Syntax Documentation](SYNTAX.md) | [Contributing Guide](CONTRIBUTING.md)
